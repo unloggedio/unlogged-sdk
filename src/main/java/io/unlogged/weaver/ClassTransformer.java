@@ -4,6 +4,7 @@ import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.util.Name;
 
 public class ClassTransformer {
 
@@ -30,11 +31,16 @@ public class ClassTransformer {
         System.out.println("ClassElement: " + jcClassDecl.getSimpleName());
         List<JCTree> classMemberElements = jcClassDecl.getMembers();
         for (JCTree classMemberElement : classMemberElements) {
-            System.out.println("ClassMember [" + classMemberElement.getClass().getCanonicalName() + "]");
+            System.out.println("\tMember [" + classMemberElement.getClass().getCanonicalName() + "]");
             if (classMemberElement instanceof JCTree.JCMethodDecl) {
+                Name name = ((JCTree.JCMethodDecl) classMemberElement).getName();
+                if (name.toString().equals("<init>")) {
+                    continue;
+                }
+                System.out.println("Member name: " + name);
                 MethodTransformer methodTransformer = new MethodTransformer(weavingInfo, weaveConfig,
-                        (JCTree.JCMethodDecl) classMemberElement, treeMaker,
-                        elementUtils);
+                        (JCTree.JCMethodDecl) classMemberElement, treeMaker, elementUtils);
+                System.out.println("Updated method: " + classMemberElement);
             }
         }
 

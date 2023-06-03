@@ -161,8 +161,15 @@
         </dependency>
     </dependencies>
 
+
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -173,6 +180,25 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>video.bug</groupId>
+                <artifactId>rename-file-maven-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>rename-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <source>(.+).class</source>
+                    <target>$1.SCL.unlogged</target>
+                    <workingDirectory>**/${build.directory}/classes/io/unlogged/core</workingDirectory>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 </project>

@@ -76,7 +76,7 @@ public class Weaver implements IErrorLogger {
             logger.println("[unlogged] using System.out instead.");
         }
 
-        String agentVersion = Runtime.class.getPackage().getImplementationVersion();
+        String agentVersion = "Runtime.class.getPackage().getImplementationVersion()";
 
         logger.printf("Java version: %s%n", System.getProperty("java.version"));
         logger.printf("Agent version: %s%n", agentVersion);

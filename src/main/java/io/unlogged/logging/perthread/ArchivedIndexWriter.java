@@ -64,11 +64,9 @@ public class ArchivedIndexWriter implements IndexOutputStream {
         initIndexQueues();
 
         errorLogger.log("prepare index archive: " + currentArchiveFile.getName());
-        archivedIndexOutputStream = new ZipOutputStream(
-                new BufferedOutputStream(new FileOutputStream(currentArchiveFile)));
+        archivedIndexOutputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(currentArchiveFile)));
         aggregatedValueSet = BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
-        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbes(
-                BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
+        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbes(BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
 
 
         initialiseIndexes();
@@ -335,10 +333,10 @@ public class ArchivedIndexWriter implements IndexOutputStream {
 
     public void addValueId(long value) {
 //        System.err.println("Add value to aggregated value filter: " + value);
-        aggregatedValueSet.add(value);
+//        aggregatedValueSet.add(value);
     }
 
     public void addProbeId(int value) {
-        aggregatedProbeIdSet.add(value);
+//        aggregatedProbeIdSet.add(value);
     }
 }
