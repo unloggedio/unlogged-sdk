@@ -1,5 +1,6 @@
 package io.unlogged.core.processor;
 
+import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.jvm.ClassWriter;
 import com.sun.tools.javac.main.JavaCompiler;
@@ -10,7 +11,8 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
 import io.unlogged.Unlogged;
-import io.unlogged.core.DiagnosticsReceiver;
+import io.unlogged.core.CleanupRegistry;
+import io.unlogged.core.javac.JavacTransformer;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
 import io.unlogged.weaver.Weaver;
@@ -30,9 +32,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URL;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class UnloggedProcessor extends AbstractProcessor {
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final IdentityHashMap<JCTree.JCCompilationUnit, Long> roots = new IdentityHashMap<JCTree.JCCompilationUnit, Long>();
     private ProcessingEnvironment unwrappedProcessingEnv;
     private Context context;
     private JavacElements elementUtils;
@@ -51,6 +52,8 @@ public class UnloggedProcessor extends AbstractProcessor {
     private JavacFiler javacFiler;
     private JavacProcessingEnvironment javacProcessingEnv;
     private Trees trees;
+    private JavacTransformer transformer;
+    private CleanupRegistry cleanup = new CleanupRegistry();
 
     public UnloggedProcessor() {
         System.out.println("HelloUnloggedProcessor");
@@ -224,18 +227,7 @@ public class UnloggedProcessor extends AbstractProcessor {
         context = ((JavacProcessingEnvironment) unwrappedProcessingEnv).getContext();
         elementUtils = (JavacElements) procEnv.getElementUtils();
         treeMaker = TreeMaker.instance(context);
-
-//        transformer = new JavacTransformer(procEnv.getMessager(), trees);
-//        SortedSet<Long> p = transformer.getPriorities();
-//        if (p.isEmpty()) {
-//            this.priorityLevels = new long[] {0L};
-//            this.priorityLevelsRequiringResolutionReset = new HashSet<Long>();
-//        } else {
-//            this.priorityLevels = new long[p.size()];
-//            int i = 0;
-//            for (Long prio : p) this.priorityLevels[i++] = prio;
-//            this.priorityLevelsRequiringResolutionReset = transformer.getPrioritiesRequiringResolutionReset();
-//        }
+        transformer = new JavacTransformer(procEnv.getMessager(), trees);
 
 
         WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
@@ -268,7 +260,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 //                filerFileManagerField.set(javacFiler, newFilerManager);
 //
 //                if (io.unlogged.core.javac.Javac.getJavaCompilerVersion() > 8
-//                        && !io.unlogged.core.javac.JavacHandlerUtil.inNetbeansCompileOnSave(context)) {
+//                        && !io.unlogged.core.handlers.JavacHandlerUtil.inNetbeansCompileOnSave(context)) {
 //                    replaceFileManagerJdk9(context, newFilerManager);
 //                }
 //            }
@@ -297,7 +289,6 @@ public class UnloggedProcessor extends AbstractProcessor {
         } catch (Exception e) {
         }
     }
-
 
     private void disablePartialReparseInNetBeansEditor(Context context) {
         try {
@@ -377,7 +368,6 @@ public class UnloggedProcessor extends AbstractProcessor {
         }
     }
 
-
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
@@ -387,6 +377,16 @@ public class UnloggedProcessor extends AbstractProcessor {
         }
 
         Set<? extends Element> rootElements = roundEnv.getRootElements();
+
+        for (Element element : rootElements) {
+            JCTree.JCCompilationUnit unit = toUnit(element);
+            if (unit == null) continue;
+            if (roots.containsKey(unit)) continue;
+            roots.put(unit, 0L);
+        }
+
+        transformer.transform(0L, context, new ArrayList<>(roots.keySet()), cleanup);
+
         for (Element classElement : rootElements) {
             JCTree elementTree = elementUtils.getTree(classElement);
             if (elementTree instanceof JCTree.JCClassDecl) {
@@ -396,6 +396,23 @@ public class UnloggedProcessor extends AbstractProcessor {
         }
         return true;
     }
+
+    private JCTree.JCCompilationUnit toUnit(Element element) {
+        TreePath path = null;
+        if (trees != null) {
+            try {
+                path = trees.getPath(element);
+            } catch (NullPointerException ignore) {
+                // Happens if a package-info.java doesn't contain a package declaration.
+                // https://github.com/projectlombok/lombok/issues/2184
+                // We can safely ignore those, since they do not need any processing
+            }
+        }
+        if (path == null) return null;
+
+        return (JCTree.JCCompilationUnit) path.getCompilationUnit();
+    }
+
 
     /**
      * This class casts the given processing environment to a JavacProcessingEnvironment. In case of

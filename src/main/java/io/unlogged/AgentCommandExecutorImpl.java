@@ -74,13 +74,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     }
                 }
                 if (objectInstanceByClass == null) {
-                    objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(),
-                            logger.getTargetClassLoader());
+                    objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(), logger.getTargetClassLoader());
                 }
 
-                objectClass = objectInstanceByClass.getClass();
+                objectClass = Class.forName(agentCommandRequest.getClassName(), false, logger.getTargetClassLoader());
 
-                targetClassLoader = objectInstanceByClass.getClass().getClassLoader();
+                targetClassLoader = objectInstanceByClass != null ? objectInstanceByClass.getClass().getClassLoader()
+                 : logger.getTargetClassLoader();
 
                 Method methodToExecute = null;
 

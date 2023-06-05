@@ -7,7 +7,7 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 
-public class MethodTransformer {
+public class MethodTransformer extends JCTree.Visitor {
 
     public static final String LOGGER_CLASS = "com/videobug/agent/logging/Logging";
 
@@ -33,6 +33,8 @@ public class MethodTransformer {
         this.treeMaker = treeMaker;
         this.weaveConfig = config;
         this.elementUtils = elementUtils;
+
+        String methodName = jcMethodDecl.getName().toString();
 
         addMethodEnterLog(jcMethodDecl);
 
@@ -66,15 +68,16 @@ public class MethodTransformer {
     private void addMethodEnterLog(JCTree.JCMethodDecl jcMethodDecl) {
 
         treeMaker.pos = jcMethodDecl.pos;
-        JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
-                treeMaker.Select(
-                        treeMaker.Ident(
-                                elementUtils.getName("System")
-                        ),
-                        elementUtils.getName("out")
-                ),
-                elementUtils.getName("println")
-        );
+        JCTree.JCFieldAccess printlnMethod = createSystemOutPrintln();
+
+        JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
+
+        jcMethodDecl.accept(this);
+
+        for (JCTree.JCStatement statement : methodBodyBlock.getStatements()) {
+            System.out.println("\t\tStatement: " + statement);
+        }
+
 
         jcMethodDecl.body = treeMaker.Block(0, List.of(
                         treeMaker.Exec(
@@ -87,10 +90,28 @@ public class MethodTransformer {
                                         )
                                 )
                         ),
-                        jcMethodDecl.body
+                        methodBodyBlock
                 )
         );
     }
 
+    private JCTree.JCFieldAccess createSystemOutPrintln() {
+        JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
+                treeMaker.Select(
+                        treeMaker.Ident(
+                                elementUtils.getName("System")
+                        ),
+                        elementUtils.getName("out")
+                ),
+                elementUtils.getName("println")
+        );
+        return printlnMethod;
+    }
 
+    @Override
+    public void visitApply(JCTree.JCMethodInvocation that) {
+        treeMaker.pos = that.pos;
+
+        super.visitApply(that);
+    }
 }
