@@ -72,7 +72,7 @@ public class MethodTransformer extends JCTree.Visitor {
 
         JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
 
-        jcMethodDecl.accept(this);
+//        jcMethodDecl.accept(this);
 
         for (JCTree.JCStatement statement : methodBodyBlock.getStatements()) {
             System.out.println("\t\tStatement: " + statement);
