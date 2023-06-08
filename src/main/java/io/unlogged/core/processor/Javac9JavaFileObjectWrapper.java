@@ -28,9 +28,9 @@ import java.io.*;
 import java.net.URI;
 
 class Javac9JavaFileObjectWrapper implements javax.tools.JavaFileObject {
-	private final LombokFileObject delegate;
+	private final UnloggedFileObject delegate;
 	
-	public Javac9JavaFileObjectWrapper(LombokFileObject delegate) {
+	public Javac9JavaFileObjectWrapper(UnloggedFileObject delegate) {
 		this.delegate = delegate;
 	}
 	

@@ -74,7 +74,7 @@ public class TypeLibrary {
 	}
 	
 	public static TypeLibrary createLibraryForSingleType(String fqnSingleton) {
-		if (LombokInternalAliasing.REVERSE_ALIASES.containsKey(fqnSingleton)) {
+		if (UnloggedInternalAliasing.REVERSE_ALIASES.containsKey(fqnSingleton)) {
 			// Internal aliasing is a little too complex to handle with the map-less 'efficient' implementation.
 			TypeLibrary tl = new TypeLibrary();
 			tl.addType(fqnSingleton);
@@ -91,7 +91,7 @@ public class TypeLibrary {
 	 * @param fullyQualifiedTypeName the FQN type name, such as 'java.lang.String'.
 	 */
 	public void addType(String fullyQualifiedTypeName) {
-		Collection<String> oldNames = LombokInternalAliasing.REVERSE_ALIASES.get(fullyQualifiedTypeName);
+		Collection<String> oldNames = UnloggedInternalAliasing.REVERSE_ALIASES.get(fullyQualifiedTypeName);
 		if (oldNames != null) for (String oldName : oldNames) addType(oldName);
 		
 		String dotBased = fullyQualifiedTypeName.replace("$", ".");

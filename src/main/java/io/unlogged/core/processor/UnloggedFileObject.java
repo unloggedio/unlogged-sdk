@@ -5,6 +5,6 @@ import java.nio.charset.CharsetDecoder;
 
 import javax.tools.JavaFileObject;
 
-public interface LombokFileObject extends JavaFileObject {
+public interface UnloggedFileObject extends JavaFileObject {
 	CharsetDecoder getDecoder(boolean ignoreEncodingErrors);
 }

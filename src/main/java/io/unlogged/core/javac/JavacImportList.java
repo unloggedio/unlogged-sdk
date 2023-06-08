@@ -27,7 +27,7 @@ import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
 import com.sun.tools.javac.tree.JCTree.JCImport;
 import com.sun.tools.javac.util.List;
 import io.unlogged.core.ImportList;
-import io.unlogged.core.LombokInternalAliasing;
+import io.unlogged.core.UnloggedInternalAliasing;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,7 +43,7 @@ public class JavacImportList implements ImportList {
 	
 	@Override public String getFullyQualifiedNameForSimpleName(String unqualified) {
 		String q = getFullyQualifiedNameForSimpleNameNoAliasing(unqualified);
-		return q == null ? null : LombokInternalAliasing.processAliases(q);
+		return q == null ? null : UnloggedInternalAliasing.processAliases(q);
 	}
 	
 	@Override public String getFullyQualifiedNameForSimpleNameNoAliasing(String unqualified) {

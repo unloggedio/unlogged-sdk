@@ -33,7 +33,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.charset.CharsetDecoder;
 
-final class InterceptingJavaFileObject implements LombokFileObject {
+final class InterceptingJavaFileObject implements UnloggedFileObject {
 	private final JavaFileObject delegate;
 	private final String fileName;
 	private final DiagnosticsReceiver diagnostics;

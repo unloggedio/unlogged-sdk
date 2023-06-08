@@ -12,11 +12,11 @@ import io.unlogged.core.DiagnosticsReceiver;
 
 final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
 	private final DiagnosticsReceiver diagnostics;
-	private final LombokFileObjects.Compiler compiler;
+	private final UnloggedFileObjects.Compiler compiler;
 	
 	InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics) {
 		super(original);
-		this.compiler = LombokFileObjects.getCompiler(original);
+		this.compiler = UnloggedFileObjects.getCompiler(original);
 		this.diagnostics = diagnostics;
 	}
 	
@@ -24,6 +24,6 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 		JavaFileObject fileObject = fileManager.getJavaFileForOutput(location, className, kind, sibling);
 		if (kind != Kind.CLASS) return fileObject;
 		
-		return LombokFileObjects.createIntercepting(compiler, fileObject, className, diagnostics);
+		return UnloggedFileObjects.createIntercepting(compiler, fileObject, className, diagnostics);
 	}
 }

@@ -28,7 +28,7 @@ import com.sun.tools.javac.util.Options;
 import java.util.HashSet;
 import java.util.Set;
 
-public abstract class LombokOptions extends Options {
+public abstract class UnloggedOptions extends Options {
 //	private boolean deleteLombokAnnotations = false;
 	private static final Set<JCCompilationUnit> changed = new HashSet<JCCompilationUnit>();
 //	private FormatPreferences formatPreferences = new FormatPreferences(null);
@@ -55,7 +55,7 @@ public abstract class LombokOptions extends Options {
 //		return options.deleteLombokAnnotations;
 //	}
 	
-	protected LombokOptions(Context context) {
+	protected UnloggedOptions(Context context) {
 		super(context);
 	}
 	

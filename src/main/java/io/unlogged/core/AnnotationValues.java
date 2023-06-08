@@ -41,7 +41,7 @@ import static io.unlogged.core.AST.*;
 public class AnnotationValues<A extends Annotation> {
 	private final Class<A> type;
 	private final Map<String, AnnotationValue> values;
-	private final LombokNode<?, ?, ?> ast;
+	private final UnloggedNode<?, ?, ?> ast;
 
 	/**
 	 * Represents a single method on the annotation class. For example, the value() method on the Getter annotation.
@@ -56,13 +56,13 @@ public class AnnotationValues<A extends Annotation> {
 		/** A list of the actual expressions. List is size 1 unless an array is provided. */
 		public final List<Object> expressions;
 		
-		private final LombokNode<?, ?, ?> node;
+		private final UnloggedNode<?, ?, ?> node;
 		private final boolean isExplicit;
 		
 		/**
 		 * Like the other constructor, but used for when the annotation method is initialized with an array value.
 		 */
-		public AnnotationValue(LombokNode<?, ?, ?> node, List<String> raws, List<Object> expressions, List<Object> valueGuesses, boolean isExplicit) {
+		public AnnotationValue(UnloggedNode<?, ?, ?> node, List<String> raws, List<Object> expressions, List<Object> valueGuesses, boolean isExplicit) {
 			this.node = node;
 			this.raws = raws;
 			this.expressions = expressions;
@@ -111,7 +111,7 @@ public class AnnotationValues<A extends Annotation> {
 	 * @param values a Map of method names to AnnotationValue instances, for example 'value -> annotationValue instance'.
 	 * @param ast The Annotation node.
 	 */
-	public AnnotationValues(Class<A> type, Map<String, AnnotationValue> values, LombokNode<?, ?, ?> ast) {
+	public AnnotationValues(Class<A> type, Map<String, AnnotationValue> values, UnloggedNode<?, ?, ?> ast) {
 		this.type = type;
 		this.values = values;
 		this.ast = ast;
@@ -125,7 +125,7 @@ public class AnnotationValues<A extends Annotation> {
 	 * Creates a new annotation wrapper with all default values, and using the provided ast as lookup anchor for
 	 * class literals.
 	 */
-	public static <A extends Annotation> AnnotationValues<A> of(Class<A> type, LombokNode<?, ?, ?> ast) {
+	public static <A extends Annotation> AnnotationValues<A> of(Class<A> type, UnloggedNode<?, ?, ?> ast) {
 		return new AnnotationValues<A>(type, Collections.<String, AnnotationValue>emptyMap(), ast);
 	}
 	
@@ -476,7 +476,7 @@ public class AnnotationValues<A extends Annotation> {
 		String prefix = typeName.indexOf('.') > -1 ? typeName.substring(0, typeName.indexOf('.')) : typeName;
 		
 		/* 1. Walk through type names in this source file at this level. */ {
-			LombokNode<?, ?, ?> n = ast;
+			UnloggedNode<?, ?, ?> n = ast;
 			walkThroughCU:
 			while (n != null) {
 				if (n.getKind() == Kind.TYPE) {
@@ -541,7 +541,7 @@ public class AnnotationValues<A extends Annotation> {
 		}
 	}
 	
-	private static String inLocalPackage(LombokNode<?, ?, ?> node, String typeName) {
+	private static String inLocalPackage(UnloggedNode<?, ?, ?> node, String typeName) {
 		StringBuilder result = new StringBuilder();
 		if (node != null && node.getPackageDeclaration() != null) result.append(node.getPackageDeclaration());
 		if (result.length() > 0) result.append('.');

@@ -23,37 +23,37 @@ package io.unlogged.core;
 
 import java.util.*;
 
-public final class LombokImmutableList<T> implements Iterable<T> {
+public final class UnloggedImmutableList<T> implements Iterable<T> {
 	private Object[] content;
-	private static final LombokImmutableList<?> EMPTY = new LombokImmutableList<Object>(new Object[0]);
+	private static final UnloggedImmutableList<?> EMPTY = new UnloggedImmutableList<Object>(new Object[0]);
 	
 	@SuppressWarnings("unchecked")
-	public static <T> LombokImmutableList<T> of() {
-		return (LombokImmutableList<T>) EMPTY;
+	public static <T> UnloggedImmutableList<T> of() {
+		return (UnloggedImmutableList<T>) EMPTY;
 	}
 	
-	public static <T> LombokImmutableList<T> of(T a) {
-		return new LombokImmutableList<T>(new Object[] {a});
+	public static <T> UnloggedImmutableList<T> of(T a) {
+		return new UnloggedImmutableList<T>(new Object[] {a});
 	}
 	
-	public static <T> LombokImmutableList<T> of(T a, T b) {
-		return new LombokImmutableList<T>(new Object[] {a, b});
+	public static <T> UnloggedImmutableList<T> of(T a, T b) {
+		return new UnloggedImmutableList<T>(new Object[] {a, b});
 	}
 	
-	public static <T> LombokImmutableList<T> of(T a, T b, T c) {
-		return new LombokImmutableList<T>(new Object[] {a, b, c});
+	public static <T> UnloggedImmutableList<T> of(T a, T b, T c) {
+		return new UnloggedImmutableList<T>(new Object[] {a, b, c});
 	}
 	
-	public static <T> LombokImmutableList<T> of(T a, T b, T c, T d) {
-		return new LombokImmutableList<T>(new Object[] {a, b, c, d});
+	public static <T> UnloggedImmutableList<T> of(T a, T b, T c, T d) {
+		return new UnloggedImmutableList<T>(new Object[] {a, b, c, d});
 	}
 	
-	public static <T> LombokImmutableList<T> of(T a, T b, T c, T d, T e) {
-		return new LombokImmutableList<T>(new Object[] {a, b, c, d, e});
+	public static <T> UnloggedImmutableList<T> of(T a, T b, T c, T d, T e) {
+		return new UnloggedImmutableList<T>(new Object[] {a, b, c, d, e});
 	}
 	
 	@SuppressWarnings({"all", "unchecked"})
-	public static <T> LombokImmutableList<T> of(T a, T b, T c, T d, T e, T f, T... g) {
+	public static <T> UnloggedImmutableList<T> of(T a, T b, T c, T d, T e, T f, T... g) {
 		Object[] rest = g == null ? new Object[] {null} : g;
 		Object[] val = new Object[rest.length + 6];
 		System.arraycopy(rest, 0, val, 6, rest.length);
@@ -63,49 +63,49 @@ public final class LombokImmutableList<T> implements Iterable<T> {
 		val[3] = d;
 		val[4] = e;
 		val[5] = f;
-		return new LombokImmutableList<T>(val);
+		return new UnloggedImmutableList<T>(val);
 	}
 	
-	public static <T> LombokImmutableList<T> copyOf(Collection<? extends T> list) {
-		return new LombokImmutableList<T>(list.toArray());
+	public static <T> UnloggedImmutableList<T> copyOf(Collection<? extends T> list) {
+		return new UnloggedImmutableList<T>(list.toArray());
 	}
 	
-	public static <T> LombokImmutableList<T> copyOf(Iterable<? extends T> iterable) {
+	public static <T> UnloggedImmutableList<T> copyOf(Iterable<? extends T> iterable) {
 		List<T> list = new ArrayList<T>();
 		for (T o : iterable) list.add(o);
 		return copyOf(list);
 	}
 	
-	public static <T> LombokImmutableList<T> copyOf(T[] array) {
+	public static <T> UnloggedImmutableList<T> copyOf(T[] array) {
 		Object[] content = new Object[array.length];
 		System.arraycopy(array, 0, content, 0, array.length);
-		return new LombokImmutableList<T>(content);
+		return new UnloggedImmutableList<T>(content);
 	}
 	
-	private LombokImmutableList(Object[] content) {
+	private UnloggedImmutableList(Object[] content) {
 		this.content = content;
 	}
 	
-	public LombokImmutableList<T> replaceElementAt(int idx, T newValue) {
+	public UnloggedImmutableList<T> replaceElementAt(int idx, T newValue) {
 		Object[] newContent = content.clone();
 		newContent[idx] = newValue;
-		return new LombokImmutableList<T>(newContent);
+		return new UnloggedImmutableList<T>(newContent);
 	}
 	
-	public LombokImmutableList<T> append(T newValue) {
+	public UnloggedImmutableList<T> append(T newValue) {
 		int len = content.length;
 		Object[] newContent = new Object[len + 1];
 		System.arraycopy(content, 0, newContent, 0, len);
 		newContent[len] = newValue;
-		return new LombokImmutableList<T>(newContent);
+		return new UnloggedImmutableList<T>(newContent);
 	}
 	
-	public LombokImmutableList<T> prepend(T newValue) {
+	public UnloggedImmutableList<T> prepend(T newValue) {
 		int len = content.length;
 		Object[] newContent = new Object[len + 1];
 		System.arraycopy(content, 0, newContent, 1, len);
 		newContent[0] = newValue;
-		return new LombokImmutableList<T>(newContent);
+		return new UnloggedImmutableList<T>(newContent);
 	}
 	
 	public int indexOf(T val) {
@@ -119,17 +119,17 @@ public final class LombokImmutableList<T> implements Iterable<T> {
 		return -1;
 	}
 	
-	public LombokImmutableList<T> removeElement(T val) {
+	public UnloggedImmutableList<T> removeElement(T val) {
 		int idx = indexOf(val);
 		return idx == -1 ? this : removeElementAt(idx);
 	}
 	
-	public LombokImmutableList<T> removeElementAt(int idx) {
+	public UnloggedImmutableList<T> removeElementAt(int idx) {
 		int len = content.length;
 		Object[] newContent = new Object[len - 1];
 		if (idx > 0) System.arraycopy(content, 0, newContent, 0, idx);
 		if (idx < len - 1) System.arraycopy(content, idx + 1, newContent, idx, len - idx - 1);
-		return new LombokImmutableList<T>(newContent);
+		return new UnloggedImmutableList<T>(newContent);
 	}
 	
 	public boolean isEmpty() {
@@ -179,9 +179,9 @@ public final class LombokImmutableList<T> implements Iterable<T> {
 	}
 	
 	@Override public boolean equals(Object obj) {
-		if (!(obj instanceof LombokImmutableList)) return false;
+		if (!(obj instanceof UnloggedImmutableList)) return false;
 		if (obj == this) return true;
-		return Arrays.equals(content, ((LombokImmutableList<?>) obj).content);
+		return Arrays.equals(content, ((UnloggedImmutableList<?>) obj).content);
 	}
 	
 	@Override public int hashCode() {

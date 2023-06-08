@@ -27,7 +27,7 @@ import io.unlogged.core.configuration.*;
 import java.net.URI;
 import java.util.Collections;
 
-public class LombokConfiguration {
+public class UnloggedConfiguration {
 	private static final ConfigurationResolver NULL_RESOLVER = new ConfigurationResolver() {
 		@SuppressWarnings("unchecked") @Override public <T> T resolve(ConfigurationKey<T> key) {
 			if (key.getType().isList()) return (T) Collections.emptyList();
@@ -51,7 +51,7 @@ public class LombokConfiguration {
 		}
 	}
 	
-	private LombokConfiguration() {
+	private UnloggedConfiguration() {
 		// prevent instantiation
 	}
 	

@@ -35,10 +35,10 @@ import static io.unlogged.core.AST.*;
  * @param N The common type of all AST nodes in the internal representation of the target platform.
  *          For example, JCTree for javac, and ASTNode for Eclipse.
  */
-public abstract class LombokNode<A extends AST<A, L, N>, L extends LombokNode<A, L, N>, N> implements DiagnosticsReceiver {
+public abstract class UnloggedNode<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N>, N> implements DiagnosticsReceiver {
 	protected final Kind kind;
 	protected final N node;
-	protected LombokImmutableList<L> children;
+	protected UnloggedImmutableList<L> children;
 	protected L parent;
 	
 	/** structurally significant are those nodes that can be annotated in java 1.6 or are method-like toplevels,
@@ -54,10 +54,10 @@ public abstract class LombokNode<A extends AST<A, L, N>, L extends LombokNode<A,
 	 * @param kind The kind of node represented by this object.
 	 */
 	@SuppressWarnings("unchecked")
-	protected LombokNode(N node, List<L> children, Kind kind) {
+	protected UnloggedNode(N node, List<L> children, Kind kind) {
 		this.kind = kind;
 		this.node = node;
-		this.children = children != null ? LombokImmutableList.copyOf(children) : LombokImmutableList.<L>of();
+		this.children = children != null ? UnloggedImmutableList.copyOf(children) : UnloggedImmutableList.<L>of();
 		for (L child : this.children) {
 			child.parent = (L) this;
 			if (!child.isStructurallySignificant)
@@ -176,7 +176,7 @@ public abstract class LombokNode<A extends AST<A, L, N>, L extends LombokNode<A,
 	/**
 	 * Returns all children nodes.
 	 */
-	public LombokImmutableList<L> down() {
+	public UnloggedImmutableList<L> down() {
 		return children;
 	}
 	
@@ -250,10 +250,10 @@ public abstract class LombokNode<A extends AST<A, L, N>, L extends LombokNode<A,
 	
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	private void gatherAndRemoveChildren(Map<N, L> map) {
-		for (LombokNode child : children) child.gatherAndRemoveChildren(map);
+		for (UnloggedNode child : children) child.gatherAndRemoveChildren(map);
 		getAst().identityDetector.remove(get());
 		map.put(get(), (L) this);
-		children = LombokImmutableList.of();
+		children = UnloggedImmutableList.of();
 		getAst().getNodeMap().remove(get());
 	}
 	

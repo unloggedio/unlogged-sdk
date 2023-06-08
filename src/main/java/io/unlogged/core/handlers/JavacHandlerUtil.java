@@ -32,7 +32,7 @@ import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import io.unlogged.core.AnnotationValues;
 import io.unlogged.core.ConfigurationKeys;
-import io.unlogged.core.LombokImmutableList;
+import io.unlogged.core.UnloggedImmutableList;
 import io.unlogged.core.TypeResolver;
 import io.unlogged.core.configuration.CheckerFrameworkVersion;
 import io.unlogged.core.configuration.NullAnnotationLibrary;
@@ -1247,7 +1247,7 @@ public class JavacHandlerUtil {
         return chainDots(node, -1, null, null, elems);
     }
 
-    public static JCExpression chainDots(JavacNode node, LombokImmutableList<String> elems) {
+    public static JCExpression chainDots(JavacNode node, UnloggedImmutableList<String> elems) {
         assert elems != null;
 
         JavacTreeMaker maker = node.getTreeMaker();
@@ -1491,7 +1491,7 @@ public class JavacHandlerUtil {
         if (typeNode != null && isPrimitive(typeNode)) return null;
         JCLiteral message = maker.Literal(exceptionType.toExceptionMessage(varName.toString(), customMessage));
 
-        LombokImmutableList<String> method = exceptionType.getMethod();
+        UnloggedImmutableList<String> method = exceptionType.getMethod();
         if (method != null) {
             return maker.Exec(maker.Apply(List.<JCExpression>nil(), chainDots(source, method),
                     List.of(maker.Ident(varName), message)));

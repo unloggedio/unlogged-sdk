@@ -23,7 +23,7 @@ package io.unlogged.core;
 
 import java.util.*;
 
-public class LombokInternalAliasing {
+public class UnloggedInternalAliasing {
 	public static final Map<String, String> ALIASES;
 	public static final Map<String, Collection<String>> REVERSE_ALIASES;
 	

@@ -9,7 +9,7 @@ import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
-import io.unlogged.Runtime;
+import io.unlogged.core.javac.JavacAST;
 import io.unlogged.logging.IErrorLogger;
 
 import java.io.*;
@@ -24,28 +24,18 @@ import java.util.ArrayList;
  */
 public class Weaver implements IErrorLogger {
 
-    public static final String PROPERTY_FILE = "weaving.properties";
-    public static final String SEPARATOR = ",";
-    public static final char SEPARATOR_CHAR = ',';
-    public static final String CLASS_ID_FILE = "classes.txt";
-    public static final String METHOD_ID_FILE = "methods.txt";
-    public static final String DATA_ID_FILE = "dataids.txt";
     public static final String ERROR_LOG_FILE = "log.txt";
 
     public static final String CATEGORY_WOVEN_CLASSES = "woven-classes";
     public static final String CATEGORY_ERROR_CLASSES = "error-classes";
 
     private final File outputDir;
-    private final String lineSeparator = "\n";
     private final WeaveConfig config;
-    final private TreeMaker treeMaker;
-    final private JavacElements elementUtils;
-    private Writer dataIdWriter;
+    private final UnloggedVisitor unloggedVisitor = new UnloggedVisitor();
     private PrintStream logger;
     private int classId;
     private int confirmedDataId;
     private int confirmedMethodId;
-    private Writer methodIdWriter;
     private boolean dumpOption;
 
     /**
@@ -54,12 +44,8 @@ public class Weaver implements IErrorLogger {
      *
      * @param outputDir    location to save the weave data
      * @param config       weave configuration
-     * @param treeMaker
-     * @param elementUtils
      */
-    public Weaver(File outputDir, WeaveConfig config, TreeMaker treeMaker, JavacElements elementUtils) {
-        this.treeMaker = treeMaker;
-        this.elementUtils = elementUtils;
+    public Weaver(File outputDir, WeaveConfig config) {
         assert outputDir.isDirectory() && outputDir.canWrite();
 
         this.outputDir = outputDir;
@@ -114,7 +100,7 @@ public class Weaver implements IErrorLogger {
      * Close files written by the weaver.
      */
     public void close() {
-        config.save(new File(outputDir, PROPERTY_FILE));
+        // todo write classWeave to class fields
     }
 
     /**
@@ -127,106 +113,104 @@ public class Weaver implements IErrorLogger {
     }
 
 
-    /**
-     * Execute bytecode injection for a given class.
-     *
-     * @param jcClassDecl is the content of the class.
-     */
-    public void weave(JCTree.JCClassDecl jcClassDecl) {
-        String className = jcClassDecl.getSimpleName().toString();
+//    /**
+//     * Execute bytecode injection for a given class.
+//     *
+//     * @param jcClassDecl is the content of the class.
+//     */
+//    public void weave(JCTree.JCClassDecl jcClassDecl) {
+//        String className = jcClassDecl.getSimpleName().toString();
+//
+//        String hash = getClassHash(jcClassDecl);
+//        LogLevel level = LogLevel.Normal;
+//        WeaveLog log = new WeaveLog(classId, confirmedMethodId, confirmedDataId);
+//        try {
+//
+//            String[] interfaces = new String[jcClassDecl.implementing.size()];
+//            List<JCTree.JCExpression> implementing = jcClassDecl.implementing;
+//
+//            for (int i = 0; i < implementing.size(); i++) {
+//                JCTree.JCExpression jcExpression = implementing.get(i);
+//                interfaces[i] = jcExpression.type.toString();
+//            }
+//
+//
+//            ClassInfo classIdEntry = new ClassInfo(
+//                    classId, "",
+//                    "classTransformer.getSourceFileName()",
+//                    className, level, hash,
+//                    "classTransformer.getClassLoaderIdentifier()",
+//                    interfaces,
+//                    "jcClassDecl.extending.type.toString()",
+//                    jcClassDecl.typarams.toString()
+//            );
+//
+//
+//            byte[] classWeaveInfoByteArray = finishClassProcess(classIdEntry, log);
+//            // TODO
+//            // Logging.recordWeaveInfo(classWeaveInfoByteArray, classIdEntry, log);
+//
+////            return classTransformer.getWeaveResult();
+//
+//        } catch (Throwable e) {
+//            log("Failed to weave " + className);
+//            log(e);
+//            if (dumpOption) doSave(className, jcClassDecl, CATEGORY_ERROR_CLASSES);
+//        }
+//    }
 
-        String hash = getClassHash(jcClassDecl);
-        LogLevel level = LogLevel.Normal;
-        WeaveLog log = new WeaveLog(classId, confirmedMethodId, confirmedDataId);
-        try {
-            ClassTransformer classTransformer = new ClassTransformer(log, config, jcClassDecl, treeMaker, elementUtils);
-
-
-            String[] interfaces = new String[jcClassDecl.implementing.size()];
-            List<JCTree.JCExpression> implementing = jcClassDecl.implementing;
-
-            for (int i = 0; i < implementing.size(); i++) {
-                JCTree.JCExpression jcExpression = implementing.get(i);
-                interfaces[i] = jcExpression.type.toString();
-            }
-
-
-            ClassInfo classIdEntry = new ClassInfo(
-                    classId, "",
-                    "classTransformer.getSourceFileName()",
-                    className, level, hash,
-                    "classTransformer.getClassLoaderIdentifier()",
-                    interfaces,
-                    "jcClassDecl.extending.type.toString()",
-                    jcClassDecl.typarams.toString()
-            );
-
-
-            byte[] classWeaveInfoByteArray = finishClassProcess(classIdEntry, log);
-            // TODO
-            // Logging.recordWeaveInfo(classWeaveInfoByteArray, classIdEntry, log);
-
-//            return classTransformer.getWeaveResult();
-
-        } catch (Throwable e) {
-            log("Failed to weave " + className);
-            log(e);
-            if (dumpOption) doSave(className, jcClassDecl, CATEGORY_ERROR_CLASSES);
-        }
-    }
-
-    /**
-     * Write the weaving result to files.
-     * Without calling this method, this object discards data when a weaving failed.
-     *
-     * @param classInfo records the class information.
-     * @param result    records the state after weaving.
-     * @return updated byte code with probes added
-     */
-    public byte[] finishClassProcess(ClassInfo classInfo, WeaveLog result) {
-
-        ByteArrayOutputStream boas = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(boas);
-
-        try {
-            byte[] classInfoBytes = classInfo.toBytes();
-//            System.err.println("ClassBytes: " + new String(classInfoBytes));
-            out.write(classInfoBytes);
-
-
-        } catch (IOException e) {
-            e.printStackTrace(logger);
-        }
-        classId++;
-
-        confirmedDataId = result.getNextDataId();
-        try {
-            ArrayList<DataInfo> dataInfoEntries = result.getDataEntries();
-            out.writeInt(dataInfoEntries.size());
-            for (DataInfo dataInfo : dataInfoEntries) {
-                byte[] classWeaveBytes = dataInfo.toBytes();
-                out.write(classWeaveBytes);
-            }
-        } catch (IOException e) {
-            e.printStackTrace(logger);
-        }
-
-        // Commit method IDs to the final output
-        confirmedMethodId = result.getNextMethodId();
-        try {
-            ArrayList<MethodInfo> methods = result.getMethods();
-            out.writeInt(methods.size());
-            for (MethodInfo method : methods) {
-                byte[] methodBytes = method.toBytes();
-                out.write(methodBytes);
-
-            }
-        } catch (IOException e) {
-            e.printStackTrace(logger);
-        }
-
-        return boas.toByteArray();
-    }
+//    /**
+//     * Write the weaving result to files.
+//     * Without calling this method, this object discards data when a weaving failed.
+//     *
+//     * @param classInfo records the class information.
+//     * @param result    records the state after weaving.
+//     * @return updated byte code with probes added
+//     */
+//    public byte[] finishClassProcess(ClassInfo classInfo, WeaveLog result) {
+//
+//        ByteArrayOutputStream boas = new ByteArrayOutputStream();
+//        DataOutputStream out = new DataOutputStream(boas);
+//
+//        try {
+//            byte[] classInfoBytes = classInfo.toBytes();
+////            System.err.println("ClassBytes: " + new String(classInfoBytes));
+//            out.write(classInfoBytes);
+//
+//
+//        } catch (IOException e) {
+//            e.printStackTrace(logger);
+//        }
+//        classId++;
+//
+//        confirmedDataId = result.getNextDataId();
+//        try {
+//            ArrayList<DataInfo> dataInfoEntries = result.getDataEntries();
+//            out.writeInt(dataInfoEntries.size());
+//            for (DataInfo dataInfo : dataInfoEntries) {
+//                byte[] classWeaveBytes = dataInfo.toBytes();
+//                out.write(classWeaveBytes);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace(logger);
+//        }
+//
+//        // Commit method IDs to the final output
+//        confirmedMethodId = result.getNextMethodId();
+//        try {
+//            ArrayList<MethodInfo> methods = result.getMethods();
+//            out.writeInt(methods.size());
+//            for (MethodInfo method : methods) {
+//                byte[] methodBytes = method.toBytes();
+//                out.write(methodBytes);
+//
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace(logger);
+//        }
+//
+//        return boas.toByteArray();
+//    }
 
 
     /**
@@ -239,17 +223,6 @@ public class Weaver implements IErrorLogger {
      */
     private String getClassHash(JCTree.JCClassDecl jcClassDecl) {
         return String.valueOf(jcClassDecl.hashCode());
-//        if (digest != null) {
-//            byte[] hash = digest.digest(targetClass);
-//            StringBuilder hex = new StringBuilder(hash.length * 2);
-//            for (byte b : hash) {
-//                String l = "0" + Integer.toHexString(b);
-//                hex.append(l.substring(l.length() - 2));
-//            }
-//            return hex.toString();
-//        } else {
-//            return "";
-//        }
     }
 
     /**
@@ -275,4 +248,7 @@ public class Weaver implements IErrorLogger {
         }
     }
 
+    public void weave(JavacAST ast) {
+        ast.traverse(unloggedVisitor);
+    }
 }

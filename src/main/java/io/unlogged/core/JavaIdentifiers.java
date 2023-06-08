@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 public class JavaIdentifiers {
 	private JavaIdentifiers() {}
 	
-	private static final LombokImmutableList<String> KEYWORDS = LombokImmutableList.of(
+	private static final UnloggedImmutableList<String> KEYWORDS = UnloggedImmutableList.of(
 			"public", "private", "protected",
 			"default", "switch", "case",
 			"for", "do", "goto", "const", "strictfp", "while", "if", "else",

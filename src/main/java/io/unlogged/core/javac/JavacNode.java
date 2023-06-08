@@ -31,7 +31,7 @@ import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.Name;
 import io.unlogged.core.AST.Kind;
 import io.unlogged.core.AnnotationValues;
-import io.unlogged.core.LombokNode;
+import io.unlogged.core.UnloggedNode;
 import io.unlogged.core.handlers.JavacHandlerUtil;
 
 import javax.lang.model.element.Element;
@@ -42,7 +42,7 @@ import java.util.List;
 /**
  * Javac specific version of the LombokNode class.
  */
-public class JavacNode extends LombokNode<JavacAST, JavacNode, JCTree> {
+public class JavacNode extends UnloggedNode<JavacAST, JavacNode, JCTree> {
 	private JavacAST ast;
 	/**
 	 * Passes through to the parent constructor.

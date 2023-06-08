@@ -24,7 +24,7 @@ package io.unlogged.core.handlers;
 import io.unlogged.core.AST;
 import io.unlogged.core.ConfigurationKeys;
 import io.unlogged.core.JavaIdentifiers;
-import io.unlogged.core.LombokNode;
+import io.unlogged.core.UnloggedNode;
 import io.unlogged.core.configuration.AllowHelper;
 import io.unlogged.core.configuration.CapitalizationStrategy;
 import io.unlogged.core.configuration.ConfigurationKey;
@@ -467,7 +467,7 @@ public class HandlerUtil {
      * If it is, this returns {@code true} and does nothing else.
      * If it isn't, this returns {@code false} and adds an error message to the supplied node.
      */
-    public static boolean checkName(String nameSpec, String identifier, LombokNode<?, ?, ?> errorNode) {
+    public static boolean checkName(String nameSpec, String identifier, UnloggedNode<?, ?, ?> errorNode) {
         if (identifier.isEmpty()) {
             errorNode.addError(nameSpec + " cannot be the empty string.");
             return false;
@@ -516,7 +516,7 @@ public class HandlerUtil {
         return Singulars.autoSingularize(plural);
     }
 
-    public static void handleFlagUsage(LombokNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key, String featureName) {
+    public static void handleFlagUsage(UnloggedNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key, String featureName) {
         FlagUsageType fut = node.getAst().readConfiguration(key);
 
         if (fut == null && AllowHelper.isAllowable(key)) {
@@ -532,7 +532,7 @@ public class HandlerUtil {
     }
 
     @SuppressWarnings("deprecation")
-    public static boolean shouldAddGenerated(LombokNode<?, ?, ?> node) {
+    public static boolean shouldAddGenerated(UnloggedNode<?, ?, ?> node) {
         Boolean add = node.getAst().readConfiguration(ConfigurationKeys.ADD_JAVAX_GENERATED_ANNOTATIONS);
         if (add != null) return add;
         return Boolean.TRUE.equals(node.getAst().readConfiguration(ConfigurationKeys.ADD_GENERATED_ANNOTATIONS));
@@ -749,12 +749,12 @@ public class HandlerUtil {
 //		return new ArrayList<String>(names);
 //	}
 
-    public static void handleExperimentalFlagUsage(LombokNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key, String featureName) {
+    public static void handleExperimentalFlagUsage(UnloggedNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key, String featureName) {
         handleFlagUsage(node, key, featureName, ConfigurationKeys.EXPERIMENTAL_FLAG_USAGE,
                 "any lombok.experimental feature");
     }
 
-    public static void handleFlagUsage(LombokNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key1, String featureName1, ConfigurationKey<FlagUsageType> key2, String featureName2) {
+    public static void handleFlagUsage(UnloggedNode<?, ?, ?> node, ConfigurationKey<FlagUsageType> key1, String featureName1, ConfigurationKey<FlagUsageType> key2, String featureName2) {
         FlagUsageType fut1 = node.getAst().readConfiguration(key1);
         FlagUsageType fut2 = node.getAst().readConfiguration(key2);
 
@@ -853,7 +853,7 @@ public class HandlerUtil {
      * @param suffix Something like {@code running}.
      * @return prefix + smartly title-cased suffix. For example, {@code setRunning}.
      */
-    public static String buildAccessorName(LombokNode<?, ?, ?> node, String prefix, String suffix) {
+    public static String buildAccessorName(UnloggedNode<?, ?, ?> node, String prefix, String suffix) {
         CapitalizationStrategy capitalizationStrategy = node.getAst()
                 .readConfigurationOr(ConfigurationKeys.ACCESSORS_JAVA_BEANS_SPEC_CAPITALIZATION,
                         CapitalizationStrategy.defaultValue());

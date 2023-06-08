@@ -22,7 +22,7 @@
 package io.unlogged.core.configuration;
 
 
-import io.unlogged.core.LombokImmutableList;
+import io.unlogged.core.UnloggedImmutableList;
 
 @ExampleValueString("[NullPointerException | IllegalArgumentException | Assertion | JDK | Guava]")
 public enum NullCheckExceptionType {
@@ -31,7 +31,7 @@ public enum NullCheckExceptionType {
 			return "java.lang.IllegalArgumentException";
 		}
 
-		@Override public LombokImmutableList<String> getMethod() {
+		@Override public UnloggedImmutableList<String> getMethod() {
 			return null;
 		}
 	},
@@ -40,7 +40,7 @@ public enum NullCheckExceptionType {
 			return "java.lang.NullPointerException";
 		}
 
-		@Override public LombokImmutableList<String> getMethod() {
+		@Override public UnloggedImmutableList<String> getMethod() {
 			return null;
 		}
 	},
@@ -49,7 +49,7 @@ public enum NullCheckExceptionType {
 			return null;
 		}
 
-		@Override public LombokImmutableList<String> getMethod() {
+		@Override public UnloggedImmutableList<String> getMethod() {
 			return null;
 		}
 	},
@@ -58,7 +58,7 @@ public enum NullCheckExceptionType {
 			return null;
 		}
 
-		@Override public LombokImmutableList<String> getMethod() {
+		@Override public UnloggedImmutableList<String> getMethod() {
 			return METHOD_JDK;
 		}
 	},
@@ -67,13 +67,13 @@ public enum NullCheckExceptionType {
 			return null;
 		}
 
-		@Override public LombokImmutableList<String> getMethod() {
+		@Override public UnloggedImmutableList<String> getMethod() {
 			return METHOD_GUAVA;
 		}
 	};
 	
-	private static final LombokImmutableList<String> METHOD_JDK = LombokImmutableList.of("java", "util", "Objects", "requireNonNull");
-	private static final LombokImmutableList<String> METHOD_GUAVA = LombokImmutableList.of("com", "google", "common", "base", "Preconditions", "checkNotNull");
+	private static final UnloggedImmutableList<String> METHOD_JDK = UnloggedImmutableList.of("java", "util", "Objects", "requireNonNull");
+	private static final UnloggedImmutableList<String> METHOD_GUAVA = UnloggedImmutableList.of("com", "google", "common", "base", "Preconditions", "checkNotNull");
 	
 	public String toExceptionMessage(String fieldName, String customMessage) {
 		if (customMessage == null) return fieldName + " is marked non-null but is null";
@@ -82,5 +82,5 @@ public enum NullCheckExceptionType {
 	
 	public abstract String getExceptionType();
 	
-	public abstract LombokImmutableList<String> getMethod();
+	public abstract UnloggedImmutableList<String> getMethod();
 }

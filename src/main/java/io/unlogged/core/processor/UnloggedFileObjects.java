@@ -10,10 +10,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public final class LombokFileObjects {
+public final class UnloggedFileObjects {
 
     private static final List<String> KNOWN_JAVA9_FILE_MANAGERS = Arrays.asList(
             "com.google.errorprone.MaskedClassLoader$MaskedFileManager",
@@ -25,7 +24,7 @@ public final class LombokFileObjects {
     );
     private static Constructor<?> j9CompilerConstructor = null;
 
-    private LombokFileObjects() {
+    private UnloggedFileObjects() {
     }
 
     static Method getDecoderMethod(String className) {
@@ -148,7 +147,7 @@ public final class LombokFileObjects {
 //            }
 //        };
 
-        JavaFileObject wrap(LombokFileObject fileObject);
+        JavaFileObject wrap(UnloggedFileObject fileObject);
 
         Method getDecoderMethod();
     }

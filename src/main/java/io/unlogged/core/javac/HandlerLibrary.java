@@ -30,9 +30,13 @@ import io.unlogged.core.TypeLibrary;
 import io.unlogged.core.TypeResolver;
 import io.unlogged.core.configuration.ConfigurationKeysLoader;
 import io.unlogged.core.handlers.JavacHandlerUtil;
+import io.unlogged.weaver.WeaveConfig;
+import io.unlogged.weaver.WeaveParameters;
+import io.unlogged.weaver.Weaver;
 
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
+import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -51,6 +55,8 @@ public class HandlerLibrary {
     private final Map<String, List<AnnotationHandlerContainer<?>>> annotationHandlers = new HashMap<String, List<AnnotationHandlerContainer<?>>>();
     private final Collection<VisitorContainer> visitorHandlers = new ArrayList<VisitorContainer>();
     private final Messager messager;
+    private final Weaver weaver;
+    private final Trees trees;
     private SortedSet<Long> priorities;
     private SortedSet<Long> prioritiesRequiringResolutionReset;
 
@@ -58,9 +64,14 @@ public class HandlerLibrary {
      * Creates a new HandlerLibrary that will report any problems or errors to the provided messager.
      * You probably want to use {@link #load(Messager, Trees)} instead.
      */
-    public HandlerLibrary(Messager messager) {
+    public HandlerLibrary(Messager messager, Trees trees) {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
+        this.trees = trees;
+        String agentArgs = "";
+        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
+        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
+        this.weaver = new Weaver(new File("./session"), weaveConfig);
     }
 
     /**
@@ -69,39 +80,38 @@ public class HandlerLibrary {
      * to the handle methods will defer to these handlers.
      */
     public static HandlerLibrary load(Messager messager, Trees trees) {
-        HandlerLibrary library = new HandlerLibrary(messager);
-
-        try {
-            loadAnnotationHandlers(library, trees);
-            loadVisitorHandlers(library, trees);
-        } catch (IOException e) {
-            System.err.println("Lombok isn't running due to misconfigured SPI files: " + e);
-        }
-
-        library.calculatePriorities();
+        HandlerLibrary library = new HandlerLibrary(messager, trees);
+//        try {
+//            loadAnnotationHandlers(library, trees);
+//            loadVisitorHandlers(library, trees);
+//        } catch (IOException e) {
+//            System.err.println("Lombok isn't running due to misconfigured SPI files: " + e);
+//        }
+//
+//        library.calculatePriorities();
 
         return library;
     }
 
-    /**
-     * Uses SPI Discovery to find implementations of {@link JavacAnnotationHandler}.
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void loadAnnotationHandlers(HandlerLibrary lib, Trees trees) throws IOException {
-        //No, that seemingly superfluous reference to JavacAnnotationHandler's classloader is not in fact superfluous!
-        for (JavacAnnotationHandler handler : SpiLoadUtil.findServices(JavacAnnotationHandler.class,
-                JavacAnnotationHandler.class.getClassLoader())) {
-            handler.setTrees(trees);
-            Class<? extends Annotation> annotationClass = handler.getAnnotationHandledByThisHandler();
-            AnnotationHandlerContainer<?> container = new AnnotationHandlerContainer(handler, annotationClass);
-            String annotationClassName = container.annotationClass.getName().replace("$", ".");
-            List<AnnotationHandlerContainer<?>> list = lib.annotationHandlers.get(annotationClassName);
-            if (list == null)
-                lib.annotationHandlers.put(annotationClassName, list = new ArrayList<AnnotationHandlerContainer<?>>(1));
-            list.add(container);
-            lib.typeLibrary.addType(container.annotationClass.getName());
-        }
-    }
+//    /**
+//     * Uses SPI Discovery to find implementations of {@link JavacAnnotationHandler}.
+//     */
+//    @SuppressWarnings({"rawtypes", "unchecked"})
+//    private static void loadAnnotationHandlers(HandlerLibrary lib, Trees trees) throws IOException {
+//        //No, that seemingly superfluous reference to JavacAnnotationHandler's classloader is not in fact superfluous!
+//        for (JavacAnnotationHandler handler : SpiLoadUtil.findServices(JavacAnnotationHandler.class,
+//                JavacAnnotationHandler.class.getClassLoader())) {
+//            handler.setTrees(trees);
+//            Class<? extends Annotation> annotationClass = handler.getAnnotationHandledByThisHandler();
+//            AnnotationHandlerContainer<?> container = new AnnotationHandlerContainer(handler, annotationClass);
+//            String annotationClassName = container.annotationClass.getName().replace("$", ".");
+//            List<AnnotationHandlerContainer<?>> list = lib.annotationHandlers.get(annotationClassName);
+//            if (list == null)
+//                lib.annotationHandlers.put(annotationClassName, list = new ArrayList<AnnotationHandlerContainer<?>>(1));
+//            list.add(container);
+//            lib.typeLibrary.addType(container.annotationClass.getName());
+//        }
+//    }
 
     /**
      * Uses SPI Discovery to find implementations of {@link JavacASTVisitor}.
@@ -221,13 +231,12 @@ public class HandlerLibrary {
     /**
      * Will call all registered {@link JavacASTVisitor} instances.
      */
-    public void callASTVisitors(JavacAST ast, long priority) {
-        for (VisitorContainer container : visitorHandlers)
-            try {
-                if (container.getPriority() == priority) ast.traverse(container.visitor);
-            } catch (Throwable t) {
-                javacError(String.format("Lombok visitor handler %s failed", container.visitor.getClass()), t);
-            }
+    public void callASTVisitors(JavacAST ast) {
+        weaver.weave(ast);
+    }
+
+    public void finish() {
+        weaver.close();
     }
 
     private static class VisitorContainer {

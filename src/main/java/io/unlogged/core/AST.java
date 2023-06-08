@@ -44,7 +44,7 @@ import static io.unlogged.core.processor.Util.sneakyThrow;
  * @param N The common type of all AST nodes in the internal representation of the target platform.
  *          For example, JCTree for javac, and ASTNode for Eclipse.
  */
-public abstract class AST<A extends AST<A, L, N>, L extends LombokNode<A, L, N>, N> {
+public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N>, N> {
 	/** The kind of node represented by a given AST.Node object. */
 	public enum Kind {
 		COMPILATION_UNIT, TYPE, FIELD, INITIALIZER, METHOD, ANNOTATION, ARGUMENT, LOCAL, STATEMENT, TYPE_USE;
@@ -195,7 +195,7 @@ public abstract class AST<A extends AST<A, L, N>, L extends LombokNode<A, L, N>,
 			oldChild.parent = targetNode;
 		}
 		
-		targetNode.children = LombokImmutableList.copyOf(children);
+		targetNode.children = UnloggedImmutableList.copyOf(children);
 		
 		return targetNode;
 	}
@@ -430,7 +430,7 @@ public abstract class AST<A extends AST<A, L, N>, L extends LombokNode<A, L, N>,
 	public final <T> T readConfiguration(ConfigurationKey<T> key) {
 		long start = configTracker == null ? 0L : configTracker.start();
 		try {
-			return LombokConfiguration.read(key, this);
+			return UnloggedConfiguration.read(key, this);
 		} finally {
 			if (configTracker != null) configTracker.end(start);
 		}
@@ -442,7 +442,7 @@ public abstract class AST<A extends AST<A, L, N>, L extends LombokNode<A, L, N>,
 	public final <T> T readConfigurationOr(ConfigurationKey<T> key, T defaultValue) {
 		long start = configTracker == null ? 0L : configTracker.start();
 		try {
-			T value = LombokConfiguration.read(key, this);
+			T value = UnloggedConfiguration.read(key, this);
 			return value != null ? value : defaultValue;
 		} finally {
 			if (configTracker != null) configTracker.end(start);

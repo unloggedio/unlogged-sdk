@@ -21,7 +21,7 @@ import java.util.Set;
 
 import static io.unlogged.core.Augments.ClassLoader_lombokAlreadyAddedTo;
 
-@SupportedAnnotationTypes("io.unlogged.Unlogged")
+@SupportedAnnotationTypes("*")
 public class AnnotationProcessor extends AbstractProcessor {
 
     private final List<ProcessorDescriptor> registered = Arrays.asList(new JavacDescriptor());
@@ -69,7 +69,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     }
 
     /**
-     * This method is a simplified version of {@link lombok.javac.apt.LombokProcessor#getJavacProcessingEnvironment}
+     * This method is a simplified version of {@link io.unlogged.core.processor.UnloggedProcessor#getJavacProcessingEnvironment}
      * It simply returns the processing environment, but in case of gradle incremental compilation,
      * the delegate ProcessingEnvironment of the gradle wrapper is returned.
      */

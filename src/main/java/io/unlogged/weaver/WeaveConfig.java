@@ -148,7 +148,7 @@ public class WeaveConfig {
         this.password = weaveParameters.getPassword();
 
         this.sessionId = UUID.randomUUID().toString();
-        this.processId = getProcessId(new Random().nextInt());
+//        this.processId = getProcessId(new Random().nextInt());
     }
 
     private static Integer getProcessId(final Integer fallback) {

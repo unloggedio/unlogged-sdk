@@ -10,7 +10,6 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
-import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.javac.JavacTransformer;
 import io.unlogged.weaver.WeaveConfig;
@@ -24,7 +23,6 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileManager;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -232,7 +230,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 
         WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
         WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
-        weaver = new Weaver(new File("./session"), weaveConfig, treeMaker, elementUtils);
+//        weaver = new Weaver(new File("./session"), weaveConfig, treeMaker, elementUtils);
 
     }
 
@@ -371,9 +369,9 @@ public class UnloggedProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
-        Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(Unlogged.class);
-        if (elements == null || elements.size() == 0) {
-            return true;
+        if (roundEnv.processingOver()) {
+            transformer.finish();
+            return false;
         }
 
         Set<? extends Element> rootElements = roundEnv.getRootElements();
@@ -385,15 +383,8 @@ public class UnloggedProcessor extends AbstractProcessor {
             roots.put(unit, 0L);
         }
 
-        transformer.transform(0L, context, new ArrayList<>(roots.keySet()), cleanup);
+        transformer.transform(context, new ArrayList<>(roots.keySet()), cleanup);
 
-        for (Element classElement : rootElements) {
-            JCTree elementTree = elementUtils.getTree(classElement);
-            if (elementTree instanceof JCTree.JCClassDecl) {
-                JCTree.JCClassDecl classTree = (JCTree.JCClassDecl) elementTree;
-                weaver.weave(classTree);
-            }
-        }
         return true;
     }
 

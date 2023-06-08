@@ -36,14 +36,14 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Set;
 
-class Java9Compiler implements LombokFileObjects.Compiler {
+class Java9Compiler implements UnloggedFileObjects.Compiler {
     private final BaseFileManager fileManager;
 
     public Java9Compiler(JavaFileManager jfm) {
         fileManager = asBaseFileManager(jfm);
     }
 
-    private static Path toPath(LombokFileObject fileObject) {
+    private static Path toPath(UnloggedFileObject fileObject) {
         URI uri = fileObject.toUri();
         if (uri.getScheme() == null) {
             uri = URI.create("file:///" + uri);
@@ -63,7 +63,7 @@ class Java9Compiler implements LombokFileObjects.Compiler {
     }
 
     @Override
-    public JavaFileObject wrap(LombokFileObject fileObject) {
+    public JavaFileObject wrap(UnloggedFileObject fileObject) {
         Path p;
         try {
             p = toPath(fileObject);
