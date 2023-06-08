@@ -25,18 +25,17 @@ import com.sun.source.util.Trees;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
-import io.unlogged.core.SpiLoadUtil;
+import io.unlogged.Unlogged;
 import io.unlogged.core.TypeLibrary;
 import io.unlogged.core.TypeResolver;
 import io.unlogged.core.configuration.ConfigurationKeysLoader;
 import io.unlogged.core.handlers.JavacHandlerUtil;
-import io.unlogged.weaver.WeaveConfig;
-import io.unlogged.weaver.WeaveParameters;
-import io.unlogged.weaver.Weaver;
+import io.unlogged.core.handlers.UnloggedAnnotationHandler;
+import io.unlogged.weaver.DataInfoProvider;
+import io.unlogged.weaver.UnloggedVisitor;
 
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
-import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -55,7 +54,8 @@ public class HandlerLibrary {
     private final Map<String, List<AnnotationHandlerContainer<?>>> annotationHandlers = new HashMap<String, List<AnnotationHandlerContainer<?>>>();
     private final Collection<VisitorContainer> visitorHandlers = new ArrayList<VisitorContainer>();
     private final Messager messager;
-    private final Weaver weaver;
+    //    private final Weaver weaver;
+    private final UnloggedVisitor unloggedVisitor = new UnloggedVisitor(new DataInfoProvider());
     private final Trees trees;
     private SortedSet<Long> priorities;
     private SortedSet<Long> prioritiesRequiringResolutionReset;
@@ -68,10 +68,10 @@ public class HandlerLibrary {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
         this.trees = trees;
-        String agentArgs = "";
-        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
-        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
-        this.weaver = new Weaver(new File("./session"), weaveConfig);
+//        String agentArgs = "";
+//        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
+//        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
+//        this.weaver = new Weaver(new File("./session"), weaveConfig);
     }
 
     /**
@@ -81,24 +81,33 @@ public class HandlerLibrary {
      */
     public static HandlerLibrary load(Messager messager, Trees trees) {
         HandlerLibrary library = new HandlerLibrary(messager, trees);
-//        try {
-//            loadAnnotationHandlers(library, trees);
+        try {
+            loadAnnotationHandlers(library, trees);
 //            loadVisitorHandlers(library, trees);
-//        } catch (IOException e) {
-//            System.err.println("Lombok isn't running due to misconfigured SPI files: " + e);
-//        }
+        } catch (IOException e) {
+            System.err.println("Unlogged isn't running due to misconfigured SPI files: " + e);
+        }
 //
 //        library.calculatePriorities();
 
         return library;
     }
 
-//    /**
-//     * Uses SPI Discovery to find implementations of {@link JavacAnnotationHandler}.
-//     */
-//    @SuppressWarnings({"rawtypes", "unchecked"})
-//    private static void loadAnnotationHandlers(HandlerLibrary lib, Trees trees) throws IOException {
-//        //No, that seemingly superfluous reference to JavacAnnotationHandler's classloader is not in fact superfluous!
+    /**
+     * Uses SPI Discovery to find implementations of {@link JavacAnnotationHandler}.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void loadAnnotationHandlers(HandlerLibrary lib, Trees trees) throws IOException {
+
+        List<AnnotationHandlerContainer<?>> list = new ArrayList<>(1);
+        AnnotationHandlerContainer<Unlogged> unloggedHandlerContainer =
+                new AnnotationHandlerContainer<>(new UnloggedAnnotationHandler(), Unlogged.class);
+        list.add(unloggedHandlerContainer);
+        lib.annotationHandlers.put(Unlogged.class.getCanonicalName(), list);
+
+        lib.typeLibrary.addType(unloggedHandlerContainer.annotationClass.getName());
+
+        //No, that seemingly superfluous reference to JavacAnnotationHandler's classloader is not in fact superfluous!
 //        for (JavacAnnotationHandler handler : SpiLoadUtil.findServices(JavacAnnotationHandler.class,
 //                JavacAnnotationHandler.class.getClassLoader())) {
 //            handler.setTrees(trees);
@@ -111,19 +120,19 @@ public class HandlerLibrary {
 //            list.add(container);
 //            lib.typeLibrary.addType(container.annotationClass.getName());
 //        }
-//    }
-
-    /**
-     * Uses SPI Discovery to find implementations of {@link JavacASTVisitor}.
-     */
-    private static void loadVisitorHandlers(HandlerLibrary lib, Trees trees) throws IOException {
-        //No, that seemingly superfluous reference to JavacASTVisitor's classloader is not in fact superfluous!
-        for (JavacASTVisitor visitor : SpiLoadUtil.findServices(JavacASTVisitor.class,
-                JavacASTVisitor.class.getClassLoader())) {
-            visitor.setTrees(trees);
-            lib.visitorHandlers.add(new VisitorContainer(visitor));
-        }
     }
+
+//    /**
+//     * Uses SPI Discovery to find implementations of {@link JavacASTVisitor}.
+//     */
+//    private static void loadVisitorHandlers(HandlerLibrary lib, Trees trees) throws IOException {
+//        //No, that seemingly superfluous reference to JavacASTVisitor's classloader is not in fact superfluous!
+//        for (JavacASTVisitor visitor : SpiLoadUtil.findServices(JavacASTVisitor.class,
+//                JavacASTVisitor.class.getClassLoader())) {
+//            visitor.setTrees(trees);
+//            lib.visitorHandlers.add(new VisitorContainer(visitor));
+//        }
+//    }
 
     public SortedSet<Long> getPriorities() {
         return priorities;
@@ -133,25 +142,25 @@ public class HandlerLibrary {
         return prioritiesRequiringResolutionReset;
     }
 
-    private void calculatePriorities() {
-        SortedSet<Long> set = new TreeSet<Long>();
-        SortedSet<Long> resetNeeded = new TreeSet<Long>();
-        for (List<AnnotationHandlerContainer<?>> containers : annotationHandlers.values()) {
-            for (AnnotationHandlerContainer<?> container : containers) {
-                set.add(container.getPriority());
-                if (container.isResolutionResetNeeded()) resetNeeded.add(container.getPriority());
-            }
-        }
-        for (VisitorContainer container : visitorHandlers) {
-            set.add(container.getPriority());
-            if (container.isResolutionResetNeeded()) resetNeeded.add(container.getPriority());
-        }
-        this.priorities = Collections.unmodifiableSortedSet(set);
-        this.prioritiesRequiringResolutionReset = Collections.unmodifiableSortedSet(resetNeeded);
-    }
+//    private void calculatePriorities() {
+//        SortedSet<Long> set = new TreeSet<Long>();
+//        SortedSet<Long> resetNeeded = new TreeSet<Long>();
+//        for (List<AnnotationHandlerContainer<?>> containers : annotationHandlers.values()) {
+//            for (AnnotationHandlerContainer<?> container : containers) {
+//                set.add(container.getPriority());
+//                if (container.isResolutionResetNeeded()) resetNeeded.add(container.getPriority());
+//            }
+//        }
+//        for (VisitorContainer container : visitorHandlers) {
+//            set.add(container.getPriority());
+//            if (container.isResolutionResetNeeded()) resetNeeded.add(container.getPriority());
+//        }
+//        this.priorities = Collections.unmodifiableSortedSet(set);
+//        this.prioritiesRequiringResolutionReset = Collections.unmodifiableSortedSet(resetNeeded);
+//    }
 
     /**
-     * Generates a warning in the Messager that was used to initialize this HandlerLibrary.
+     * Generates a warning in the Messenger that was used to initialize this HandlerLibrary.
      */
     public void javacWarning(String message) {
         javacWarning(message, null);
@@ -210,13 +219,13 @@ public class HandlerLibrary {
 
         for (AnnotationHandlerContainer<?> container : containers) {
             try {
-                if (container.getPriority() == priority) {
-                    if (checkAndSetHandled(annotation)) {
-                        container.handle(node);
-                    } else {
-                        if (container.isEvenIfAlreadyHandled()) container.handle(node);
-                    }
+//                if (container.getPriority() == priority) {
+                if (checkAndSetHandled(annotation)) {
+                    container.handle(node);
+                } else {
+                    if (container.isEvenIfAlreadyHandled()) container.handle(node);
                 }
+//                }
             } catch (AnnotationValueDecodeFail fail) {
                 fail.owner.setError(fail.getMessage(), fail.idx);
             } catch (Throwable t) {
@@ -232,11 +241,11 @@ public class HandlerLibrary {
      * Will call all registered {@link JavacASTVisitor} instances.
      */
     public void callASTVisitors(JavacAST ast) {
-        weaver.weave(ast);
+        ast.traverse(unloggedVisitor);
     }
 
     public void finish() {
-        weaver.close();
+        // todo
     }
 
     private static class VisitorContainer {

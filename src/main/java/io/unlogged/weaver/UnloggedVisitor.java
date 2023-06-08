@@ -4,6 +4,7 @@ import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
+import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.javac.JavacASTAdapter;
 import io.unlogged.core.javac.JavacNode;
 import io.unlogged.core.javac.JavacTreeMaker;
@@ -72,19 +73,21 @@ public class UnloggedVisitor extends JavacASTAdapter {
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
 
-        JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
-                treeMaker.Select(
-                        treeMaker.Select(treeMaker.Select(
-                                treeMaker.Ident(
-                                        methodNode.toName("io")
-                                ),
-                                methodNode.toName("unlogged")
-                        ), methodNode.toName("logging")
-                        ),
-                        methodNode.toName("Logging")
-                ),
-                methodNode.toName("recordEvent")
-        );
+        JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode,
+                "io.unlogged.logging.Logging.recordEvent");
+//        JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
+//                treeMaker.Select(
+//                        treeMaker.Select(treeMaker.Select(
+//                                treeMaker.Ident(
+//                                        methodNode.toName("io")
+//                                ),
+//                                methodNode.toName("unlogged")
+//                        ), methodNode.toName("logging")
+//                        ),
+//                        methodNode.toName("Logging")
+//                ),
+//                methodNode.toName("recordEvent")
+//        );
 
         JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
 

@@ -3,6 +3,8 @@ package io.unlogged.logging;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.impl.EventStreamAggregatedLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
+import io.unlogged.logging.util.ObjectIdAggregatedStream;
+import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,23 +28,23 @@ public class Logging {
 
 
     public static EventStreamAggregatedLogger initialiseAggregatedLogger(
-            IErrorLogger errorLogger,
             AggregatedFileLogger aggregatedLogger,
             File outputDir) throws IOException {
-        EventStreamAggregatedLogger instance = new EventStreamAggregatedLogger(outputDir, aggregatedLogger);
+        TypeIdAggregatedStreamMap typeToId = new TypeIdAggregatedStreamMap(aggregatedLogger);
+        ObjectIdAggregatedStream objectIdMap = new ObjectIdAggregatedStream(aggregatedLogger, typeToId, outputDir);
+
+        EventStreamAggregatedLogger instance = new EventStreamAggregatedLogger(objectIdMap, aggregatedLogger);
         INSTANCE = instance;
         return instance;
     }
 
-    public static DetailedEventStreamAggregatedLogger
-    initialiseDetailedAggregatedLogger(
-            String includedPackage,
-            AggregatedFileLogger aggregatedLogger,
-            File outputDir
+    public static DetailedEventStreamAggregatedLogger initialiseDetailedAggregatedLogger(
+            AggregatedFileLogger aggregatedLogger, File outputDir
     ) throws IOException {
-        DetailedEventStreamAggregatedLogger instance =
-                new DetailedEventStreamAggregatedLogger(includedPackage, outputDir,
-                        aggregatedLogger);
+        TypeIdAggregatedStreamMap typeToId = new TypeIdAggregatedStreamMap(aggregatedLogger);
+        ObjectIdAggregatedStream objectIdMap = new ObjectIdAggregatedStream(aggregatedLogger, typeToId, outputDir);
+
+        DetailedEventStreamAggregatedLogger instance = new DetailedEventStreamAggregatedLogger(objectIdMap, aggregatedLogger);
         INSTANCE = instance;
         return instance;
     }
@@ -387,4 +389,8 @@ public class Logging {
         }
     }
 
+    public static IEventLogger initialiseDiscardLogger() {
+        INSTANCE = new DiscardEventLogger();
+        return INSTANCE;
+    }
 }

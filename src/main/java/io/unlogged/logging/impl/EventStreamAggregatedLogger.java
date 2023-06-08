@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
-import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 
 /**
@@ -23,21 +20,21 @@ public class EventStreamAggregatedLogger implements IEventLogger {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AggregatedFileLogger aggregatedLogger;
-    private final TypeIdAggregatedStreamMap typeToId;
+    //    private final TypeIdAggregatedStreamMap typeToId;
     private final ObjectIdAggregatedStream objectIdMap;
+
     /**
      * Create an instance of logging object.
      *
-     * @param outputDir        specifies an object to record errors that occur in this class
+     * @param objectIdMap      object id mapper to convert object instances to persistent id
      * @param aggregatedLogger writer
      */
-    public EventStreamAggregatedLogger(File outputDir,
+    public EventStreamAggregatedLogger(ObjectIdAggregatedStream objectIdMap,
                                        AggregatedFileLogger aggregatedLogger
-    ) throws IOException {
+    ) {
 //        System.out.printf("[unlogged] new event stream aggregated logger\n");
         this.aggregatedLogger = aggregatedLogger;
-        typeToId = new TypeIdAggregatedStreamMap(this.aggregatedLogger, this);
-        objectIdMap = new ObjectIdAggregatedStream(this.aggregatedLogger, typeToId, outputDir);
+        this.objectIdMap = objectIdMap;
     }
 
     @Override

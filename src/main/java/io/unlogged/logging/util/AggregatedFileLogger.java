@@ -22,4 +22,8 @@ public interface AggregatedFileLogger {
     void writeEvent(int dataId, long objectId, byte[] toByteArray);
 
     void writeEvent(int dataId, long objectId, ByteArrayOutputStream outputStream);
+
+    void errorLog(String message);
+
+    void errorLog(Throwable throwable);
 }

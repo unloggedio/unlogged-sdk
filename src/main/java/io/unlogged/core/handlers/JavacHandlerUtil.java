@@ -32,8 +32,8 @@ import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import io.unlogged.core.AnnotationValues;
 import io.unlogged.core.ConfigurationKeys;
-import io.unlogged.core.UnloggedImmutableList;
 import io.unlogged.core.TypeResolver;
+import io.unlogged.core.UnloggedImmutableList;
 import io.unlogged.core.configuration.CheckerFrameworkVersion;
 import io.unlogged.core.configuration.NullAnnotationLibrary;
 import io.unlogged.core.configuration.NullCheckExceptionType;
@@ -1075,10 +1075,11 @@ public class JavacHandlerUtil {
     public static JavacNode injectField(JavacNode typeNode, JCVariableDecl field, boolean addGenerated, boolean specialEnumHandling) {
         JCClassDecl type = (JCClassDecl) typeNode.get();
 
-//		if (addGenerated) {
-//			addSuppressWarningsAll(field.mods, typeNode, typeNode.getNodeFor(getGeneratedBy(field)), typeNode.getContext());
-//			addGenerated(field.mods, typeNode, typeNode.getNodeFor(getGeneratedBy(field)), typeNode.getContext());
-//		}
+        if (addGenerated) {
+            addSuppressWarningsAll(field.mods, typeNode, typeNode.getNodeFor(getGeneratedBy(field)),
+                    typeNode.getContext());
+            addGenerated(field.mods, typeNode, typeNode.getNodeFor(getGeneratedBy(field)), typeNode.getContext());
+        }
 
         List<JCTree> insertAfter = null;
         List<JCTree> insertBefore = type.defs;
@@ -1309,57 +1310,60 @@ public class JavacHandlerUtil {
         return chainDots(node, null, null, elems.split("\\."));
     }
 
-	public static JCExpression genJavaLangTypeRef(JavacNode node, String... simpleNames) {
+    public static JCExpression genJavaLangTypeRef(JavacNode node, String... simpleNames) {
 //		if (LombokOptionsFactory.getDelombokOptions(node.getContext()).getFormatPreferences().javaLangAsFqn()) {
 //			return chainDots(node, "java", "lang", simpleNames);
 //		} else {
-			return chainDots(node, null, null, simpleNames);
+        return chainDots(node, null, null, simpleNames);
 //		}
-	}
+    }
 
-	public static JCExpression genJavaLangTypeRef(JavacNode node, int pos, String... simpleNames) {
+    public static JCExpression genJavaLangTypeRef(JavacNode node, int pos, String... simpleNames) {
 //		if (LombokOptionsFactory.getDelombokOptions(node.getContext()).getFormatPreferences().javaLangAsFqn()) {
 //			return chainDots(node, pos, "java", "lang", simpleNames);
 //		} else {
-			return chainDots(node, pos, null, null, simpleNames);
+        return chainDots(node, pos, null, null, simpleNames);
 //		}
-	}
+    }
 
-	public static void addSuppressWarningsAll(JCModifiers mods, JavacNode node, JavacNode source, Context context) {
+    public static void addSuppressWarningsAll(JCModifiers mods, JavacNode node, JavacNode source, Context context) {
 //		if (!LombokOptionsFactory.getDelombokOptions(context).getFormatPreferences().generateSuppressWarnings()) return;
 
-		boolean addJLSuppress = !Boolean.FALSE.equals(node.getAst().readConfiguration(ConfigurationKeys.ADD_SUPPRESSWARNINGS_ANNOTATIONS));
+        boolean addJLSuppress = !Boolean.FALSE.equals(
+                node.getAst().readConfiguration(ConfigurationKeys.ADD_SUPPRESSWARNINGS_ANNOTATIONS));
 
-		if (addJLSuppress) {
-			for (JCAnnotation ann : mods.annotations) {
-				JCTree type = ann.getAnnotationType();
-				Name n = null;
-				if (type instanceof JCIdent) n = ((JCIdent) type).name;
-				else if (type instanceof JCFieldAccess) n = ((JCFieldAccess) type).name;
-				if (n != null && n.contentEquals("SuppressWarnings")) {
-					addJLSuppress = false;
-				}
-			}
-		}
-		if (addJLSuppress) addAnnotation(mods, node, source, "java.lang.SuppressWarnings", node.getTreeMaker().Literal("all"));
+        if (addJLSuppress) {
+            for (JCAnnotation ann : mods.annotations) {
+                JCTree type = ann.getAnnotationType();
+                Name n = null;
+                if (type instanceof JCIdent) n = ((JCIdent) type).name;
+                else if (type instanceof JCFieldAccess) n = ((JCFieldAccess) type).name;
+                if (n != null && n.contentEquals("SuppressWarnings")) {
+                    addJLSuppress = false;
+                }
+            }
+        }
+        if (addJLSuppress)
+            addAnnotation(mods, node, source, "java.lang.SuppressWarnings", node.getTreeMaker().Literal("all"));
 
-		if (Boolean.TRUE.equals(node.getAst().readConfiguration(ConfigurationKeys.ADD_FINDBUGS_SUPPRESSWARNINGS_ANNOTATIONS))) {
-			JavacTreeMaker maker = node.getTreeMaker();
-			JCExpression arg = maker.Assign(maker.Ident(node.toName("justification")), maker.Literal("generated code"));
-			addAnnotation(mods, node, source, "edu.umd.cs.findbugs.annotations.SuppressFBWarnings", arg);
-		}
-	}
+        if (Boolean.TRUE.equals(
+                node.getAst().readConfiguration(ConfigurationKeys.ADD_FINDBUGS_SUPPRESSWARNINGS_ANNOTATIONS))) {
+            JavacTreeMaker maker = node.getTreeMaker();
+            JCExpression arg = maker.Assign(maker.Ident(node.toName("justification")), maker.Literal("generated code"));
+            addAnnotation(mods, node, source, "edu.umd.cs.findbugs.annotations.SuppressFBWarnings", arg);
+        }
+    }
 
-	public static void addGenerated(JCModifiers mods, JavacNode node, JavacNode source, Context context) {
+    public static void addGenerated(JCModifiers mods, JavacNode node, JavacNode source, Context context) {
 //		if (!LombokOptionsFactory.getDelombokOptions(context).getFormatPreferences().generateGenerated()) return;
 
-		if (HandlerUtil.shouldAddGenerated(node)) {
-			addAnnotation(mods, node, source, "javax.annotation.Generated", node.getTreeMaker().Literal("lombok"));
-		}
-		if (Boolean.TRUE.equals(node.getAst().readConfiguration(ConfigurationKeys.ADD_LOMBOK_GENERATED_ANNOTATIONS))) {
-			addAnnotation(mods, node, source, "lombok.Generated", null);
-		}
-	}
+        if (HandlerUtil.shouldAddGenerated(node)) {
+            addAnnotation(mods, node, source, "javax.annotation.Generated", node.getTreeMaker().Literal("lombok"));
+        }
+        if (Boolean.TRUE.equals(node.getAst().readConfiguration(ConfigurationKeys.ADD_LOMBOK_GENERATED_ANNOTATIONS))) {
+            addAnnotation(mods, node, source, "lombok.Generated", null);
+        }
+    }
 
     /**
      * Searches the given field node for annotations and returns each one that matches the provided regular expression pattern.

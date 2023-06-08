@@ -20,7 +20,7 @@ public class ObjectIdAggregatedStream extends ObjectIdMap {
      *
      * @param aggregatedLogger destination logger object
      * @param typeToId         is an object to translate a type into an integer representing a type.
-     * @param outputDir location to save the object map
+     * @param outputDir        location to save the object map
      * @throws IOException when failed to save object map to outputDir
      */
     public ObjectIdAggregatedStream(
@@ -53,12 +53,13 @@ public class ObjectIdAggregatedStream extends ObjectIdMap {
 //        System.err.println("new object [" + id + "] of type [" + typeId + "] -> " + o.getClass().getCanonicalName() + " => " + o);
         aggregatedLogger.writeNewObjectType(id, typeId);
 
-        if (o instanceof String) {
+//        if (o instanceof String) {
 //            String stringObject = (String) o;
 //            if (stringObject.length() < 1001) {
 //                aggregatedLogger.writeNewString(id, stringObject);
 //            }
-        } else if (o instanceof Throwable) {
+//        } else
+        if (o instanceof Throwable) {
             try {
                 Throwable t = (Throwable) o;
                 long causeId = getId(t.getCause());

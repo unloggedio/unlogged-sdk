@@ -24,9 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * this stream creates a number of files whose size is limited by the number of events
  * (MAX_EVENTS_PER_FILE field).
  */
-public class PerThreadBinaryFileAggregatedLogger implements
-        AggregatedFileLogger,
-        ThreadEventCountProvider {
+public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger, ThreadEventCountProvider {
 
     /**
      * The number of events stored in a single file.
@@ -290,17 +288,7 @@ public class PerThreadBinaryFileAggregatedLogger implements
             return;
         }
         int bytesToWrite = 1 + 4 + exceptionBytes.length;
-
         int currentThreadId = threadId.get();
-
-        try {
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
-                prepareNextFile(currentThreadId);
-            }
-        } catch (IOException e) {
-            errorLogger.log(e);
-        }
-
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream(bytesToWrite);
@@ -309,7 +297,9 @@ public class PerThreadBinaryFileAggregatedLogger implements
             tempOut.writeInt(exceptionBytes.length);
             tempOut.write(exceptionBytes);
             getStreamForThread(threadId.get()).write(baos.toByteArray());
-            getThreadEventCount(currentThreadId).addAndGet(1);
+            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
+                prepareNextFile(currentThreadId);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -372,12 +362,11 @@ public class PerThreadBinaryFileAggregatedLogger implements
 
             getStreamForThread(currentThreadId).write(buffer);
 
-            getThreadEventCount(currentThreadId).addAndGet(1);
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -402,7 +391,7 @@ public class PerThreadBinaryFileAggregatedLogger implements
         fileCollector.addClassWeaveInfo(byteArray);
     }
 
-    public void shutdown() throws IOException, InterruptedException {
+    public void shutdown() throws IOException {
         System.err.println("[unlogged] shutdown logger");
         skipUploads = true;
         shutdown = true;
@@ -443,12 +432,12 @@ public class PerThreadBinaryFileAggregatedLogger implements
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-            getThreadEventCount(currentThreadId).addAndGet(1);
+
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -491,6 +480,16 @@ public class PerThreadBinaryFileAggregatedLogger implements
         } catch (IOException e) {
             errorLogger.log(e);
         }
+    }
+
+    @Override
+    public void errorLog(String message) {
+        errorLogger.log(message);
+    }
+
+    @Override
+    public void errorLog(Throwable throwable) {
+        errorLogger.log(throwable);
     }
 
     @Override

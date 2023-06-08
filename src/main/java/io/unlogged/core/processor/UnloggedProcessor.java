@@ -10,6 +10,7 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
+import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.javac.JavacTransformer;
 import io.unlogged.weaver.WeaveConfig;
@@ -32,26 +33,25 @@ import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @version 1.0
  */
-@SupportedAnnotationTypes("io.unlogged.Unlogged")
+@SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class UnloggedProcessor extends AbstractProcessor {
 
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final IdentityHashMap<JCTree.JCCompilationUnit, Long> roots = new IdentityHashMap<JCTree.JCCompilationUnit, Long>();
+    private final CleanupRegistry cleanup = new CleanupRegistry();
+    public Element transformedEntryPoint = null;
     private ProcessingEnvironment unwrappedProcessingEnv;
     private Context context;
-    private JavacElements elementUtils;
-    private TreeMaker treeMaker;
-    private Weaver weaver;
-    private JavacFiler javacFiler;
     private JavacProcessingEnvironment javacProcessingEnv;
     private Trees trees;
     private JavacTransformer transformer;
-    private CleanupRegistry cleanup = new CleanupRegistry();
+    private JavacFiler javacFiler;
 
     public UnloggedProcessor() {
         System.out.println("HelloUnloggedProcessor");
@@ -223,13 +223,11 @@ public class UnloggedProcessor extends AbstractProcessor {
         trees = Trees.instance(javacProcessingEnv);
         unwrappedProcessingEnv = jbUnwrap(ProcessingEnvironment.class, procEnv);
         context = ((JavacProcessingEnvironment) unwrappedProcessingEnv).getContext();
-        elementUtils = (JavacElements) procEnv.getElementUtils();
-        treeMaker = TreeMaker.instance(context);
         transformer = new JavacTransformer(procEnv.getMessager(), trees);
 
 
-        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
-        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
+//        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
+//        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
 //        weaver = new Weaver(new File("./session"), weaveConfig, treeMaker, elementUtils);
 
     }
@@ -374,6 +372,26 @@ public class UnloggedProcessor extends AbstractProcessor {
             return false;
         }
 
+//        Set<? extends Element> annotatedClasses = roundEnv.getElementsAnnotatedWith(Unlogged.class);
+//        if (annotatedClasses.size() > 1) {
+//            throw new RuntimeException("More than 1 class annotated with @Unlogged annotation. Only the entry point " +
+//                    "method should be annotated with @Unlogged annotation: [" +
+//                    annotatedClasses.stream()
+//                            .map(Element::getSimpleName)
+//                            .collect(Collectors.toList()) + "]");
+//        } else if (annotatedClasses.size() == 1) {
+//            Element entryPoint = annotatedClasses.stream().findFirst().get();
+//            if (transformedEntryPoint == null) {
+//                // first entry point
+//                transformedEntryPoint = entryPoint;
+//                transformer.transformEntryPoint(context, transformedEntryPoint, cleanup);
+//            } else if (transformedEntryPoint != entryPoint) {
+//                throw new RuntimeException(
+//                        "More than 1 class annotated with @Unlogged annotation. Only the entry point " +
+//                                "method should be annotated with @Unlogged annotation");
+//            }
+//        }
+//
         Set<? extends Element> rootElements = roundEnv.getRootElements();
 
         for (Element element : rootElements) {

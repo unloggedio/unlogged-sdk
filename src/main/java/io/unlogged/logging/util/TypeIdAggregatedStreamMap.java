@@ -1,7 +1,5 @@
 package io.unlogged.logging.util;
 
-import io.unlogged.logging.IEventLogger;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -52,24 +50,20 @@ public class TypeIdAggregatedStreamMap {
      * Mapping from a Class object to String type ID.
      */
     private final HashMap<Class<?>, Integer> classToIdMap;
-    private final IEventLogger eventLogger;
+    //    private final IEventLogger eventLogger;
     private int nextId;
 
     /**
      * Create an initial map containing only basic types.
+     *
      * @param aggregatedLogger destination aggregated logger
-     * @param detailedEventStreamAggregatedLogger detailed event logger to receive registerClass events
      */
-    public TypeIdAggregatedStreamMap(AggregatedFileLogger aggregatedLogger,
-                                     IEventLogger detailedEventStreamAggregatedLogger) {
+    public TypeIdAggregatedStreamMap(AggregatedFileLogger aggregatedLogger) {
         this.aggregatedLogger = aggregatedLogger;
-        this.eventLogger = detailedEventStreamAggregatedLogger;
         classToIdMap = new HashMap<>(65536);
         for (int i = 0; i < BASIC_TYPE_CLASS.length; ++i) {
             Integer id = createTypeRecord(BASIC_TYPE_CLASS[i]);
-            if (i < 10) {
-                assert id.equals(i);
-            }
+            assert i >= 10 || id.equals(i);
         }
     }
 
@@ -109,13 +103,11 @@ public class TypeIdAggregatedStreamMap {
         int componentType = getTypeIdString(type.getComponentType());
 
         List<Integer> interfaceClasses = new LinkedList<>();
-        if (type.getInterfaces() != null) {
-            for (Class<?> anInterface : type.getInterfaces()) {
-                int interfaceClassId = getTypeIdString(anInterface);
+        for (Class<?> anInterface : type.getInterfaces()) {
+            int interfaceClassId = getTypeIdString(anInterface);
 //                System.err.println(type.getName() + " has interface " + anInterface.getName() +
 //                        " -> " + interfaceClassId);
-                interfaceClasses.add(interfaceClassId);
-            }
+            interfaceClasses.add(interfaceClassId);
         }
 
 
@@ -129,9 +121,7 @@ public class TypeIdAggregatedStreamMap {
 
 
         int newId = nextId++;
-        eventLogger.registerClass(newId, type);
         classToIdMap.put(type, newId);
-//        StringBuilder record = new StringBuilder(512);
 
         try {
             record.writeInt(newId);
@@ -146,9 +136,8 @@ public class TypeIdAggregatedStreamMap {
 
             record.writeInt(classLoaderIdentifier.getBytes().length);
             record.write(classLoaderIdentifier.getBytes());
-
-
             record.writeInt(interfaceClasses.size());
+
             for (Integer interfaceClass : interfaceClasses) {
                 record.writeInt(interfaceClass);
             }
@@ -157,13 +146,15 @@ public class TypeIdAggregatedStreamMap {
         } catch (IOException e) {
             /// should never happen
         }
-        this.aggregatedLogger.writeNewTypeRecord(newId, typeNameFromClass, byteArrayOutputStream.toByteArray());
+
+        aggregatedLogger.writeNewTypeRecord(newId, typeNameFromClass, byteArrayOutputStream.toByteArray());
         return newId;
     }
 
     /**
      * Return a string representing a type ID number.
      * This is to generate a type ID list file.
+     *
      * @param type Class type for which to create an Id
      * @return a new id for this type if it didnt exist already, else the original one
      */

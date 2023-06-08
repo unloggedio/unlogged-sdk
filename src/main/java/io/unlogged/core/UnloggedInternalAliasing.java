@@ -38,11 +38,11 @@ public class UnloggedInternalAliasing {
 	
 	static {
 		Map<String, String> m1 = new HashMap<String, String>();
-		m1.put("lombok.experimental.Value", "lombok.Value");
-		m1.put("lombok.experimental.Builder", "lombok.Builder");
-		m1.put("lombok.experimental.var", "lombok.var");
-		m1.put("lombok.Delegate", "lombok.experimental.Delegate");
-		m1.put("lombok.experimental.Wither", "lombok.With");
+//		m1.put("lombok.experimental.Value", "lombok.Value");
+//		m1.put("lombok.experimental.Builder", "lombok.Builder");
+//		m1.put("lombok.experimental.var", "lombok.var");
+//		m1.put("lombok.Delegate", "lombok.experimental.Delegate");
+//		m1.put("lombok.experimental.Wither", "lombok.With");
 		ALIASES = Collections.unmodifiableMap(m1);
 		
 		Map<String, Collection<String>> m2 = new HashMap<String, Collection<String>>();

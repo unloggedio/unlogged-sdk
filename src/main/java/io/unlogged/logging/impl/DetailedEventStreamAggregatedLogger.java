@@ -13,31 +13,24 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
-import com.insidious.common.weaver.ClassInfo;
-import com.insidious.common.weaver.DataInfo;
-import com.insidious.common.weaver.EventType;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
-import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
@@ -57,15 +50,15 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
     private final AggregatedFileLogger aggregatedLogger;
-    private final TypeIdAggregatedStreamMap typeToId;
+    //    private final TypeIdAggregatedStreamMap typeToId;
     private final ObjectIdAggregatedStream objectIdMap;
-    private final String includedPackage;
+    //    private final String includedPackage;
     private final Boolean DEBUG = Boolean.parseBoolean(System.getProperty("UNLOGGED_DEBUG"));
     //    private final ThreadLocal<ByteArrayOutputStream> threadOutputBuffer =
 //            ThreadLocal.withInitial(ByteArrayOutputStream::new);
     private final ThreadLocal<Boolean> isRecording = ThreadLocal.withInitial(() -> false);
     final private boolean serializeValues = true;
-//    private final Map<String, WeaveLog> classMap = new HashMap<>();
+    //    private final Map<String, WeaveLog> classMap = new HashMap<>();
 //    private final Map<Integer, DataInfo> callProbes = new HashMap<>();
     private final Set<Integer> probesToRecord = new HashSet<>();
     private final SerializationMode SERIALIZATION_MODE = SerializationMode.JACKSON;
@@ -82,26 +75,20 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     /**
      * Create an instance of logging object.
      *
-     * @param includedPackage comma separated string of class names included in probing this session
-     * @param outputDir        specifies an object to record errors that occur in this class
+     * @param objectIdMap      object id mapper which can convert an object to persistent Id
      * @param aggregatedLogger writer
      */
     public DetailedEventStreamAggregatedLogger(
-            String includedPackage, File outputDir,
-            AggregatedFileLogger aggregatedLogger
-    ) throws IOException {
+            ObjectIdAggregatedStream objectIdMap, AggregatedFileLogger aggregatedLogger
+    ) {
 
-        this.includedPackage = includedPackage;
+        this.objectIdMap = objectIdMap;
         this.aggregatedLogger = aggregatedLogger;
-        typeToId = new TypeIdAggregatedStreamMap(this.aggregatedLogger, this);
-        objectIdMap = new ObjectIdAggregatedStream(this.aggregatedLogger, typeToId, outputDir);
 
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
             isLombokPresent = true;
-//            System.err.println("Lombok found: " + lombokBuilderAnnotation.getCanonicalName());
         } catch (ClassNotFoundException e) {
-//            System.err.println("Lombok not found");
             isLombokPresent = false;
         }
 
@@ -249,16 +236,16 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     }
 
-    public ObjectIdAggregatedStream getObjectIdMap() {
-        return objectIdMap;
-    }
+//    public ObjectIdAggregatedStream getObjectIdMap() {
+//        return objectIdMap;
+//    }
 
     /**
      * Close all file streams used by the object.
      */
     public void close() {
 //        System.out.printf("[videobug] close event stream aggregated logger\n");
-        objectIdMap.close();
+//        objectIdMap.close();
         try {
             aggregatedLogger.shutdown();
         } catch (Exception e) {
@@ -368,6 +355,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
                     probesToRecord.remove(dataId);
+                    aggregatedLogger.errorLog("Removing probe: [" + dataId + "] is of classType: " + className);
                 } else if (SERIALIZATION_MODE == SerializationMode.JACKSON) {
 //                    System.err.println("To serialize class: " + className);
 //                    objectMapper.writeValue(outputStream, value);
@@ -417,6 +405,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
             } catch (Throwable e) {
                 probesToRecord.remove(dataId);
+                aggregatedLogger.errorLog("Removing probe id: " + dataId);
+                aggregatedLogger.errorLog(e);
 //                if (value != null) {
 //                    kryo.register(value.getClass());
 //                    String message = e.getMessage();

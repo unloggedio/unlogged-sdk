@@ -6,6 +6,7 @@ import io.unlogged.command.ServerMetadata;
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.Logging;
+import io.unlogged.logging.SimpleFileLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
@@ -14,7 +15,6 @@ import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
 
 import java.io.File;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -28,6 +28,7 @@ public class Runtime {
      * The logger receives method calls from injected instructions via selogger.logging.Logging class.
      */
     private IEventLogger logger;
+    public Boolean initialized = false;
 
 
     /**
@@ -61,31 +62,17 @@ public class Runtime {
                 return;
             }
 
-            errorLogger = new IErrorLogger() {
-                @Override
-                public void log(Throwable throwable) {
-                    throwable.printStackTrace();
-                    System.out.println(throwable.getMessage());
-                }
-
-                @Override
-                public void log(String message) {
-                    System.out.println(message);
-
-                }
-
-                @Override
-                public void close() {
-
-                }
-            };
-
+            errorLogger = new SimpleFileLogger(outputDir);
 
             System.out.println("[unlogged]" +
                     " session Id: [" + config.getSessionId() + "]" +
                     " on hostname [" + NetworkClient.getHostname() + "]");
 
             switch (weaveParameters.getMode()) {
+
+
+                case Discard:
+                    logger = Logging.initialiseDiscardLogger();
 
                 case PerThread:
 
@@ -95,17 +82,13 @@ public class Runtime {
                     FileNameGenerator fileNameGenerator1 = new FileNameGenerator(outputDir, "index-", ".zip");
                     RawFileCollector fileCollector =
                             new RawFileCollector(weaveParameters.getFilesPerIndex(), fileNameGenerator1,
-                                    networkClient,
-                                    errorLogger, outputDir);
+                                    networkClient, errorLogger, outputDir);
 
                     FileNameGenerator fileNameGenerator = new FileNameGenerator(outputDir, "log-", ".selog");
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger
-                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger,
-                            fileCollector);
+                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger, fileCollector);
 
-                    logger = Logging.initialiseAggregatedLogger(errorLogger,
-                            perThreadBinaryFileAggregatedLogger,
-                            outputDir);
+                    logger = Logging.initialiseAggregatedLogger(perThreadBinaryFileAggregatedLogger, outputDir);
                     break;
 
                 case Testing:
@@ -127,8 +110,7 @@ public class Runtime {
                             = new PerThreadBinaryFileAggregatedLogger(logFileNameGenerator, errorLogger,
                             fileCollector1);
 
-                    logger = Logging.initialiseDetailedAggregatedLogger(
-                            weaveParameters.getIncludedNames().get(0), perThreadBinaryFileAggregatedLogger1,
+                    logger = Logging.initialiseDetailedAggregatedLogger(perThreadBinaryFileAggregatedLogger1,
                             outputDir);
                     break;
 

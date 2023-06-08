@@ -28,6 +28,7 @@ import com.sun.tools.javac.util.Context;
 import io.unlogged.core.CleanupRegistry;
 
 import javax.annotation.processing.Messager;
+import javax.lang.model.element.Element;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -48,9 +49,15 @@ public class JavacTransformer {
         return handlers.getPrioritiesRequiringResolutionReset();
     }
 
+//    public void transformEntryPoint(Context context, Element entryPointElement, CleanupRegistry cleanup) {
+//        JavacAST ast = new JavacAST(messager, context, unit, cleanup);
+//        handlers.
+//    }
+
     public void transform(Context context, List<JCCompilationUnit> compilationUnits, CleanupRegistry cleanup) {
         for (JCCompilationUnit unit : compilationUnits) {
             JavacAST ast = new JavacAST(messager, context, unit, cleanup);
+            ast.traverse(new AnnotationVisitor(0));
             handlers.callASTVisitors(ast);
             if (ast.isChanged()) UnloggedOptions.markChanged(context, (JCCompilationUnit) ast.top().get());
         }
