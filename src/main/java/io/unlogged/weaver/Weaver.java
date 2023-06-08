@@ -31,7 +31,7 @@ public class Weaver implements IErrorLogger {
 
     private final File outputDir;
     private final WeaveConfig config;
-    private final UnloggedVisitor unloggedVisitor = new UnloggedVisitor();
+    private final UnloggedVisitor unloggedVisitor = new UnloggedVisitor(new DataInfoProvider());
     private PrintStream logger;
     private int classId;
     private int confirmedDataId;

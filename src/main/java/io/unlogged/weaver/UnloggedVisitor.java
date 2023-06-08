@@ -1,6 +1,6 @@
 package io.unlogged.weaver;
 
-import com.insidious.common.weaver.DataInfo;
+import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
@@ -8,41 +8,82 @@ import io.unlogged.core.javac.JavacASTAdapter;
 import io.unlogged.core.javac.JavacNode;
 import io.unlogged.core.javac.JavacTreeMaker;
 
+import javax.lang.model.element.Element;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 public class UnloggedVisitor extends JavacASTAdapter {
 
-    private final Map<JCTree.JCMethodDecl, java.util.List<DataInfo>> methodRoots = new HashMap<>();
+    private final Map<JCTree.JCMethodDecl, MethodInfo> methodRoots = new HashMap<>();
+    private final Map<JavacNode, ClassInfo> classRoots = new HashMap<>();
+    private final Map<JavacNode, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
+    private final DataInfoProvider dataInfoProvider;
 
-    public UnloggedVisitor() {
+    private int classIdSerial = 0;
+    private int methodIdSerial = 0;
+    private int dataIdSerial = 0;
+
+    public UnloggedVisitor(DataInfoProvider dataInfoProvider) {
+        this.dataInfoProvider = dataInfoProvider;
     }
 
     @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
+        JavacNode classNode = methodNode.up();
+        String className = classNode.getName();
+
+        ClassInfo classInfo;
+        if (!classRoots.containsKey(classNode)) {
+            Element element = classNode.getElement();
+            classInfo = new ClassInfo(
+                    classIdSerial++, "classContainer", classNode.up().getFileName(),
+                    className, LogLevel.Normal, String.valueOf(element.hashCode()),
+                    "classLoader", new String[]{}, "superName", "signature"
+            );
+            classRoots.put(classNode, classInfo);
+            classDataInfoList.put(classNode, new ArrayList<>());
+        } else {
+            classInfo = classRoots.get(classNode);
+        }
+        if (methodNode.isStatic()) {
+            return;
+        }
+
         if (methodRoots.containsKey(jcMethodDecl)) {
             return;
         }
-        methodRoots.put(jcMethodDecl, new ArrayList<DataInfo>());
-
-        String className = methodNode.up().getName();
         String methodName = methodNode.getName();
+        String methodDesc = createMethodDescriptor(methodNode);
+        MethodInfo methodInfo = new MethodInfo(classInfo.getClassId(), methodIdSerial++,
+                className, methodName, methodDesc, (int) jcMethodDecl.mods.flags,
+                "sourceFileName", String.valueOf(jcMethodDecl.hashCode()));
+        methodRoots.put(jcMethodDecl, methodInfo);
+
+
         String methodSignature = jcMethodDecl.params.toString();
-        JCTree returnType1 = jcMethodDecl.getReturnType();
-        String returnType = returnType1 != null ? returnType1.toString() : "";
+
+
+        DataInfo dataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
+                dataIdSerial++, methodNode.getStartPos(), 0, EventType.METHOD_ENTRY, Descriptor.Void, "");
+
+        classDataInfoList.get(classNode).add(dataInfo);
 
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
 
         JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
                 treeMaker.Select(
-                        treeMaker.Ident(
-                                methodNode.toName("System")
+                        treeMaker.Select(treeMaker.Select(
+                                treeMaker.Ident(
+                                        methodNode.toName("io")
+                                ),
+                                methodNode.toName("unlogged")
+                        ), methodNode.toName("logging")
                         ),
-                        methodNode.toName("out")
+                        methodNode.toName("Logging")
                 ),
-                methodNode.toName("println")
+                methodNode.toName("recordEvent")
         );
 
         JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
@@ -53,8 +94,8 @@ public class UnloggedVisitor extends JavacASTAdapter {
                         List.<JCTree.JCExpression>nil(),
                         printlnMethod,
                         List.<JCTree.JCExpression>of(
-                                treeMaker.Literal(
-                                        "Method " + className + "." + methodName + "()")
+                                treeMaker.Ident(methodNode.toName("this")),
+                                treeMaker.Literal(dataInfo.getDataId())
                         )
                 )
         );
@@ -95,4 +136,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
         System.out.println("After: " + jcMethodDecl.body);
 
     }
+
+    private String createMethodDescriptor(JavacNode methodNode) {
+        return "(IL)Ljava.lang.Integer;";
+    }
+
 }
