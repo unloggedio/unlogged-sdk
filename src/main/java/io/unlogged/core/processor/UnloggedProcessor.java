@@ -4,18 +4,12 @@ import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.jvm.ClassWriter;
 import com.sun.tools.javac.main.JavaCompiler;
-import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
-import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.javac.JavacTransformer;
-import io.unlogged.weaver.WeaveConfig;
-import io.unlogged.weaver.WeaveParameters;
-import io.unlogged.weaver.Weaver;
 import sun.misc.Unsafe;
 
 import javax.annotation.processing.*;
@@ -33,7 +27,6 @@ import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 /**
  * @version 1.0

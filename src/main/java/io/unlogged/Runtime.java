@@ -3,10 +3,7 @@ package io.unlogged;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.IErrorLogger;
-import io.unlogged.logging.IEventLogger;
-import io.unlogged.logging.Logging;
-import io.unlogged.logging.SimpleFileLogger;
+import io.unlogged.logging.*;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
@@ -22,21 +19,20 @@ import java.io.File;
 public class Runtime {
 
     public static final int AGENT_SERVER_PORT = 12100;
+    private static Runtime instance;
     private AgentCommandServer httpServer;
     private IErrorLogger errorLogger;
     /**
      * The logger receives method calls from injected instructions via selogger.logging.Logging class.
      */
-    private IEventLogger logger;
-    public Boolean initialized = false;
-
+    private IEventLogger logger = Logging.initialiseDiscardLogger();
 
     /**
      * Process command line arguments and prepare an output directory
      *
      * @param args string arguments for weaver
      */
-    public Runtime(String args) {
+    private Runtime(String args) {
 
         try {
             WeaveParameters weaveParameters = new WeaveParameters(args);
@@ -131,6 +127,19 @@ public class Runtime {
             System.err.println(
                     "[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());
         }
+    }
+
+    public static Runtime getInstance(String args) {
+        if (instance != null) {
+            return instance;
+        }
+        synchronized (Runtime.class) {
+            if (instance != null) {
+                return instance;
+            }
+            instance = new Runtime(args);
+        }
+        return instance;
     }
 
     /**

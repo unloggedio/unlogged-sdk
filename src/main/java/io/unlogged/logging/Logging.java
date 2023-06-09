@@ -24,7 +24,7 @@ public class Logging {
      * The instance to record events.
      * A system must call one of initialize methods OR directly set an instance to this field.
      */
-    static IEventLogger INSTANCE;
+    static IEventLogger INSTANCE = new DiscardEventLogger();
 
 
     public static EventStreamAggregatedLogger initialiseAggregatedLogger(
