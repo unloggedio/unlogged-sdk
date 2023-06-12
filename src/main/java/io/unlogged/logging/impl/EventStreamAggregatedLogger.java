@@ -1,11 +1,13 @@
 package io.unlogged.logging.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * This class is an implementation of IEventLogger that records
@@ -50,7 +52,7 @@ public class EventStreamAggregatedLogger implements IEventLogger {
      * Close all file streams used by the object.
      */
     public void close() {
-        System.out.printf("[unlogged] close event stream aggregated logger\n");
+        System.out.println("[unlogged] close event stream aggregated logger");
         objectIdMap.close();
         try {
             aggregatedLogger.shutdown();
@@ -234,6 +236,11 @@ public class EventStreamAggregatedLogger implements IEventLogger {
         int longValue = Float.floatToRawIntBits(value);
 //        System.out.printf("Record event in event stream aggregated logger %s -> %s\n", dataId, longValue);
         aggregatedLogger.writeEvent(dataId, longValue);
+    }
+
+    @Override
+    public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
+        aggregatedLogger.writeWeaveInfo(byteArray);
     }
 
 //    @Override

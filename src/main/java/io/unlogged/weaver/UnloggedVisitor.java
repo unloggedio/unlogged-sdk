@@ -16,9 +16,11 @@ import java.util.Map;
 
 public class UnloggedVisitor extends JavacASTAdapter {
 
-    private final Map<JCTree.JCMethodDecl, MethodInfo> methodRoots = new HashMap<>();
-    private final Map<JavacNode, ClassInfo> classRoots = new HashMap<>();
-    private final Map<JavacNode, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
+    private final Map<String, Boolean> methodRoots = new HashMap<>();
+    private final Map<JCTree, ClassInfo> classRoots = new HashMap<>();
+    private final Map<ClassInfo, JavacNode> classJavacNodeMap = new HashMap<>();
+    private final Map<ClassInfo, java.util.List<MethodInfo>> classMethodInfoList = new HashMap<>();
+    private final Map<ClassInfo, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
     private final DataInfoProvider dataInfoProvider;
 
     public UnloggedVisitor(DataInfoProvider dataInfoProvider) {
@@ -28,25 +30,29 @@ public class UnloggedVisitor extends JavacASTAdapter {
     @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
         JavacNode classNode = methodNode.up();
+        JCTree classElement = classNode.get();
         String className = classNode.getName();
+        String methodDoneKey = className + jcMethodDecl.getName() + jcMethodDecl.params.toString();
 
         ClassInfo classInfo;
-        if (!classRoots.containsKey(classNode)) {
+        if (!classRoots.containsKey(classElement)) {
             Element element = classNode.getElement();
             classInfo = new ClassInfo(
                     dataInfoProvider.nextClassId(), "classContainer", classNode.up().getFileName(),
                     className, LogLevel.Normal, String.valueOf(element.hashCode()),
                     "classLoader", new String[]{}, "superName", "signature");
-            classRoots.put(classNode, classInfo);
-            classDataInfoList.put(classNode, new ArrayList<>());
+            classRoots.put(classElement, classInfo);
+            classDataInfoList.put(classInfo, new ArrayList<>());
+            classMethodInfoList.put(classInfo, new ArrayList<>());
         } else {
-            classInfo = classRoots.get(classNode);
+            classInfo = classRoots.get(classElement);
         }
+        classJavacNodeMap.put(classInfo, classNode);
         if (methodNode.isStatic()) {
             return;
         }
 
-        if (methodRoots.containsKey(jcMethodDecl)) {
+        if (methodRoots.containsKey(methodDoneKey)) {
             return;
         }
         String methodName = methodNode.getName();
@@ -54,17 +60,18 @@ public class UnloggedVisitor extends JavacASTAdapter {
         MethodInfo methodInfo = new MethodInfo(classInfo.getClassId(), dataInfoProvider.nextMethodId(),
                 className, methodName, methodDesc, (int) jcMethodDecl.mods.flags,
                 "sourceFileName", String.valueOf(jcMethodDecl.hashCode()));
-        methodRoots.put(jcMethodDecl, methodInfo);
+        classMethodInfoList.get(classInfo).add(methodInfo);
+        methodRoots.put(methodDoneKey, true);
 
 
         String methodSignature = jcMethodDecl.params.toString();
 
 
         DataInfo dataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
-                dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0, EventType.METHOD_ENTRY, Descriptor.Void
-                , "");
+                dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
+                EventType.METHOD_ENTRY, Descriptor.Void, "");
 
-        classDataInfoList.get(classNode).add(dataInfo);
+        classDataInfoList.get(classInfo).add(dataInfo);
 
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
@@ -114,7 +121,8 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     private JCTree.JCExpressionStatement createLogStatement(JavacNode methodNode, String variableToRecord, int dataId) {
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
-        JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode, "io.unlogged.logging.Logging.recordEvent");
+        JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode,
+                "io.unlogged.logging.Logging.recordEvent");
 
         JCTree.JCExpressionStatement logStatement = treeMaker.Exec(
                 treeMaker.Apply(
@@ -133,7 +141,19 @@ public class UnloggedVisitor extends JavacASTAdapter {
         return "(IL)Ljava.lang.Integer;";
     }
 
-    public Map<JavacNode, ClassInfo> getClassRoots() {
+    public Map<JCTree, ClassInfo> getClassRoots() {
         return classRoots;
+    }
+
+    public Map<ClassInfo, JavacNode> getClassNodeMap() {
+        return classJavacNodeMap;
+    }
+
+    public Map<ClassInfo, java.util.List<MethodInfo>> getMethodMap() {
+        return classMethodInfoList;
+    }
+
+    public Map<ClassInfo, java.util.List<DataInfo>> getClassDataInfoList() {
+        return classDataInfoList;
     }
 }

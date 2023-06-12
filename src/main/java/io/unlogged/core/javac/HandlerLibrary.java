@@ -22,6 +22,9 @@
 package io.unlogged.core.javac;
 
 import com.insidious.common.weaver.ClassInfo;
+import com.insidious.common.weaver.DataInfo;
+import com.insidious.common.weaver.EventType;
+import com.insidious.common.weaver.MethodInfo;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
@@ -38,6 +41,7 @@ import io.unlogged.weaver.UnloggedVisitor;
 
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -201,16 +205,9 @@ public class HandlerLibrary {
      * {@link JavacAnnotationHandler} and if one exists, calling it with a freshly cooked up
      * instance of {@link io.unlogged.core.AnnotationValues}.
      * <p>
-     * Note that depending on the printASTOnly flag, the {@link io.unlogged.core.PrintAST} annotation
-     * will either be silently skipped, or everything that isn't {@code PrintAST} will be skipped.
-     * <p>
-     * The HandlerLibrary will attempt to guess if the given annotation node represents a lombok annotation.
-     * For example, if {@code lombok.*} is in the import list, then this method will guess that
-     * {@code Getter} refers to {@code lombok.Getter}, presuming that {@link lombok.javac.handlers.HandleGetter}
-     * has been loaded.
      *
      * @param unit       The Compilation Unit that contains the Annotation AST Node.
-     * @param node       The Lombok AST Node representing the Annotation AST Node.
+     * @param node       The AST Node representing the Annotation AST Node.
      * @param annotation 'node.get()' - convenience parameter.
      */
     public void handleAnnotation(JCCompilationUnit unit, JavacNode node, JCAnnotation annotation, long priority) {
@@ -235,7 +232,7 @@ public class HandlerLibrary {
             } catch (Throwable t) {
                 String sourceName = "(unknown).java";
                 if (unit != null && unit.sourcefile != null) sourceName = unit.sourcefile.getName();
-                javacError(String.format("Lombok annotation handler %s failed on " + sourceName,
+                javacError(String.format("Unlogged annotation handler %s failed on " + sourceName,
                         container.handler.getClass()), t);
             }
         }
@@ -249,23 +246,66 @@ public class HandlerLibrary {
     }
 
     public void finish() {
-        Map<JavacNode, ClassInfo> classRoots = unloggedVisitor.getClassRoots();
-        for (Map.Entry<JavacNode, ClassInfo> entry : classRoots.entrySet()) {
-            JavacNode classNode = entry.getKey();
-            ClassInfo classInfo = entry.getValue();
+        Base64.Encoder base64Encoder = Base64.getEncoder();
+        Map<JCTree, ClassInfo> classRoots = unloggedVisitor.getClassRoots();
+        Map<ClassInfo, JavacNode> classNodeMap = unloggedVisitor.getClassNodeMap();
+        Map<ClassInfo, List<MethodInfo>> methodRoots = unloggedVisitor.getMethodMap();
+        Map<ClassInfo, List<DataInfo>> dataInfoListMap = unloggedVisitor.getClassDataInfoList();
 
-            byte[] classInfoBytes = classInfo.toBytes();
+        for (Map.Entry<JCTree, ClassInfo> entry : classRoots.entrySet()) {
+            JCTree classTree = entry.getKey();
+            ClassInfo classInfo = entry.getValue();
+            JavacNode classNode = classNodeMap.get(classInfo);
+
+            List<Integer> probeIdsToRecord = new ArrayList<>();
+
+            List<MethodInfo> methodInfoList = methodRoots.get(classInfo);
+            List<DataInfo> dataInfoList = dataInfoListMap.get(classInfo);
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            try {
+                classInfo.writeToOutputStream(byteArrayOutputStream);
+                for (DataInfo dataInfo : dataInfoList) {
+                    dataInfo.writeToStream(byteArrayOutputStream);
+                    if (dataInfo.getEventType().equals(EventType.METHOD_PARAM) || true) {
+                        probeIdsToRecord.add(dataInfo.getDataId());
+                    }
+                }
+                for (MethodInfo methodInfo : methodInfoList) {
+                    methodInfo.writeToOutputStream(byteArrayOutputStream);
+                }
+
+            } catch (IOException e) {
+                // throw new RuntimeException(e);
+            }
+
+            byte[] classWeaveBytes = byteArrayOutputStream.toByteArray();
 
 
             JavacTreeMaker maker = classNode.getTreeMaker();
-            JCTree.JCExpression runtimeFieldType = chainDotsString(classNode, "com.insidious.common.weaver.ClassInfo");
-            JCTree.JCExpression factoryMethod = chainDotsString(classNode, "io.unlogged.Runtime.getInstance");
+            JCTree.JCExpression runtimeFieldType = chainDotsString(classNode, "java.lang.Boolean");
+            JCTree.JCExpression factoryMethod = chainDotsString(classNode, "io.unlogged.Runtime.registerClass");
+
+            JCTree.JCExpression arraysAsListMethod = chainDotsString(classNode, "java.util.Arrays.asList");
+            JCTree.JCExpression[] probeIdsAsArrayExpression = new JCTree.JCExpression[probeIdsToRecord.size()];
+            for (int i = 0; i < probeIdsToRecord.size(); i++) {
+                Integer integer = probeIdsToRecord.get(i);
+                probeIdsAsArrayExpression[i] = maker.Literal(integer);
+            }
+
+            JCTree.JCMethodInvocation functionCreatesProbeIdsArray = maker.Apply(
+                    com.sun.tools.javac.util.List.<JCTree.JCExpression>nil(), arraysAsListMethod,
+                    com.sun.tools.javac.util.List.<JCTree.JCExpression>from(probeIdsAsArrayExpression));
+
             JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
-                    maker.Literal(classInfoBytes)
+                    maker.Literal(base64Encoder.encodeToString(classWeaveBytes)),
+                    functionCreatesProbeIdsArray
             };
 
+
             JCTree.JCMethodInvocation factoryMethodCall = maker.Apply(
-                    com.sun.tools.javac.util.List.<JCTree.JCExpression>nil(), factoryMethod, com.sun.tools.javac.util.List.<JCTree.JCExpression>from(factoryParameters));
+                    com.sun.tools.javac.util.List.<JCTree.JCExpression>nil(), factoryMethod,
+                    com.sun.tools.javac.util.List.<JCTree.JCExpression>from(factoryParameters));
 
             JCTree.JCVariableDecl fieldDecl = recursiveSetGeneratedBy(maker.VarDef(
                     maker.Modifiers(Flags.PRIVATE | Flags.FINAL | Flags.STATIC),
@@ -273,6 +313,8 @@ public class HandlerLibrary {
 
 
             JavacHandlerUtil.injectField(classNode, fieldDecl);
+            System.out.println("Class [" + classInfo.getClassName() + "] ->\n" + classNode.get()
+                    + "\n=======================================================================\n");
         }
 
         // todo

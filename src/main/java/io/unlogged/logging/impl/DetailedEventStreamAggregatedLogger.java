@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
+import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
 import io.unlogged.logging.util.AggregatedFileLogger;
@@ -704,44 +705,19 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         aggregatedLogger.writeEvent(dataId, longValue);
     }
 
-//    @Override
-//    public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, WeaveLog log) {
-//
-////        classMap.put(classIdEntry.getClassName(), log);
-////        System.err.println("Record weave info for [" + classIdEntry.getClassName() + "]");
-//        if (!classIdEntry.getClassName().contains("mongo") &&
-//                !classIdEntry.getClassName().contains("spring") &&
-//                !classIdEntry.getClassName().contains("redis")
-//        ) {
-//            List<Integer> newClassProbes = log.getDataEntries()
-//                    .stream()
-//                    .filter(e ->
-//                            e.getEventType() == EventType.CALL_PARAM ||
-//                                    e.getEventType() == EventType.METHOD_PARAM ||
-//                                    e.getEventType() == EventType.METHOD_NORMAL_EXIT ||
-//                                    e.getEventType() == EventType.METHOD_EXCEPTIONAL_EXIT ||
-//                                    e.getEventType() == EventType.CALL_RETURN)
-//                    .filter(e -> {
-//                        String type = e.getAttribute("Type", null);
-//                        if ("Ljava/util/Iterator;".equals(type)) {
-//                            return false;
-//                        }
-//                        return true;
-//                    })
-//                    .map(DataInfo::getDataId)
-//                    .collect(Collectors.toList());
-//
-//
-//            Map<Integer, DataInfo> callProbes1 = log.getDataEntries()
-//                    .stream()
-//                    .collect(Collectors.toMap(DataInfo::getDataId, e -> e));
-//
-//
-//            probesToRecord.addAll(newClassProbes);
-////            callProbes.putAll(callProbes1);
-//        }
-//        aggregatedLogger.writeWeaveInfo(byteArray);
-//    }
+    @Override
+    public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
+
+//        classMap.put(classIdEntry.getClassName(), log);
+//        System.err.println("Record weave info for [" + classIdEntry.getClassName() + "]");
+        if (!classIdEntry.getClassName().contains("mongo") &&
+                !classIdEntry.getClassName().contains("spring") &&
+                !classIdEntry.getClassName().contains("redis")
+        ) {
+            probesToRecord.addAll(probeIdsToRecord);
+        }
+        aggregatedLogger.writeWeaveInfo(byteArray);
+    }
 
     @Override
     public void setRecording(boolean b) {

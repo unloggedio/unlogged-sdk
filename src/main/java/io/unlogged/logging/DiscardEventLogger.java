@@ -1,6 +1,9 @@
 package io.unlogged.logging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insidious.common.weaver.ClassInfo;
+
+import java.util.List;
 
 public class DiscardEventLogger implements IEventLogger {
 
@@ -64,6 +67,11 @@ public class DiscardEventLogger implements IEventLogger {
 
     @Override
     public void recordEvent(int dataId, float value) {
+
+    }
+
+    @Override
+    public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
 
     }
 

@@ -2,6 +2,10 @@ package io.unlogged.logging;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insidious.common.weaver.ClassInfo;
+import io.unlogged.weaver.WeaveLog;
+
+import java.util.List;
 
 /**
  * This interface defines a set of methods for recording runtime events.
@@ -99,7 +103,8 @@ public interface IEventLogger {
      * @param value  contains a value to be recorded.
      */
     void recordEvent(int dataId, float value);
-//	void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, WeaveLog log);
+
+    void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord);
 
     void setRecording(boolean b);
 

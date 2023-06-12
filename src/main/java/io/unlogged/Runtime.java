@@ -1,9 +1,13 @@
 package io.unlogged;
 
+import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.*;
+import io.unlogged.logging.IErrorLogger;
+import io.unlogged.logging.IEventLogger;
+import io.unlogged.logging.Logging;
+import io.unlogged.logging.SimpleFileLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
@@ -11,7 +15,12 @@ import io.unlogged.logging.util.NetworkClient;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -20,6 +29,7 @@ public class Runtime {
 
     public static final int AGENT_SERVER_PORT = 12100;
     private static Runtime instance;
+    private static List<Pair<String, List<Integer>>> pendingClassRegistrations = new ArrayList<>();
     private AgentCommandServer httpServer;
     private IErrorLogger errorLogger;
     /**
@@ -102,6 +112,7 @@ public class Runtime {
 
                     FileNameGenerator logFileNameGenerator =
                             new FileNameGenerator(outputDir, "log-", ".selog");
+
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger1
                             = new PerThreadBinaryFileAggregatedLogger(logFileNameGenerator, errorLogger,
                             fileCollector1);
@@ -124,7 +135,8 @@ public class Runtime {
 
         } catch (Throwable thx) {
             thx.printStackTrace();
-            System.err.println("[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());
+            System.err.println(
+                    "[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());
         }
     }
 
@@ -137,8 +149,35 @@ public class Runtime {
                 return instance;
             }
             instance = new Runtime(args);
+            for (Pair<String, List<Integer>> pendingClassRegistration : pendingClassRegistrations) {
+                registerClass(pendingClassRegistration.getFirst(), pendingClassRegistration.getSecond());
+            }
+
         }
         return instance;
+    }
+
+    // this method is called by all classes which were probed during compilation time
+    public static boolean registerClass(String classInfoBytes, List<Integer> probeIdsToRecord) {
+        if (instance != null) {
+            byte[] decodedBytes = Base64.getDecoder().decode(classInfoBytes);
+            ClassInfo classInfo = new ClassInfo();
+
+            try {
+                ByteArrayInputStream in = new ByteArrayInputStream(decodedBytes);
+                classInfo.readFromDataStream(in);
+            } catch (IOException e) {
+//            throw new RuntimeException(e);
+                return false;
+            }
+
+            instance.logger.recordWeaveInfo(decodedBytes, classInfo, probeIdsToRecord);
+
+        } else {
+
+            pendingClassRegistrations.add(new Pair<>(classInfoBytes, probeIdsToRecord));
+        }
+        return true;
     }
 
     /**
