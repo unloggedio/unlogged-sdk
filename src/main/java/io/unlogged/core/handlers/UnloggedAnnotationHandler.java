@@ -28,6 +28,7 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
             return;
         }
         JavacTreeMaker maker = methodNode.getTreeMaker();
+
         JCTree.JCExpression runtimeFieldType = chainDotsString(methodNode, "io.unlogged.Runtime");
         JCTree.JCExpression factoryMethod = chainDotsString(methodNode, "io.unlogged.Runtime.getInstance");
         JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{

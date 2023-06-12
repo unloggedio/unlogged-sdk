@@ -21,10 +21,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
     private final Map<JavacNode, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
     private final DataInfoProvider dataInfoProvider;
 
-    private int classIdSerial = 0;
-    private int methodIdSerial = 0;
-    private int dataIdSerial = 0;
-
     public UnloggedVisitor(DataInfoProvider dataInfoProvider) {
         this.dataInfoProvider = dataInfoProvider;
     }
@@ -38,10 +34,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
         if (!classRoots.containsKey(classNode)) {
             Element element = classNode.getElement();
             classInfo = new ClassInfo(
-                    classIdSerial++, "classContainer", classNode.up().getFileName(),
+                    dataInfoProvider.nextClassId(), "classContainer", classNode.up().getFileName(),
                     className, LogLevel.Normal, String.valueOf(element.hashCode()),
-                    "classLoader", new String[]{}, "superName", "signature"
-            );
+                    "classLoader", new String[]{}, "superName", "signature");
             classRoots.put(classNode, classInfo);
             classDataInfoList.put(classNode, new ArrayList<>());
         } else {
@@ -56,7 +51,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
         }
         String methodName = methodNode.getName();
         String methodDesc = createMethodDescriptor(methodNode);
-        MethodInfo methodInfo = new MethodInfo(classInfo.getClassId(), methodIdSerial++,
+        MethodInfo methodInfo = new MethodInfo(classInfo.getClassId(), dataInfoProvider.nextMethodId(),
                 className, methodName, methodDesc, (int) jcMethodDecl.mods.flags,
                 "sourceFileName", String.valueOf(jcMethodDecl.hashCode()));
         methodRoots.put(jcMethodDecl, methodInfo);
@@ -66,49 +61,28 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
 
         DataInfo dataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
-                dataIdSerial++, methodNode.getStartPos(), 0, EventType.METHOD_ENTRY, Descriptor.Void, "");
+                dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0, EventType.METHOD_ENTRY, Descriptor.Void
+                , "");
 
         classDataInfoList.get(classNode).add(dataInfo);
 
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
 
-        JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode,
-                "io.unlogged.logging.Logging.recordEvent");
-//        JCTree.JCFieldAccess printlnMethod = treeMaker.Select(
-//                treeMaker.Select(
-//                        treeMaker.Select(treeMaker.Select(
-//                                treeMaker.Ident(
-//                                        methodNode.toName("io")
-//                                ),
-//                                methodNode.toName("unlogged")
-//                        ), methodNode.toName("logging")
-//                        ),
-//                        methodNode.toName("Logging")
-//                ),
-//                methodNode.toName("recordEvent")
-//        );
+        JCTree.JCExpressionStatement logStatement = createLogStatement(methodNode, "this", dataInfo.getDataId());
+
+        ListBuffer<JCTree.JCStatement> newStatements = new ListBuffer<JCTree.JCStatement>();
 
         JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
 
-        ListBuffer<JCTree.JCStatement> newStatements = new ListBuffer<JCTree.JCStatement>();
-        JCTree.JCExpressionStatement logStatement = treeMaker.Exec(
-                treeMaker.Apply(
-                        List.<JCTree.JCExpression>nil(),
-                        printlnMethod,
-                        List.<JCTree.JCExpression>of(
-                                treeMaker.Ident(methodNode.toName("this")),
-                                treeMaker.Literal(dataInfo.getDataId())
-                        )
-                )
-        );
+        List<JCTree.JCStatement> blockStatements = methodBodyBlock.getStatements();
 
         if (!methodName.equals("<init>")) {
             newStatements.add(logStatement);
-            newStatements.addAll(methodBodyBlock.getStatements());
+            newStatements.addAll(blockStatements);
         } else {
             boolean foundSuperCall = false;
-            for (JCTree.JCStatement statement : methodBodyBlock.getStatements()) {
+            for (JCTree.JCStatement statement : blockStatements) {
                 newStatements.add(statement);
                 if (!foundSuperCall) {
                     if (statement instanceof JCTree.JCExpressionStatement) {
@@ -127,11 +101,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
                         }
                     }
                 }
-//                System.out.println("\t\tStatement: " + statement);
             }
             if (!foundSuperCall) {
                 newStatements.add(logStatement);
-//                System.out.println("Did not find a super() call in method: " + methodName + " for class " + className);
             }
         }
 
@@ -140,8 +112,28 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     }
 
+    private JCTree.JCExpressionStatement createLogStatement(JavacNode methodNode, String variableToRecord, int dataId) {
+        JavacTreeMaker treeMaker = methodNode.getTreeMaker();
+        JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode, "io.unlogged.logging.Logging.recordEvent");
+
+        JCTree.JCExpressionStatement logStatement = treeMaker.Exec(
+                treeMaker.Apply(
+                        List.<JCTree.JCExpression>nil(),
+                        printlnMethod,
+                        List.<JCTree.JCExpression>of(
+                                treeMaker.Ident(methodNode.toName(variableToRecord)),
+                                treeMaker.Literal(dataId)
+                        )
+                )
+        );
+        return logStatement;
+    }
+
     private String createMethodDescriptor(JavacNode methodNode) {
         return "(IL)Ljava.lang.Integer;";
     }
 
+    public Map<JavacNode, ClassInfo> getClassRoots() {
+        return classRoots;
+    }
 }

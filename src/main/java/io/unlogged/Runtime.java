@@ -124,8 +124,7 @@ public class Runtime {
 
         } catch (Throwable thx) {
             thx.printStackTrace();
-            System.err.println(
-                    "[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());
+            System.err.println("[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());
         }
     }
 

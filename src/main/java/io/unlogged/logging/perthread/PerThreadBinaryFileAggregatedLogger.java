@@ -65,7 +65,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     private final Map<Integer, BloomFilter<Long>> valueIdFilterSet = new HashMap<>();
     private final Map<Integer, BloomFilter<Integer>> probeIdFilterSet = new HashMap<>();
     private final OffLoadTaskPayload[] TaskQueueArray = new OffLoadTaskPayload[TASK_QUEUE_CAPACITY];
-    ScheduledExecutorService threadPoolExecutor5Seconds = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService threadPoolExecutor5Seconds = Executors.newScheduledThreadPool(2);
     ExecutorService threadPoolExecutor = Executors.newFixedThreadPool(4);
     private long currentTimestamp = System.currentTimeMillis();
     private RawFileCollector fileCollector = null;
@@ -105,6 +105,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //        System.out.printf("[unlogged] create aggregated logger -> %s\n", currentFileMap.get(-1));
 
         threadPoolExecutor.submit(fileCollector);
+//        threadPoolExecutor5Seconds.scheduleWithFixedDelay(fileCollector, 0, 1000, TimeUnit.SECONDS);
 
         logFileTimeAgeChecker = new FileEventCountThresholdChecker(
                 threadFileMap, this,
@@ -288,7 +289,17 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             return;
         }
         int bytesToWrite = 1 + 4 + exceptionBytes.length;
+
         int currentThreadId = threadId.get();
+
+        try {
+            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+                prepareNextFile(currentThreadId);
+            }
+        } catch (IOException e) {
+            errorLogger.log(e);
+        }
+
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream(bytesToWrite);
@@ -297,9 +308,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             tempOut.writeInt(exceptionBytes.length);
             tempOut.write(exceptionBytes);
             getStreamForThread(threadId.get()).write(baos.toByteArray());
-            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
-                prepareNextFile(currentThreadId);
-            }
+            getThreadEventCount(currentThreadId).addAndGet(1);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -362,11 +371,12 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(buffer);
 
+            getThreadEventCount(currentThreadId).addAndGet(1);
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -391,7 +401,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         fileCollector.addClassWeaveInfo(byteArray);
     }
 
-    public void shutdown() throws IOException {
+    public void shutdown() throws IOException, InterruptedException {
         System.err.println("[unlogged] shutdown logger");
         skipUploads = true;
         shutdown = true;
@@ -432,12 +442,12 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-
+            getThreadEventCount(currentThreadId).addAndGet(1);
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 

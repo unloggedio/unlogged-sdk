@@ -17,20 +17,20 @@ public class ObjectIdMap {
 
     public static final int INT_MAP_CAPACITY = 1024 * 1024;
     private final long nextId;
-    private Entry[] entries;
-    private int capacity;
-    private int threshold;
     private final int andKey;
     private final int size;
     private final int INT_MAX_BIT = 30;
     private final int idCount = 0;
-
+    BloomFilter<Integer> aggregatedProbeIdSet;
+    private Entry[] entries;
+    private int capacity;
+    private int threshold;
 
     /**
      * Create an instance.
      *
      * @param initialCapacity is the size of an internal array to manage the contents.
-     * @param outputDir location to save the object map, optional
+     * @param outputDir       location to save the object map, optional
      */
     public ObjectIdMap(int initialCapacity, File outputDir) throws IOException {
         size = 0;
@@ -56,13 +56,86 @@ public class ObjectIdMap {
 //                .createPersistedTo(objectIdMapFile);
 //        threshold = capacity / 2;
 //        entries = new Entry[capacity];
-        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbes(initialCapacity);
+        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbesNonSync(initialCapacity);
 
     }
 
-    BloomFilter<Integer> aggregatedProbeIdSet;
+//    CircularFifoBuffer recentIdsBuffer;
 
+    /**
+     * Translate an object into an ID.
+     *
+     * @param o is an object used in the logging target program.
+     * @return an ID corresponding to the object.
+     * 0 is returned for null.
+     */
 
+//    IntIntMap4 objectMap = new IntIntMap4(1024 * 1024, 0.5f);
+
+//    public long getIdOld(Object o) {
+//        if (o == null) {
+//            return 0L;
+//        }
+//        idCount++;
+//        int id = System.identityHashCode(o);
+//
+//        int val = objectMap.get(id);
+//        if (val == 0) {
+//            objectMap.put(id, id);
+//            onNewObjectId(o, id);
+//        } else {
+//            int x = id + 1;
+//        }
+//        return id;
+//
+//    }
+//
+//    ChronicleMap<LongValue, LongValue> objectIdContainer;
+//    ThreadLocal<LongValue> keyHolder = ThreadLocal.withInitial(() -> Values.newHeapInstance(LongValue.class));
+//    ThreadLocal<LongValue> valueHolder = ThreadLocal.withInitial(() -> Values.newHeapInstance(LongValue.class));
+//
+//
+//    ExecutorService singleExecutor = Executors.newFixedThreadPool(1);
+//    public long getIdChronicleMap(Object o) {
+//        if (o == null) {
+//            return 0L;
+//        }
+//        LongValue longIdValue = keyHolder.get();
+//        int hash = System.identityHashCode(o);
+//
+////        long index = hash & andKey;
+//        longIdValue.setValue(hash);
+//        if (objectIdContainer.containsKey(longIdValue)) {
+//            return hash;
+//        }
+//        idCount++;
+////        int objectId = hash;
+//
+////        Entry newEntry = new Entry(o, objectId, objectIdContainer.get(longIdValue), hash);
+//
+//        if (objectIdContainer.size() > capacity * 0.8 && recentIdsBuffer.size() > (0.6 * (capacity / 4))) {
+//            List<Long> idsToRemove = (List<Long>) recentIdsBuffer.stream().collect(Collectors.toList());
+//            recentIdsBuffer.clear();
+//            if (idsToRemove.size() > 0) {
+//                OldIdCleaner idCleaner = new OldIdCleaner(objectIdContainer, idsToRemove);
+//                singleExecutor.submit(idCleaner);
+//            }
+//        }
+//        recentIdsBuffer.add(longIdValue);
+//
+//        try {
+//
+//            LongValue valueItem = valueHolder.get();
+//            valueItem.setValue(hash);
+//            objectIdContainer.put(longIdValue, valueItem);
+//        } catch (IllegalStateException ise) {
+//            System.err.println("Too many objects being generated, recoding will be skip [" + objectIdContainer.size() + "]");
+//        }
+//
+//        onNewObjectId(o, hash);
+//
+//        return hash;
+//    }
     public long getId(Object o) {
         if (o == null) {
             return 0L;
@@ -70,11 +143,12 @@ public class ObjectIdMap {
         int hash = System.identityHashCode(o);
 
         if (aggregatedProbeIdSet.contains(hash)) {
+//            System.out.println("Object " + hash + " already present of type " + o.getClass());
             return hash;
         }
 
         if (aggregatedProbeIdSet.getFalsePositiveProbability() > 0.01) {
-            System.out.println("Clearing probe id bloom filter");
+            System.out.println("Clearing object id bloom filter");
             aggregatedProbeIdSet.clear();
         }
         aggregatedProbeIdSet.add(hash);
@@ -102,6 +176,89 @@ public class ObjectIdMap {
      */
     protected void onNewObjectId(Object o, long id) {
     }
+
+
+//    /**
+//     * Translate an object into an ID.
+//     *
+//     * @param o is an object used in the logging target program.
+//     * @return an ID corresponding to the object.
+//     * 0 is returned for null.
+//     */
+//    public synchronized long getSynchronizedId(Object o) {
+//        if (o == null) {
+//            return 0L;
+//        }
+//
+//        int hash = System.identityHashCode(o);
+//
+//        // Search the object.  If found, return the registered ID.
+//        int index = hash & andKey;
+//        Entry e = entries[index];
+//        while (e != null) {
+//            if (hash == e.hashcode) {
+//                return e.objectId;
+//            }
+//            e = e.next;
+//        }
+//
+//        // If not found, create a new entry for the given object.
+//        // First, prepares a new object
+//        onNewObject(o);
+//
+//        // Update an entry.  index is re-computed because andKey may be updated by onNewObject.
+//        index = hash & andKey;
+//        Entry oldEntry = entries[index];
+//        long id = nextId;
+//        nextId++;
+//        e = new Entry(o, id, oldEntry, hash);
+//        entries[index] = e;
+//        size++;
+//        onNewObjectId(o, id);
+//
+//        if (size >= threshold) {
+//            resize();
+//        }
+//        return id;
+//    }
+//
+//
+//    /**
+//     * Enlarge the internal array for entries.
+//     */
+//    private void resize() {
+//        if (capacity == (1 << INT_MAX_BIT)) {
+//            capacity = Integer.MAX_VALUE;
+//            threshold = Integer.MAX_VALUE;
+//            andKey = capacity;
+//        } else {
+//            capacity = capacity * 2;
+//            threshold = threshold * 2;
+//            andKey = capacity - 1;
+//        }
+//
+//        Entry[] newEntries = new Entry[capacity];
+//        // Copy contents of the hash table
+//        for (int from = 0; from < entries.length; ++from) {
+//            Entry fromEntry = entries[from];
+//            entries[from] = null;
+//            while (fromEntry != null) {
+//                Entry nextEntry = fromEntry.next;
+//                if (fromEntry.hashcode != 0) {
+//                    // Copy non-null entries
+//                    int index = fromEntry.hashcode & andKey;
+//                    fromEntry.next = newEntries[index];
+//                    newEntries[index] = fromEntry;
+//                } else {
+//                    // skip null object entry
+//                    fromEntry.next = null;
+//                    size--;
+//                }
+//                fromEntry = nextEntry;
+//            }
+//        }
+//        entries = newEntries;
+//    }
 
     /**
      * @return the number of objects stored in the map.

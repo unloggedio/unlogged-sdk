@@ -29,20 +29,21 @@ public class RawFileCollector implements Runnable {
     private final Queue<TypeInfoDocument> typeInfoDocuments;
     private final NetworkClient networkClient;
     private final BlockingQueue<TypeInfoDocument> typesToIndex;
-    private final Queue<ObjectInfoDocument> EMPTY_LIST = new ArrayBlockingQueue<>(1);
-    private final LinkedList<StringInfoDocument> EMPTY_STRING_LIST = new LinkedList<>();
-    private final LinkedList<TypeInfoDocument> EMPTY_TYPE_LIST = new LinkedList<>();
+    private final List<ObjectInfoDocument> EMPTY_LIST = new ArrayList<>();
+    private final List<StringInfoDocument> EMPTY_STRING_LIST = new ArrayList<>();
+    private final Queue<TypeInfoDocument> EMPTY_TYPE_LIST = new ArrayBlockingQueue<>(1);
     private final FileOutputStream classWeaveFileRaw;
     private final File outputDir;
-    private final Queue<ObjectInfoDocument> objectInfoDocuments = new ArrayBlockingQueue<>(1024 * 1024);
+    private final BlockingQueue<StringInfoDocument> stringsToIndex;
+    private final BlockingQueue<ObjectInfoDocument> objectsToIndex;
+    private final ArchiveCloser archiveCloser;
+    private final BlockingQueue<ArchivedIndexWriter> archiveQueue = new ArrayBlockingQueue<>(100);
     public int filesPerArchive = 0;
     private boolean shutdown = false;
     private boolean shutdownComplete = false;
     private boolean skipUploads;
     private ArchivedIndexWriter archivedIndexWriter;
     private int fileCount = 0;
-    private BlockingQueue<StringInfoDocument> stringsToIndex;
-    private BlockingQueue<ObjectInfoDocument> objectsToIndex;
     private AtomicBoolean isDraining = new AtomicBoolean(false);
 
     public RawFileCollector(int filesPerArchive,
@@ -57,13 +58,15 @@ public class RawFileCollector implements Runnable {
         this.fileList = new ArrayBlockingQueue<>(1024 * 128);
         this.typeInfoDocuments = new ArrayBlockingQueue<>(1024 * 1024);
         typesToIndex = new ArrayBlockingQueue<>(1024 * 1024);
-        objectsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
         stringsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
+        objectsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
 
         this.outputDir = outputDir;
         errorLogger.log("Created raw file collector, files per archive: " + filesPerArchive);
         finalizeArchiveAndUpload();
         classWeaveFileRaw = new FileOutputStream(new File(outputDir + "/" + "class.weave.dat"));
+        archiveCloser = new ArchiveCloser(archiveQueue, errorLogger);
+        EXECUTOR_SERVICE.submit(archiveCloser);
 
     }
 
@@ -75,31 +78,10 @@ public class RawFileCollector implements Runnable {
                 outputDir + "/class.weave.dat", errorLogger);
         fileCount = 0;
         if (archivedIndexWriterOld != null) {
-            EXECUTOR_SERVICE.submit(() -> {
-                try {
-                    errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile()
-                            .getName());
-                    drainItemsToIndex(archivedIndexWriterOld);
-                    archivedIndexWriterOld.drainQueueToIndex(EMPTY_LIST, typeInfoDocuments, EMPTY_STRING_LIST);
-                    archivedIndexWriterOld.close();
-                    errorLogger.log("closed archive: " + archivedIndexWriterOld.getArchiveFile()
-                            .getName());
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                }
-
-                if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
-                    File archiveFile = archivedIndexWriterOld.getArchiveFile();
-                    try {
-                        errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
-                        networkClient.uploadFile(archiveFile.getAbsolutePath());
-                    } catch (IOException e) {
-                        errorLogger.log("failed to upload archive file: " + e.getMessage());
-                    } finally {
-                        archiveFile.delete();
-                    }
-                }
-            });
+            boolean added = archiveQueue.offer(archivedIndexWriterOld);
+            if (!added) {
+                errorLogger.log("Failed to close archive queue, queue is full");
+            }
         }
     }
 
@@ -146,8 +128,7 @@ public class RawFileCollector implements Runnable {
             errorLogger.log("file upload cron interrupted, shutting down");
         } finally {
             errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
-                    .getName() + "] can " +
-                    "be closed: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
+                    .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
             if (archivedIndexWriter.fileCount() >= filesPerArchive || shutdown) {
                 if (!doneFinalize) {
                     finalizeArchiveAndUpload();
@@ -159,14 +140,16 @@ public class RawFileCollector implements Runnable {
         }
     }
 
-    public void drainItemsToIndex(IndexOutputStream writer) {
-        if (isDraining.compareAndSet(false, true)) {
+    public void drainItemsToIndex(ArchivedIndexWriter writer) {
+        if (!isDraining.compareAndSet(false, true)) {
             return;
         }
-        errorLogger.log("Drain items to index: ");
+        errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drain items to index: " +
+                objectsToIndex.size() + ", " + typesToIndex.size() + ", " + stringsToIndex.size());
         List<StringInfoDocument> stringInfoDocuments = new ArrayList<>();
 
 
+        List<ObjectInfoDocument> objectInfoDocuments = new ArrayList<>(objectsToIndex.size());
         objectsToIndex.drainTo(objectInfoDocuments);
 
         List<TypeInfoDocument> newTypes = new ArrayList<>();
@@ -180,35 +163,36 @@ public class RawFileCollector implements Runnable {
             errorLogger.log("no new data to record, return");
             return;
         }
+
         writer.drainQueueToIndex(objectInfoDocuments, EMPTY_TYPE_LIST, stringInfoDocuments);
+        errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drained");
 
         isDraining.set(false);
 
-    }
-
-    void prepareIndexItemBuffers() {
-        objectsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
-        stringsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
     }
 
     @Override
     public void run() {
         try {
             while (true) {
-                long start = System.currentTimeMillis();
-                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
-                if (shutdown) {
-                    return;
-                }
-                try {
-                    EXECUTOR_SERVICE.submit(() -> drainItemsToIndex(archivedIndexWriter));
-                    upload();
-                } catch (IOException e) {
-                    errorLogger.log(e);
-                }
+            long start = System.currentTimeMillis();
+            errorLogger.log(start + " : run raw file collector cron: " + shutdown);
+            if (shutdown) {
+                return;
+            }
+            try {
+                EXECUTOR_SERVICE.submit(() -> {
+                    try {
+                        drainItemsToIndex(archivedIndexWriter);
+                    } catch (Throwable e) {
+                        errorLogger.log(e);
+                    }
+                });
+                upload();
+            } catch (IOException e) {
+                errorLogger.log(e);
+            }
                 Thread.sleep(1000);
-//                long timeToProcessFile = System.currentTimeMillis() - start;
-//            errorLogger.log("adding file took [" + timeToProcessFile + "] ms");
             }
         } catch (Throwable e) {
             errorLogger.log("failed to write archived index to disk: " + e.getMessage());
@@ -217,8 +201,6 @@ public class RawFileCollector implements Runnable {
 
     public void indexObjectTypeEntry(long id, int typeId) {
         objectsToIndex.offer(new ObjectInfoDocument(id, typeId));
-//        System.err.println("Offering object [" + id + "] of type [" + typeId + "] => " + objectsToIndex.size());
-
     }
 
     public void indexStringEntry(long id, String stringObject) {
@@ -250,5 +232,54 @@ public class RawFileCollector implements Runnable {
 
     public BlockingQueue<UploadFile> getFileQueue() {
         return this.fileList;
+    }
+
+    public class ArchiveCloser implements Runnable {
+
+        private final BlockingQueue<ArchivedIndexWriter> archiveQueue;
+        private final IErrorLogger errorLogger;
+
+        public ArchiveCloser(BlockingQueue<ArchivedIndexWriter> archiveQueue, IErrorLogger errorLogger) {
+            this.archiveQueue = archiveQueue;
+            this.errorLogger = errorLogger;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    errorLogger.log("Waiting for next archive to close");
+                    ArchivedIndexWriter archivedIndexWriterOld = archiveQueue.take();
+                    try {
+                        errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile().getName());
+                        drainItemsToIndex(archivedIndexWriterOld);
+                        archivedIndexWriterOld.drainQueueToIndex(EMPTY_LIST, typeInfoDocuments, EMPTY_STRING_LIST);
+                        archivedIndexWriterOld.close();
+                        errorLogger.log("closed archive: " + archivedIndexWriterOld.getArchiveFile().getName());
+                    } catch (Throwable e) {
+                        errorLogger.log(e);
+                    }
+
+                    if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
+                        File archiveFile = archivedIndexWriterOld.getArchiveFile();
+                        try {
+                            errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
+                            networkClient.uploadFile(archiveFile.getAbsolutePath());
+                        } catch (IOException e) {
+                            errorLogger.log("failed to upload archive file: " + e.getMessage());
+                        } finally {
+                            archiveFile.delete();
+                        }
+                    }
+
+                } catch (InterruptedException e) {
+                    errorLogger.log("Archive closer worker was interrupted: " + e.getMessage());
+                    break;
+                } catch (Exception somethingElse) {
+                    errorLogger.log(somethingElse);
+                }
+            }
+
+        }
     }
 }

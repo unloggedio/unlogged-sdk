@@ -21,7 +21,9 @@
  */
 package io.unlogged.core.javac;
 
+import com.insidious.common.weaver.ClassInfo;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
@@ -41,6 +43,8 @@ import java.lang.annotation.Annotation;
 import java.util.*;
 
 import static io.unlogged.core.AnnotationValues.AnnotationValueDecodeFail;
+import static io.unlogged.core.handlers.JavacHandlerUtil.chainDotsString;
+import static io.unlogged.core.handlers.JavacHandlerUtil.recursiveSetGeneratedBy;
 import static io.unlogged.core.javac.JavacAugments.JCTree_handled;
 
 /**
@@ -245,6 +249,32 @@ public class HandlerLibrary {
     }
 
     public void finish() {
+        Map<JavacNode, ClassInfo> classRoots = unloggedVisitor.getClassRoots();
+        for (Map.Entry<JavacNode, ClassInfo> entry : classRoots.entrySet()) {
+            JavacNode classNode = entry.getKey();
+            ClassInfo classInfo = entry.getValue();
+
+            byte[] classInfoBytes = classInfo.toBytes();
+
+
+            JavacTreeMaker maker = classNode.getTreeMaker();
+            JCTree.JCExpression runtimeFieldType = chainDotsString(classNode, "com.insidious.common.weaver.ClassInfo");
+            JCTree.JCExpression factoryMethod = chainDotsString(classNode, "io.unlogged.Runtime.getInstance");
+            JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
+                    maker.Literal(classInfoBytes)
+            };
+
+            JCTree.JCMethodInvocation factoryMethodCall = maker.Apply(
+                    com.sun.tools.javac.util.List.<JCTree.JCExpression>nil(), factoryMethod, com.sun.tools.javac.util.List.<JCTree.JCExpression>from(factoryParameters));
+
+            JCTree.JCVariableDecl fieldDecl = recursiveSetGeneratedBy(maker.VarDef(
+                    maker.Modifiers(Flags.PRIVATE | Flags.FINAL | Flags.STATIC),
+                    classNode.toName("unloggedClassLoaded"), runtimeFieldType, factoryMethodCall), classNode);
+
+
+            JavacHandlerUtil.injectField(classNode, fieldDecl);
+        }
+
         // todo
     }
 

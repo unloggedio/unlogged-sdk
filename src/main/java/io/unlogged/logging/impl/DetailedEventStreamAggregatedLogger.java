@@ -49,6 +49,7 @@ import java.util.*;
 public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
+    //    private final FSTConfiguration fstObjectMapper;
     private final AggregatedFileLogger aggregatedLogger;
     //    private final TypeIdAggregatedStreamMap typeToId;
     private final ObjectIdAggregatedStream objectIdMap;
@@ -66,29 +67,162 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             ThreadLocal.withInitial(() -> new ByteArrayOutputStream(1_000_000));
     //    private final Set<String> classesToIgnore = new HashSet<>();
     private final Kryo kryo;
-    private final ObjectMapper objectMapper;
-
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
     private boolean isLombokPresent;
     private ClassLoader targetClassLoader;
+    private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(() -> {
+        String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
+        if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
+            return new ObjectMapper();
+        } else {
+            // For 2.13.1
+            // Load JsonMappingException class force load so that we dont get a StackOverflow when we are in a cycle
+            JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
+            jme.prependPath(new JsonMappingException.Reference("from dummy"));
+            JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
+            jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
+                @Override
+                public boolean hasIgnoreMarker(AnnotatedMember m) {
+                    return false;
+                }
+
+                @Override
+                public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) {
+//                    System.err.println("Find POJO builder config: " + ac.getName());
+                    if (ac.hasAnnotation(
+                            JsonPOJOBuilder.class)) {//If no annotation present use default as empty prefix
+                        return super.findPOJOBuilderConfig(ac);
+                    }
+                    return new JsonPOJOBuilder.Value("build", "");
+                }
+
+                @Override
+                public Class<?> findPOJOBuilder(AnnotatedClass ac) {
+//                    System.err.println("Find POJO builder: " + ac.getName());
+
+//                    if (isLombokPresent) {
+//                        System.err.println("Annotation found: " + ac.hasAnnotation(lombokBuilderAnnotation));
+//                    }
+
+                    if (isLombokPresent) {
+                        try {
+                            String classFullyQualifiedName = ac.getName();
+                            String classSimpleName = classFullyQualifiedName.substring(
+                                    classFullyQualifiedName.lastIndexOf(".") + 1);
+                            String lombokClassBuilderName = ac.getName() + "$" + classSimpleName + "Builder";
+//                            System.err.println("Lookup builder by nameclean: " + lombokClassBuilderName);
+                            return targetClassLoader.loadClass(lombokClassBuilderName);
+                        } catch (ClassNotFoundException e) {
+                            return super.findPOJOBuilder(ac);
+                        }
+                    }
+                    return super.findPOJOBuilder(ac);
+                }
+            });
+            DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
+            jacksonBuilder.defaultDateFormat(df);
+            jacksonBuilder.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            jacksonBuilder.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
+
+            try {
+                Field fieldWriteSelfReferencesAsNull = SerializationFeature.class.getDeclaredField(
+                        "WRITE_SELF_REFERENCES_AS_NULL");
+                // field found
+                jacksonBuilder.configure(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL, true);
+            } catch (NoSuchFieldException e) {
+                // no field WRITE_SELF_REFERENCES_AS_NULL
+            }
+
+
+            try {
+                Class<?> hibernateClassPresent = Class.forName("org.hibernate.SessionFactory");
+                Class<?> hibernateModule = Class.forName(
+                        "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module");
+                Module module = (Module) hibernateModule.getDeclaredConstructor().newInstance();
+                Class<?> featureClass = Class.forName(
+                        "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
+                Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
+                configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING")
+                        .get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS")
+                        .get(null), true);
+                jacksonBuilder.addModule(module);
+//                System.out.println("Loaded hibernate module");
+            } catch (ClassNotFoundException | NoSuchMethodException e) {
+//                e.printStackTrace();
+//                System.out.println("Failed to load hibernate module: " + e.getMessage());
+                // hibernate module not found
+                // add a warning in System.err here ?
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException |
+                     NoSuchFieldException e) {
+                throw new RuntimeException(e);
+            }
+
+            // potentially
+//            jacksonBuilder.findAndAddModules();
+            List<String> jacksonModules = Arrays.asList(
+                    "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
+                    "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+                    "com.fasterxml.jackson.datatype.joda.JodaModule",
+//                        "com.fasterxml.jackson.module.blackbird.BlackbirdModule",
+                    "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
+                    "com.fasterxml.jackson.module.mrbean.MrBeanModule",
+//                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
+                    "com.fasterxml.jackson.module.paranamer.ParanamerModule"
+            );
+            for (String jacksonModule : jacksonModules) {
+                try {
+                    //checks for presence of this module class, if not present throws exception
+                    Class<?> jdk8Module = Class.forName(jacksonModule);
+                    jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
+                } catch (ClassNotFoundException e) {
+                    // jdk8 module not found
+                } catch (InvocationTargetException
+                         | InstantiationException
+                         | IllegalAccessException
+                         | NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            try {
+                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+                KotlinModule kotlinModule = new KotlinModule.Builder().build();
+                jacksonBuilder.addModule(kotlinModule);
+            } catch (ClassNotFoundException e) {
+                // kotlin module for jackson not present on classpath
+            }
+
+
+            JsonMapper objectMapperInstance = jacksonBuilder.build();
+            objectMapperInstance.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
+                    .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+            return objectMapperInstance;
+        }
+    });
 
     /**
      * Create an instance of logging object.
      *
-     * @param objectIdMap      object id mapper which can convert an object to persistent Id
+     * @param objectIdMap      object to id converter
      * @param aggregatedLogger writer
      */
     public DetailedEventStreamAggregatedLogger(
-            ObjectIdAggregatedStream objectIdMap, AggregatedFileLogger aggregatedLogger
+//            String includedPackage,
+            ObjectIdAggregatedStream objectIdMap,
+            AggregatedFileLogger aggregatedLogger
     ) {
 
-        this.objectIdMap = objectIdMap;
+//        this.includedPackage = includedPackage;
         this.aggregatedLogger = aggregatedLogger;
+        this.objectIdMap = objectIdMap;
 
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
             isLombokPresent = true;
+//            System.err.println("Lombok found: " + lombokBuilderAnnotation.getCanonicalName());
         } catch (ClassNotFoundException e) {
+//            System.err.println("Lombok not found");
             isLombokPresent = false;
         }
 
@@ -97,155 +231,184 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             kryo.register(byte[].class);
             kryo.register(LinkedHashMap.class);
             kryo.register(LinkedHashSet.class);
-            objectMapper = null;
+//            objectMapper = null;
+//            fstObjectMapper = null;
         } else if (SERIALIZATION_MODE == SerializationMode.JACKSON) {
-            String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
-            if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
-                objectMapper = new ObjectMapper();
-            } else {
-                // For 2.13.1
-                // Load JsonMappingException class force load so that we dont get a StackOverflow when we are in a cycle
-                JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
-                jme.prependPath(new JsonMappingException.Reference("from dummy"));
-                JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
-                jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
-                    @Override
-                    public boolean hasIgnoreMarker(AnnotatedMember m) {
-                        return false;
-                    }
-
-                    @Override
-                    public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) {
-//                    System.err.println("Find POJO builder config: " + ac.getName());
-                        if (ac.hasAnnotation(
-                                JsonPOJOBuilder.class)) {//If no annotation present use default as empty prefix
-                            return super.findPOJOBuilderConfig(ac);
-                        }
-                        return new JsonPOJOBuilder.Value("build", "");
-                    }
-
-                    @Override
-                    public Class<?> findPOJOBuilder(AnnotatedClass ac) {
-//                    System.err.println("Find POJO builder: " + ac.getName());
-
-//                    if (isLombokPresent) {
-//                        System.err.println("Annotation found: " + ac.hasAnnotation(lombokBuilderAnnotation));
+//            String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
+//            if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
+//                objectMapper = new ObjectMapper();
+//            } else {
+//                // For 2.13.1
+//                // Load JsonMappingException class force load so that we dont get a StackOverflow when we are in a cycle
+//                JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
+//                jme.prependPath(new JsonMappingException.Reference("from dummy"));
+//                JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
+//                jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
+//                    @Override
+//                    public boolean hasIgnoreMarker(AnnotatedMember m) {
+//                        return false;
 //                    }
-
-                        if (isLombokPresent) {
-                            try {
-                                String classFullyQualifiedName = ac.getName();
-                                String classSimpleName = classFullyQualifiedName.substring(
-                                        classFullyQualifiedName.lastIndexOf(".") + 1);
-                                String lombokClassBuilderName = ac.getName() + "$" + classSimpleName + "Builder";
-//                            System.err.println("Lookup builder by nameclean: " + lombokClassBuilderName);
-                                return targetClassLoader.loadClass(lombokClassBuilderName);
-                            } catch (ClassNotFoundException e) {
-                                return super.findPOJOBuilder(ac);
-                            }
-                        }
-                        return super.findPOJOBuilder(ac);
-                    }
-                });
-                DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
-                jacksonBuilder.defaultDateFormat(df);
-                jacksonBuilder.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-                jacksonBuilder.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
-
-                try {
-                    Field fieldWriteSelfReferencesAsNull = SerializationFeature.class.getDeclaredField(
-                            "WRITE_SELF_REFERENCES_AS_NULL");
-                    // field found
-                    jacksonBuilder.configure(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL, true);
-                } catch (NoSuchFieldException e) {
-                    // no field WRITE_SELF_REFERENCES_AS_NULL
-                }
-
-
-                try {
-                    Class<?> hibernateClassPresent = Class.forName("org.hibernate.SessionFactory");
-                    Class<?> hibernateModule = Class.forName(
-                            "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module");
-                    Module module = (Module) hibernateModule.getDeclaredConstructor().newInstance();
-                    Class<?> featureClass = Class.forName(
-                            "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
-                    Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
-                    configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING")
-                            .get(null), true);
-                    configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS")
-                            .get(null), true);
-                    jacksonBuilder.addModule(module);
-//                System.out.println("Loaded hibernate module");
-                } catch (ClassNotFoundException | NoSuchMethodException e) {
-//                e.printStackTrace();
-//                System.out.println("Failed to load hibernate module: " + e.getMessage());
-                    // hibernate module not found
-                    // add a warning in System.err here ?
-                } catch (InvocationTargetException | InstantiationException | IllegalAccessException |
-                         NoSuchFieldException e) {
-                    throw new RuntimeException(e);
-                }
-
-                // potentially
-//            jacksonBuilder.findAndAddModules();
-                List<String> jacksonModules = Arrays.asList(
-                        "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
-                        "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
-                        "com.fasterxml.jackson.datatype.joda.JodaModule",
-                        "com.fasterxml.jackson.module.blackbird.BlackbirdModule",
-                        "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
-                        "com.fasterxml.jackson.module.mrbean.MrBeanModule",
-//                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
-                        "com.fasterxml.jackson.module.paranamer.ParanamerModule"
-                );
-                for (String jacksonModule : jacksonModules) {
-                    try {
-                        //checks for presence of this module class, if not present throws exception
-                        Class<?> jdk8Module = Class.forName(jacksonModule);
-                        jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
-                    } catch (ClassNotFoundException e) {
-                        // jdk8 module not found
-                    } catch (InvocationTargetException
-                             | InstantiationException
-                             | IllegalAccessException
-                             | NoSuchMethodException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                try {
-                    Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-                    KotlinModule kotlinModule = new KotlinModule.Builder().build();
-                    jacksonBuilder.addModule(kotlinModule);
-                } catch (ClassNotFoundException e) {
-                    // kotlin module for jackson not present on classpath
-                }
-
-
-                objectMapper = jacksonBuilder.build();
-                objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
-                        .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-
-            }
+//
+//                    @Override
+//                    public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) {
+////                    System.err.println("Find POJO builder config: " + ac.getName());
+//                        if (ac.hasAnnotation(
+//                                JsonPOJOBuilder.class)) {//If no annotation present use default as empty prefix
+//                            return super.findPOJOBuilderConfig(ac);
+//                        }
+//                        return new JsonPOJOBuilder.Value("build", "");
+//                    }
+//
+//                    @Override
+//                    public Class<?> findPOJOBuilder(AnnotatedClass ac) {
+////                    System.err.println("Find POJO builder: " + ac.getName());
+//
+////                    if (isLombokPresent) {
+////                        System.err.println("Annotation found: " + ac.hasAnnotation(lombokBuilderAnnotation));
+////                    }
+//
+//                        if (isLombokPresent) {
+//                            try {
+//                                String classFullyQualifiedName = ac.getName();
+//                                String classSimpleName = classFullyQualifiedName.substring(
+//                                        classFullyQualifiedName.lastIndexOf(".") + 1);
+//                                String lombokClassBuilderName = ac.getName() + "$" + classSimpleName + "Builder";
+////                            System.err.println("Lookup builder by nameclean: " + lombokClassBuilderName);
+//                                return targetClassLoader.loadClass(lombokClassBuilderName);
+//                            } catch (ClassNotFoundException e) {
+//                                return super.findPOJOBuilder(ac);
+//                            }
+//                        }
+//                        return super.findPOJOBuilder(ac);
+//                    }
+//                });
+//                DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
+//                jacksonBuilder.defaultDateFormat(df);
+//                jacksonBuilder.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+//                jacksonBuilder.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
+//
+//                try {
+//                    Field fieldWriteSelfReferencesAsNull = SerializationFeature.class.getDeclaredField(
+//                            "WRITE_SELF_REFERENCES_AS_NULL");
+//                    // field found
+//                    jacksonBuilder.configure(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL, true);
+//                } catch (NoSuchFieldException e) {
+//                    // no field WRITE_SELF_REFERENCES_AS_NULL
+//                }
+//
+//
+//                try {
+//                    Class<?> hibernateClassPresent = Class.forName("org.hibernate.SessionFactory");
+//                    Class<?> hibernateModule = Class.forName(
+//                            "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module");
+//                    Module module = (Module) hibernateModule.getDeclaredConstructor().newInstance();
+//                    Class<?> featureClass = Class.forName(
+//                            "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
+//                    Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
+//                    configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING")
+//                            .get(null), true);
+//                    configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS")
+//                            .get(null), true);
+//                    jacksonBuilder.addModule(module);
+////                System.out.println("Loaded hibernate module");
+//                } catch (ClassNotFoundException | NoSuchMethodException e) {
+////                e.printStackTrace();
+////                System.out.println("Failed to load hibernate module: " + e.getMessage());
+//                    // hibernate module not found
+//                    // add a warning in System.err here ?
+//                } catch (InvocationTargetException | InstantiationException | IllegalAccessException |
+//                         NoSuchFieldException e) {
+//                    throw new RuntimeException(e);
+//                }
+//
+//                // potentially
+////            jacksonBuilder.findAndAddModules();
+//                List<String> jacksonModules = Arrays.asList(
+//                        "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
+//                        "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+//                        "com.fasterxml.jackson.datatype.joda.JodaModule",
+////                        "com.fasterxml.jackson.module.blackbird.BlackbirdModule",
+//                        "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
+//                        "com.fasterxml.jackson.module.mrbean.MrBeanModule",
+////                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
+//                        "com.fasterxml.jackson.module.paranamer.ParanamerModule"
+//                );
+//                for (String jacksonModule : jacksonModules) {
+//                    try {
+//                        //checks for presence of this module class, if not present throws exception
+//                        Class<?> jdk8Module = Class.forName(jacksonModule);
+//                        jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
+//                    } catch (ClassNotFoundException e) {
+//                        // jdk8 module not found
+//                    } catch (InvocationTargetException
+//                             | InstantiationException
+//                             | IllegalAccessException
+//                             | NoSuchMethodException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }
+//
+//                try {
+//                    Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+//                    KotlinModule kotlinModule = new KotlinModule.Builder().build();
+//                    jacksonBuilder.addModule(kotlinModule);
+//                } catch (ClassNotFoundException e) {
+//                    // kotlin module for jackson not present on classpath
+//                }
+//
+//
+//                objectMapper = jacksonBuilder.build();
+//                objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
+//                        .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+//
+//            }
             kryo = null;
+//            fstObjectMapper = null;
+        } else if (SERIALIZATION_MODE == SerializationMode.FST) {
+
+//            FSTConfiguration defaultConfigMapper = FSTConfiguration.createDefaultConfiguration();
+//            defaultConfigMapper.setForceSerializable(true);
+//            defaultConfigMapper.registerSerializer(Timestamp.class, new FSTBasicObjectSerializer() {
+//                @Override
+//                public void writeObject(FSTObjectOutput out, Object toWrite, FSTClazzInfo clzInfo,
+//                                        FSTClazzInfo.FSTFieldInfo referencedBy, int streamPosition) throws IOException {
+//                    out.writeLong(((Timestamp) toWrite).getTime());
+//                }
+//
+//                @Override
+//                public boolean alwaysCopy() {
+//                    return true;
+//                }
+//
+//                @Override
+//                public Object instantiate(Class objectClass, FSTObjectInput in, FSTClazzInfo serializationInfo,
+//                                          FSTClazzInfo.FSTFieldInfo referencee, int streamPosition) throws Exception {
+//                    return new Timestamp(in.readLong());
+//                }
+//            }, true);
+
+//            fstObjectMapper = defaultConfigMapper;
+            kryo = null;
+//            objectMapper = null;
         } else {
+//            fstObjectMapper = null;
             kryo = null;
-            objectMapper = null;
+//            objectMapper = null;
         }
 
 
     }
 
-//    public ObjectIdAggregatedStream getObjectIdMap() {
-//        return objectIdMap;
-//    }
+    public ObjectIdAggregatedStream getObjectIdMap() {
+        return objectIdMap;
+    }
 
     /**
      * Close all file streams used by the object.
      */
     public void close() {
 //        System.out.printf("[videobug] close event stream aggregated logger\n");
-//        objectIdMap.close();
+        objectIdMap.close();
         try {
             aggregatedLogger.shutdown();
         } catch (Exception e) {
@@ -338,7 +501,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("tech.jhipster")
                         || className.startsWith("com.github")
                         || className.startsWith("com.zaxxer")
-                        || className.startsWith("org.glassfish")
+                        || (className.startsWith("org.glassfish")
+                        && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                         || className.startsWith("com.fasterxml")
                         || className.startsWith("org.slf4j")
                         || className.startsWith("org.springframework")
@@ -355,32 +519,31 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
                     probesToRecord.remove(dataId);
-                    aggregatedLogger.errorLog("Removing probe: [" + dataId + "] is of classType: " + className);
                 } else if (SERIALIZATION_MODE == SerializationMode.JACKSON) {
 //                    System.err.println("To serialize class: " + className);
 //                    objectMapper.writeValue(outputStream, value);
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
-                    bytes = objectMapper.writeValueAsBytes(value);
+                    bytes = objectMapper.get().writeValueAsBytes(value);
                     if (DEBUG) {
                         System.err.println(
                                 "[" + dataId + "] record serialized value for probe [" + value.getClass() + "] [" + objectId + "] ->" +
                                         " " + new String(bytes));
                     }
                     // ######################################
-//                } else if (SERIALIZATION_MODE == SerializationMode.FST) {
-////                    objectMapper.writeValue(outputStream, value);
-////                    outputStream.flush();
-////                    bytes = outputStream.toByteArray();
+                } else if (SERIALIZATION_MODE == SerializationMode.FST) {
+//                    objectMapper.writeValue(outputStream, value);
+//                    outputStream.flush();
+//                    bytes = outputStream.toByteArray();
 //                    bytes = fstObjectMapper.asByteArray(value);
 //                    if (bytes.length > 10000) {
 //                        probesToRecord.remove(dataId);
 //                        bytes = new byte[0];
 //                    }
-////                    System.err.println(
-////                            "[" + dataId + "] record serialized value for probe [" + value.getClass() + "] [" + objectId + "] ->" +
-////                                    " " + bytes.length + " : " + Base64.getEncoder().encodeToString(bytes));
-//                    // ######################################
+//                    System.err.println(
+//                            "[" + dataId + "] record serialized value for probe [" + value.getClass() + "] [" + objectId + "] ->" +
+//                                    " " + bytes.length + " : " + Base64.getEncoder().encodeToString(bytes));
+                    // ######################################
                 } else if (SERIALIZATION_MODE == SerializationMode.OOS) {
                     // ################# USING OOS #####################
                     // # using ObjectOutputStream
@@ -405,8 +568,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
             } catch (Throwable e) {
                 probesToRecord.remove(dataId);
-                aggregatedLogger.errorLog("Removing probe id: " + dataId);
-                aggregatedLogger.errorLog(e);
 //                if (value != null) {
 //                    kryo.register(value.getClass());
 //                    String message = e.getMessage();
@@ -588,7 +749,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     }
 
     public ObjectMapper getObjectMapper() {
-        return objectMapper;
+        return objectMapper.get();
     }
 
     @Override

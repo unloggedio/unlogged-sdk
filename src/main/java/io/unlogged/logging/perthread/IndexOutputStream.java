@@ -19,7 +19,7 @@ public interface IndexOutputStream {
     void addProbeId(int probeId);
 
     void drainQueueToIndex(
-            Queue<ObjectInfoDocument> objectsToIndex,
+            List<ObjectInfoDocument> objectsToIndex,
             Queue<TypeInfoDocument> typesToIndex,
             List<StringInfoDocument> stringsToIndex);
 
