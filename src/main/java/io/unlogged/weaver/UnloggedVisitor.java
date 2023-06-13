@@ -4,6 +4,9 @@ import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
+import io.unlogged.core.ImportList;
+import io.unlogged.core.TypeLibrary;
+import io.unlogged.core.TypeResolver;
 import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.javac.JavacASTAdapter;
 import io.unlogged.core.javac.JavacNode;
@@ -22,25 +25,72 @@ public class UnloggedVisitor extends JavacASTAdapter {
     private final Map<ClassInfo, java.util.List<MethodInfo>> classMethodInfoList = new HashMap<>();
     private final Map<ClassInfo, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
     private final DataInfoProvider dataInfoProvider;
+    private final TypeLibrary typeLibrary = new TypeLibrary();
 
     public UnloggedVisitor(DataInfoProvider dataInfoProvider) {
         this.dataInfoProvider = dataInfoProvider;
     }
 
     @Override
+    public void visitCompilationUnit(JavacNode top, JCTree.JCCompilationUnit unit) {
+        for (JCTree.JCImport anImport : unit.getImports()) {
+            typeLibrary.addType(anImport.getQualifiedIdentifier().toString());
+        }
+
+    }
+
+    @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
         JavacNode classNode = methodNode.up();
+        if (!JavacHandlerUtil.isClass(classNode)) {
+            // no probing for interfaces and enums
+            return;
+        }
         JCTree classElement = classNode.get();
+        String packageDeclaration = classNode.getPackageDeclaration();
         String className = classNode.getName();
-        String methodDoneKey = className + jcMethodDecl.getName() + jcMethodDecl.params.toString();
+        if (packageDeclaration != null) {
+            className = packageDeclaration + "." + className;
+        }
+        List<JCTree.JCVariableDecl> methodParameters = jcMethodDecl.params;
+        String methodDoneKey = className + jcMethodDecl.getName() + methodParameters.toString();
 
         ClassInfo classInfo;
         if (!classRoots.containsKey(classElement)) {
+
+            ImportList importList = classNode.getImportList();
+            TypeResolver resolver = new TypeResolver(importList);
+
+            JCTree.JCClassDecl classDeclaration = (JCTree.JCClassDecl) classNode.get();
             Element element = classNode.getElement();
+            String superClassFQN = "";
+            if (classDeclaration.getExtendsClause() != null) {
+                String superClassName = ((JCTree.JCIdent) classDeclaration.getExtendsClause()).getName().toString();
+                superClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary, superClassName);
+                if (superClassFQN == null && packageDeclaration != null) {
+                    superClassFQN = packageDeclaration + "." + superClassName;
+                }
+            }
+            String[] interfaces = {};
+            List<JCTree.JCExpression> interfaceClasses = classDeclaration.getImplementsClause();
+            if (interfaceClasses != null) {
+                interfaces = new String[interfaceClasses.size()];
+                for (int i = 0; i < interfaceClasses.size(); i++) {
+                    JCTree.JCIdent interfaceClause = (JCTree.JCIdent) interfaceClasses.get(i);
+                    String interfaceClassName = interfaceClause.getName().toString();
+                    String interfaceClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary,
+                            interfaceClassName);
+                    if (interfaceClassFQN == null && packageDeclaration != null) {
+                        interfaceClassFQN = packageDeclaration + "." + interfaceClassName;
+                    }
+                    interfaces[i] = interfaceClassFQN;
+                }
+            }
+
             classInfo = new ClassInfo(
                     dataInfoProvider.nextClassId(), "classContainer", classNode.up().getFileName(),
                     className, LogLevel.Normal, String.valueOf(element.hashCode()),
-                    "classLoader", new String[]{}, "superName", "signature");
+                    "classLoader", interfaces, superClassFQN, "signature");
             classRoots.put(classElement, classInfo);
             classDataInfoList.put(classInfo, new ArrayList<>());
             classMethodInfoList.put(classInfo, new ArrayList<>());
@@ -64,7 +114,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
         methodRoots.put(methodDoneKey, true);
 
 
-        String methodSignature = jcMethodDecl.params.toString();
+        String methodSignature = methodParameters.toString();
 
 
         DataInfo dataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
@@ -72,6 +122,17 @@ public class UnloggedVisitor extends JavacASTAdapter {
                 EventType.METHOD_ENTRY, Descriptor.Void, "");
 
         classDataInfoList.get(classInfo).add(dataInfo);
+
+        ListBuffer<JCTree.JCStatement> parameterProbes = new ListBuffer<JCTree.JCStatement>();
+        for (JCTree.JCVariableDecl methodParameter : methodParameters) {
+            DataInfo paramProbeDataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
+                    dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
+                    EventType.METHOD_PARAM, Descriptor.get(methodParameter.getType().toString()), "");
+            JCTree.JCExpressionStatement paramProbe = createLogStatement(methodNode,
+                    methodParameter.getName().toString(), paramProbeDataInfo.getDataId());
+            parameterProbes.add(paramProbe);
+        }
+
 
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
@@ -81,14 +142,22 @@ public class UnloggedVisitor extends JavacASTAdapter {
         ListBuffer<JCTree.JCStatement> newStatements = new ListBuffer<JCTree.JCStatement>();
 
         JCTree.JCBlock methodBodyBlock = jcMethodDecl.body;
+        if (methodBodyBlock == null) {
+            // no probes for empty method
+            // maybe we fill it up later
+            methodBodyBlock = treeMaker.Block(0, List.nil());
+//            return;
+        }
 
         List<JCTree.JCStatement> blockStatements = methodBodyBlock.getStatements();
 
+        boolean foundSuperCall = false;
         if (!methodName.equals("<init>")) {
+            foundSuperCall = true;
             newStatements.add(logStatement);
+            newStatements.addAll(parameterProbes);
             newStatements.addAll(blockStatements);
         } else {
-            boolean foundSuperCall = false;
             for (JCTree.JCStatement statement : blockStatements) {
                 newStatements.add(statement);
                 if (!foundSuperCall) {
@@ -103,6 +172,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
                                 if ("super".equals(methodNameIdentifier.getName().toString())) {
                                     foundSuperCall = true;
                                     newStatements.add(logStatement);
+                                    newStatements.addAll(parameterProbes);
                                 }
                             }
                         }
@@ -113,6 +183,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
                 newStatements.add(logStatement);
             }
         }
+
+
+
 
         jcMethodDecl.body = treeMaker.Block(0, newStatements.toList());
         System.out.println("After: " + jcMethodDecl.body);
