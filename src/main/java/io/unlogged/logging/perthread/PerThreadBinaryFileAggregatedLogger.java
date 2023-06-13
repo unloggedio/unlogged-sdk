@@ -371,12 +371,11 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(buffer);
 
-            getThreadEventCount(currentThreadId).addAndGet(1);
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -442,12 +441,11 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-            getThreadEventCount(currentThreadId).addAndGet(1);
             valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
             probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
