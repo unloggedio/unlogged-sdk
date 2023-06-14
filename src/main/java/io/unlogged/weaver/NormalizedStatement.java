@@ -7,12 +7,22 @@ public class NormalizedStatement {
     ListBuffer<JCTree.JCStatement> statements = new ListBuffer<>();
     String resultVariableName;
 
+    public JCTree.JCExpression getRemainderExpression() {
+        return remainderExpression;
+    }
+
+    private JCTree.JCExpression remainderExpression;
+
     public ListBuffer<JCTree.JCStatement> getStatements() {
         return statements;
     }
 
     public void addStatement(JCTree.JCStatement statement) {
         statements.add(statement);
+    }
+
+    public void addAllStatement(ListBuffer<JCTree.JCStatement> statement) {
+        statements.addAll(statement);
     }
 
     public void setStatements(ListBuffer<JCTree.JCStatement> statements) {
@@ -25,5 +35,9 @@ public class NormalizedStatement {
 
     public void setResultVariableName(String resultVariableName) {
         this.resultVariableName = resultVariableName;
+    }
+
+    public void setRemainderExpression(JCTree.JCExpression expression) {
+        this.remainderExpression = expression;
     }
 }

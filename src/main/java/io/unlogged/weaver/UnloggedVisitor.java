@@ -2,7 +2,6 @@ package io.unlogged.weaver;
 
 import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import io.unlogged.core.ImportList;
@@ -17,6 +16,7 @@ import javax.lang.model.element.Element;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class UnloggedVisitor extends JavacASTAdapter {
 
@@ -27,6 +27,10 @@ public class UnloggedVisitor extends JavacASTAdapter {
     private final Map<ClassInfo, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
     private final DataInfoProvider dataInfoProvider;
     private final TypeLibrary typeLibrary = new TypeLibrary();
+    private final Random random = new Random();
+    private int currentClassId;
+    private int currentMethodId;
+    private int currentLineNumber;
 
     public UnloggedVisitor(DataInfoProvider dataInfoProvider) {
         this.dataInfoProvider = dataInfoProvider;
@@ -42,8 +46,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
+
         JavacNode classNode = methodNode.up();
-        if (!JavacHandlerUtil.isClass(classNode)) {
+        if (!JavacHandlerUtil.isClass(classNode) || true) {
             // no probing for interfaces and enums
             return;
         }
@@ -106,11 +111,16 @@ public class UnloggedVisitor extends JavacASTAdapter {
         if (methodRoots.containsKey(methodDoneKey)) {
             return;
         }
+        JavacTreeMaker treeMaker = methodNode.getTreeMaker();
+
         String methodName = methodNode.getName();
         String methodDesc = createMethodDescriptor(methodNode);
         MethodInfo methodInfo = new MethodInfo(classInfo.getClassId(), dataInfoProvider.nextMethodId(),
                 className, methodName, methodDesc, (int) jcMethodDecl.mods.flags,
                 "sourceFileName", String.valueOf(jcMethodDecl.hashCode()));
+        currentClassId = classInfo.getClassId();
+        currentMethodId = methodInfo.getMethodId();
+
         classMethodInfoList.get(classInfo).add(methodInfo);
         methodRoots.put(methodDoneKey, true);
         java.util.List<DataInfo> dataInfoList = classDataInfoList.get(classInfo);
@@ -118,9 +128,10 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
         String methodSignature = methodParameters.toString();
 
+        currentLineNumber = getPositionToLine(classNode, methodNode.getStartPos());
 
         DataInfo dataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
-                dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
+                dataInfoProvider.nextProbeId(), currentLineNumber, 0,
                 EventType.METHOD_ENTRY, Descriptor.Void, "");
 
         dataInfoList.add(dataInfo);
@@ -138,20 +149,22 @@ public class UnloggedVisitor extends JavacASTAdapter {
             }
 
             DataInfo paramProbeDataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
-                    dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
+                    dataInfoProvider.nextProbeId(), currentLineNumber, 0,
                     EventType.METHOD_PARAM, Descriptor.get(methodParameterTypeFQN), "");
             dataInfoList.add(paramProbeDataInfo);
             String parameterName = methodParameter.getName().toString();
-            JCTree.JCExpressionStatement paramProbe = createLogStatement(methodNode, parameterName,
-                    paramProbeDataInfo.getDataId());
+            JCTree.JCExpressionStatement paramProbe =
+                    createLogStatement(methodNode, treeMaker.Ident(methodNode.toName(parameterName)),
+                            paramProbeDataInfo.getDataId());
             parameterProbes.add(paramProbe);
         }
 
 
-        System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
-        JavacTreeMaker treeMaker = methodNode.getTreeMaker();
 
-        JCTree.JCExpressionStatement logStatement = createLogStatement(methodNode, "this", dataInfo.getDataId());
+        System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
+
+        JCTree.JCExpressionStatement logStatement =
+                createLogStatement(methodNode, treeMaker.Ident(methodNode.toName("this")), dataInfo.getDataId());
 
         ListBuffer<JCTree.JCStatement> newStatements = new ListBuffer<JCTree.JCStatement>();
 
@@ -172,6 +185,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
             newStatements.addAll(parameterProbes);
 
             for (JCTree.JCStatement statement : blockStatements) {
+                currentLineNumber = getPositionToLine(classNode, statement.getStartPosition());
                 System.out.println("===>\t\tStatement type: " + statement.getClass());
                 ListBuffer<JCTree.JCStatement> normalizedStatements = normalizeStatements(statement, classNode);
                 newStatements.addAll(normalizedStatements);
@@ -217,8 +231,15 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     }
 
+    private int getPositionToLine(JavacNode classNode, int startPosition) {
+        String codeString = classNode.get().getTree().toString();
+        codeString = codeString.substring(0, startPosition);
+        return codeString.split("\\n").length;
+    }
+
     private ListBuffer<JCTree.JCStatement> normalizeStatements(JCTree.JCStatement statement, JavacNode javacNode) {
         ListBuffer<JCTree.JCStatement> normalizedStatements = new ListBuffer<>();
+        JavacTreeMaker treeMaker = javacNode.getTreeMaker();
 
         if (statement instanceof JCTree.JCAssert) {
             JCTree.JCAssert castedStatement = (JCTree.JCAssert) statement;
@@ -264,8 +285,10 @@ public class UnloggedVisitor extends JavacASTAdapter {
         } else if (statement instanceof JCTree.JCReturn) {
             JCTree.JCReturn castedStatement = (JCTree.JCReturn) statement;
             JCTree.JCExpression returnExpression = castedStatement.getExpression();
-            NormalizedStatement normalizedExpression = normalizeExpression(returnExpression, javacNode);
-            normalizedStatements.add(statement);
+            NormalizedStatement normalizedExpression = normalizeExpression(returnExpression, javacNode,
+                    EventType.METHOD_NORMAL_EXIT);
+            normalizedStatements.addAll(normalizedExpression.getStatements());
+            normalizedStatements.add(treeMaker.Return(normalizedExpression.getRemainderExpression()));
         } else if (statement instanceof JCTree.JCSkip) {
             JCTree.JCSkip castedStatement = (JCTree.JCSkip) statement;
             normalizedStatements.add(statement);
@@ -299,10 +322,11 @@ public class UnloggedVisitor extends JavacASTAdapter {
      * Rearrange statements so that all parameters and return values in this expression are also passed to
      * Logging.recordEvent
      *
-     * @param expression to be normalized
+     * @param expressionEventType
+     * @param expression          to be normalized
      * @return list of normalized statements which has the same effect
      */
-    private NormalizedStatement normalizeExpression(JCTree.JCExpression expression, JavacNode javacNode) {
+    private NormalizedStatement normalizeExpression(JCTree.JCExpression expression, JavacNode javacNode, EventType expressionEventType) {
         JavacTreeMaker treeMaker = javacNode.getTreeMaker();
 
         NormalizedStatement normalizedExpressions = new NormalizedStatement();
@@ -336,6 +360,16 @@ public class UnloggedVisitor extends JavacASTAdapter {
             JCTree.JCFunctionalExpression castedExpression = (JCTree.JCFunctionalExpression) expression;
         } else if (expression instanceof JCTree.JCIdent) {
             JCTree.JCIdent castedExpression = (JCTree.JCIdent) expression;
+            String returnVariableName = castedExpression.getName().toString();
+            DataInfo returnProbe = new DataInfo(
+                    currentClassId, currentMethodId, dataInfoProvider.nextProbeId(),
+                    currentLineNumber, 0, expressionEventType, Descriptor.Void, ""
+            );
+            normalizedExpressions.addStatement(createLogStatement(
+                    javacNode, treeMaker.Ident(javacNode.toName(returnVariableName)), returnProbe.getDataId()
+            ));
+            normalizedExpressions.setRemainderExpression(expression);
+            normalizedExpressions.setResultVariableName(returnVariableName);
         } else if (expression instanceof JCTree.JCInstanceOf) {
             JCTree.JCInstanceOf castedExpression = (JCTree.JCInstanceOf) expression;
         } else if (expression instanceof JCTree.JCLambda) {
@@ -345,7 +379,33 @@ public class UnloggedVisitor extends JavacASTAdapter {
         } else if (expression instanceof JCTree.JCMemberReference) {
             JCTree.JCMemberReference castedExpression = (JCTree.JCMemberReference) expression;
         } else if (expression instanceof JCTree.JCMethodInvocation) {
+
             JCTree.JCMethodInvocation castedExpression = (JCTree.JCMethodInvocation) expression;
+            JCTree.JCExpression methodSelect = ((JCTree.JCMethodInvocation) expression).getMethodSelect();
+            MethodCallInformation methodCallInformation = getMethodInformation(methodSelect);
+            List<JCTree.JCExpression> methodArguments = castedExpression.args;
+            ListBuffer<JCTree.JCExpression> normalizedMethodArguments = new ListBuffer<>();
+            DataInfo methodNameProbe = new DataInfo(
+                    currentClassId, currentMethodId, dataInfoProvider.nextProbeId(), currentLineNumber,
+                    0, EventType.CALL, Descriptor.Void,
+                    "Name=" + (methodCallInformation != null ? methodCallInformation.getMethodName(): "")
+            );
+            normalizedExpressions.addStatement(createLogStatement(
+                    javacNode, treeMaker.Literal(castedExpression.getMethodSelect()), methodNameProbe.getDataId()
+            ));
+
+            for (JCTree.JCExpression methodArgument : methodArguments) {
+                NormalizedStatement normalizedParameter =
+                        normalizeExpression(methodArgument, javacNode, EventType.CALL_PARAM);
+                normalizedExpressions.addAllStatement(normalizedParameter.getStatements());
+                normalizedMethodArguments.add(normalizedParameter.getRemainderExpression());
+            }
+            castedExpression.args = normalizedMethodArguments.toList();
+            String newVariableName = "varMethodResult" + random.nextInt();
+            JCTree.JCExpression callExpressionResultVariable = treeMaker.Ident(javacNode.toName(newVariableName));
+//            normalizedExpressions.addStatement(treeMaker.VarDef(callExpressionResultVariable, expression));
+
+
         } else if (expression instanceof JCTree.JCNewArray) {
             JCTree.JCNewArray castedExpression = (JCTree.JCNewArray) expression;
         } else if (expression instanceof JCTree.JCNewClass) {
@@ -380,7 +440,19 @@ public class UnloggedVisitor extends JavacASTAdapter {
         return normalizedExpressions;
     }
 
-    private JCTree.JCExpressionStatement createLogStatement(JavacNode methodNode, String variableToRecord, int dataId) {
+    private MethodCallInformation getMethodInformation(JCTree.JCExpression methodSelect) {
+//        assert methodSelect instanceof JCTree.JCFieldAccess;
+        if (methodSelect instanceof JCTree.JCFieldAccess) {
+            JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) methodSelect;
+            String subject = fieldAccess.getExpression().toString();
+            String methodName = fieldAccess.getIdentifier().toString();
+            return new MethodCallInformation(subject, methodName);
+        }
+//        assert false;
+        return null;
+    }
+
+    private JCTree.JCExpressionStatement createLogStatement(JavacNode methodNode, JCTree.JCExpression ident, int dataId) {
         JavacTreeMaker treeMaker = methodNode.getTreeMaker();
         JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode,
                 "io.unlogged.logging.Logging.recordEvent");
@@ -390,7 +462,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
                         List.<JCTree.JCExpression>nil(),
                         printlnMethod,
                         List.<JCTree.JCExpression>of(
-                                treeMaker.Ident(methodNode.toName(variableToRecord)),
+                                ident,
                                 treeMaker.Literal(dataId)
                         )
                 )
