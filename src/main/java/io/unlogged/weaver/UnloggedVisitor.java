@@ -2,6 +2,7 @@ package io.unlogged.weaver;
 
 import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import io.unlogged.core.ImportList;
@@ -112,6 +113,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
                 "sourceFileName", String.valueOf(jcMethodDecl.hashCode()));
         classMethodInfoList.get(classInfo).add(methodInfo);
         methodRoots.put(methodDoneKey, true);
+        java.util.List<DataInfo> dataInfoList = classDataInfoList.get(classInfo);
 
 
         String methodSignature = methodParameters.toString();
@@ -121,15 +123,27 @@ public class UnloggedVisitor extends JavacASTAdapter {
                 dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
                 EventType.METHOD_ENTRY, Descriptor.Void, "");
 
-        classDataInfoList.get(classInfo).add(dataInfo);
+        dataInfoList.add(dataInfo);
 
         ListBuffer<JCTree.JCStatement> parameterProbes = new ListBuffer<JCTree.JCStatement>();
         for (JCTree.JCVariableDecl methodParameter : methodParameters) {
+            JCTree methodParameterType = methodParameter.getType();
+
+            String methodParameterTypeFQN = "void";
+            if (methodParameterType instanceof JCTree.JCIdent) {
+                methodParameterTypeFQN = ((JCTree.JCIdent) methodParameterType).sym.getQualifiedName().toString();
+            } else if (methodParameterType instanceof JCTree.JCPrimitiveTypeTree) {
+                JCTree.JCPrimitiveTypeTree primitiveType = (JCTree.JCPrimitiveTypeTree) methodParameterType;
+                methodParameterTypeFQN = primitiveType.toString();
+            }
+
             DataInfo paramProbeDataInfo = new DataInfo(classInfo.getClassId(), methodInfo.getMethodId(),
                     dataInfoProvider.nextProbeId(), methodNode.getStartPos(), 0,
-                    EventType.METHOD_PARAM, Descriptor.get(methodParameter.getType().toString()), "");
-            JCTree.JCExpressionStatement paramProbe = createLogStatement(methodNode,
-                    methodParameter.getName().toString(), paramProbeDataInfo.getDataId());
+                    EventType.METHOD_PARAM, Descriptor.get(methodParameterTypeFQN), "");
+            dataInfoList.add(paramProbeDataInfo);
+            String parameterName = methodParameter.getName().toString();
+            JCTree.JCExpressionStatement paramProbe = createLogStatement(methodNode, parameterName,
+                    paramProbeDataInfo.getDataId());
             parameterProbes.add(paramProbe);
         }
 
@@ -156,10 +170,21 @@ public class UnloggedVisitor extends JavacASTAdapter {
             foundSuperCall = true;
             newStatements.add(logStatement);
             newStatements.addAll(parameterProbes);
-            newStatements.addAll(blockStatements);
+
+            for (JCTree.JCStatement statement : blockStatements) {
+                System.out.println("===>\t\tStatement type: " + statement.getClass());
+                ListBuffer<JCTree.JCStatement> normalizedStatements = normalizeStatements(statement, classNode);
+                newStatements.addAll(normalizedStatements);
+            }
+
+
         } else {
             for (JCTree.JCStatement statement : blockStatements) {
+
+                System.out.println("===>\t\tStatement type: " + statement.getClass());
                 newStatements.add(statement);
+
+
                 if (!foundSuperCall) {
                     if (statement instanceof JCTree.JCExpressionStatement) {
                         JCTree.JCExpressionStatement expressionStatement = (JCTree.JCExpressionStatement) statement;
@@ -178,6 +203,8 @@ public class UnloggedVisitor extends JavacASTAdapter {
                         }
                     }
                 }
+
+
             }
             if (!foundSuperCall) {
                 newStatements.add(logStatement);
@@ -185,11 +212,172 @@ public class UnloggedVisitor extends JavacASTAdapter {
         }
 
 
-
-
         jcMethodDecl.body = treeMaker.Block(0, newStatements.toList());
         System.out.println("After: " + jcMethodDecl.body);
 
+    }
+
+    private ListBuffer<JCTree.JCStatement> normalizeStatements(JCTree.JCStatement statement, JavacNode javacNode) {
+        ListBuffer<JCTree.JCStatement> normalizedStatements = new ListBuffer<>();
+
+        if (statement instanceof JCTree.JCAssert) {
+            JCTree.JCAssert castedStatement = (JCTree.JCAssert) statement;
+            normalizedStatements.add(statement);
+
+        } else if (statement instanceof JCTree.JCBlock) {
+            JCTree.JCBlock castedStatement = (JCTree.JCBlock) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCBreak) {
+            JCTree.JCBreak castedStatement = (JCTree.JCBreak) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCCase) {
+            JCTree.JCCase castedStatement = (JCTree.JCCase) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCClassDecl) {
+            JCTree.JCClassDecl castedStatement = (JCTree.JCClassDecl) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCContinue) {
+            JCTree.JCContinue castedStatement = (JCTree.JCContinue) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCDoWhileLoop) {
+            JCTree.JCDoWhileLoop castedStatement = (JCTree.JCDoWhileLoop) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCEnhancedForLoop) {
+            JCTree.JCEnhancedForLoop castedStatement = (JCTree.JCEnhancedForLoop) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCExpressionStatement) {
+
+            JCTree.JCExpressionStatement castedStatement = (JCTree.JCExpressionStatement) statement;
+            JCTree.JCExpression expression = castedStatement.getExpression();
+//            normalizedStatements = normalizeExpression(expression);
+            normalizedStatements.add(statement);
+
+        } else if (statement instanceof JCTree.JCForLoop) {
+            JCTree.JCForLoop castedStatement = (JCTree.JCForLoop) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCIf) {
+            JCTree.JCIf castedStatement = (JCTree.JCIf) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCLabeledStatement) {
+            JCTree.JCLabeledStatement castedStatement = (JCTree.JCLabeledStatement) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCReturn) {
+            JCTree.JCReturn castedStatement = (JCTree.JCReturn) statement;
+            JCTree.JCExpression returnExpression = castedStatement.getExpression();
+            NormalizedStatement normalizedExpression = normalizeExpression(returnExpression, javacNode);
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCSkip) {
+            JCTree.JCSkip castedStatement = (JCTree.JCSkip) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCSwitch) {
+            JCTree.JCSwitch castedStatement = (JCTree.JCSwitch) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCSynchronized) {
+            JCTree.JCSynchronized castedStatement = (JCTree.JCSynchronized) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCThrow) {
+            JCTree.JCThrow castedStatement = (JCTree.JCThrow) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCTry) {
+            JCTree.JCTry castedStatement = (JCTree.JCTry) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCVariableDecl) {
+            JCTree.JCVariableDecl castedStatement = (JCTree.JCVariableDecl) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCWhileLoop) {
+            JCTree.JCWhileLoop castedStatement = (JCTree.JCWhileLoop) statement;
+            normalizedStatements.add(statement);
+        } else if (statement instanceof JCTree.JCYield) {
+            JCTree.JCYield castedStatement = (JCTree.JCYield) statement;
+            normalizedStatements.add(statement);
+        }
+
+        return normalizedStatements;
+    }
+
+    /**
+     * Rearrange statements so that all parameters and return values in this expression are also passed to
+     * Logging.recordEvent
+     *
+     * @param expression to be normalized
+     * @return list of normalized statements which has the same effect
+     */
+    private NormalizedStatement normalizeExpression(JCTree.JCExpression expression, JavacNode javacNode) {
+        JavacTreeMaker treeMaker = javacNode.getTreeMaker();
+
+        NormalizedStatement normalizedExpressions = new NormalizedStatement();
+        if (expression instanceof JCTree.JCAnnotatedType) {
+            JCTree.JCAnnotatedType castedExpression = (JCTree.JCAnnotatedType) expression;
+        } else if (expression instanceof JCTree.JCAnnotation) {
+            JCTree.JCAnnotation castedExpression = (JCTree.JCAnnotation) expression;
+        } else if (expression instanceof JCTree.JCArrayAccess) {
+            JCTree.JCArrayAccess castedExpression = (JCTree.JCArrayAccess) expression;
+        } else if (expression instanceof JCTree.JCArrayTypeTree) {
+            JCTree.JCArrayTypeTree castedExpression = (JCTree.JCArrayTypeTree) expression;
+        } else if (expression instanceof JCTree.JCAssign) {
+
+//            normalizedExpressions.addStatement(expression);
+
+            JCTree.JCAssign assignExpression = (JCTree.JCAssign) expression;
+            JCTree.JCExpression lhs = assignExpression.getVariable();
+            JCTree.JCExpression rhs = assignExpression.getExpression();
+
+        } else if (expression instanceof JCTree.JCAssignOp) {
+            JCTree.JCAssignOp castedExpression = (JCTree.JCAssignOp) expression;
+        } else if (expression instanceof JCTree.JCBinary) {
+            JCTree.JCBinary castedExpression = (JCTree.JCBinary) expression;
+        } else if (expression instanceof JCTree.JCConditional) {
+            JCTree.JCConditional castedExpression = (JCTree.JCConditional) expression;
+        } else if (expression instanceof JCTree.JCErroneous) {
+            JCTree.JCErroneous castedExpression = (JCTree.JCErroneous) expression;
+        } else if (expression instanceof JCTree.JCFieldAccess) {
+            JCTree.JCFieldAccess castedExpression = (JCTree.JCFieldAccess) expression;
+        } else if (expression instanceof JCTree.JCFunctionalExpression) {
+            JCTree.JCFunctionalExpression castedExpression = (JCTree.JCFunctionalExpression) expression;
+        } else if (expression instanceof JCTree.JCIdent) {
+            JCTree.JCIdent castedExpression = (JCTree.JCIdent) expression;
+        } else if (expression instanceof JCTree.JCInstanceOf) {
+            JCTree.JCInstanceOf castedExpression = (JCTree.JCInstanceOf) expression;
+        } else if (expression instanceof JCTree.JCLambda) {
+            JCTree.JCLambda castedExpression = (JCTree.JCLambda) expression;
+        } else if (expression instanceof JCTree.JCLiteral) {
+            JCTree.JCLiteral castedExpression = (JCTree.JCLiteral) expression;
+        } else if (expression instanceof JCTree.JCMemberReference) {
+            JCTree.JCMemberReference castedExpression = (JCTree.JCMemberReference) expression;
+        } else if (expression instanceof JCTree.JCMethodInvocation) {
+            JCTree.JCMethodInvocation castedExpression = (JCTree.JCMethodInvocation) expression;
+        } else if (expression instanceof JCTree.JCNewArray) {
+            JCTree.JCNewArray castedExpression = (JCTree.JCNewArray) expression;
+        } else if (expression instanceof JCTree.JCNewClass) {
+            JCTree.JCNewClass castedExpression = (JCTree.JCNewClass) expression;
+        } else if (expression instanceof JCTree.JCOperatorExpression) {
+            JCTree.JCOperatorExpression castedExpression = (JCTree.JCOperatorExpression) expression;
+        } else if (expression instanceof JCTree.JCParens) {
+            JCTree.JCParens castedExpression = (JCTree.JCParens) expression;
+        } else if (expression instanceof JCTree.JCPolyExpression) {
+            JCTree.JCPolyExpression castedExpression = (JCTree.JCPolyExpression) expression;
+        } else if (expression instanceof JCTree.JCPrimitiveTypeTree) {
+            JCTree.JCPrimitiveTypeTree castedExpression = (JCTree.JCPrimitiveTypeTree) expression;
+        } else if (expression instanceof JCTree.JCSwitchExpression) {
+            JCTree.JCSwitchExpression castedExpression = (JCTree.JCSwitchExpression) expression;
+        } else if (expression instanceof JCTree.JCTypeApply) {
+            JCTree.JCTypeApply castedExpression = (JCTree.JCTypeApply) expression;
+        } else if (expression instanceof JCTree.JCTypeCast) {
+            JCTree.JCTypeCast castedExpression = (JCTree.JCTypeCast) expression;
+        } else if (expression instanceof JCTree.JCTypeIntersection) {
+            JCTree.JCTypeIntersection castedExpression = (JCTree.JCTypeIntersection) expression;
+        } else if (expression instanceof JCTree.JCTypeUnion) {
+            JCTree.JCTypeUnion castedExpression = (JCTree.JCTypeUnion) expression;
+        } else if (expression instanceof JCTree.JCUnary) {
+            JCTree.JCUnary castedExpression = (JCTree.JCUnary) expression;
+        } else if (expression instanceof JCTree.JCWildcard) {
+            JCTree.JCWildcard castedExpression = (JCTree.JCWildcard) expression;
+        } else if (expression instanceof JCTree.LetExpr) {
+            JCTree.LetExpr castedExpression = (JCTree.LetExpr) expression;
+        }
+
+
+        return normalizedExpressions;
     }
 
     private JCTree.JCExpressionStatement createLogStatement(JavacNode methodNode, String variableToRecord, int dataId) {
@@ -197,7 +385,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
         JCTree.JCExpression printlnMethod = JavacHandlerUtil.chainDotsString(methodNode,
                 "io.unlogged.logging.Logging.recordEvent");
 
-        JCTree.JCExpressionStatement logStatement = treeMaker.Exec(
+        return treeMaker.Exec(
                 treeMaker.Apply(
                         List.<JCTree.JCExpression>nil(),
                         printlnMethod,
@@ -207,7 +395,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
                         )
                 )
         );
-        return logStatement;
     }
 
     private String createMethodDescriptor(JavacNode methodNode) {
