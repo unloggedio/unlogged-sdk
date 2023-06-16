@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public final class UnloggedFileObjects {
@@ -49,7 +50,7 @@ public final class UnloggedFileObjects {
                 if (superType.isInstance(jfm)) return java9Compiler(jfm);
             } catch (Throwable e) {
             }
-//            return Compiler.;
+            return Compiler.JAVAC7;
         }
         if (KNOWN_JAVA9_FILE_MANAGERS.contains(jfmClassName)) {
             try {
@@ -127,25 +128,25 @@ public final class UnloggedFileObjects {
 //                }
 //            }
 //        };
-//        Compiler JAVAC7 = new Compiler() {
-//            private final AtomicBoolean decoderIsSet = new AtomicBoolean();
-//            private Method decoderMethod = null;
-//
-//            @Override
-//            public JavaFileObject wrap(LombokFileObject fileObject) {
-//                return new Javac7BaseFileObjectWrapper(fileObject);
-//            }
-//
-//            @Override
-//            public Method getDecoderMethod() {
-//                synchronized (decoderIsSet) {
-//                    if (decoderIsSet.get()) return decoderMethod;
-//                    decoderMethod = LombokFileObjects.getDecoderMethod("com.sun.tools.javac.file.BaseFileObject");
-//                    decoderIsSet.set(true);
-//                    return decoderMethod;
-//                }
-//            }
-//        };
+        Compiler JAVAC7 = new Compiler() {
+            private final AtomicBoolean decoderIsSet = new AtomicBoolean();
+            private Method decoderMethod = null;
+
+            @Override
+            public JavaFileObject wrap(UnloggedFileObject fileObject) {
+                return new Javac7BaseFileObjectWrapper(fileObject);
+            }
+
+            @Override
+            public Method getDecoderMethod() {
+                synchronized (decoderIsSet) {
+                    if (decoderIsSet.get()) return decoderMethod;
+                    decoderMethod = UnloggedFileObjects.getDecoderMethod("com.sun.tools.javac.file.BaseFileObject");
+                    decoderIsSet.set(true);
+                    return decoderMethod;
+                }
+            }
+        };
 
         JavaFileObject wrap(UnloggedFileObject fileObject);
 

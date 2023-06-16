@@ -75,7 +75,7 @@ class Java9Compiler implements UnloggedFileObjects.Compiler {
         // J9BFOW extends javac's internal file base impl of javax.tools.JavaFileObject.
         // J9JFOW just straight implements it. Probably J9JFOW is fine, but we decided to extend java's internal impl possibly for a reason.
         // Some exotic build environments don't _have_ file objects and crash with FileNotFoundEx, so if that happens, let's try the alternative.
-//		if (p != null) return new Javac9BaseFileObjectWrapper(fileManager, p, fileObject);
+		if (p != null) return new Javac9BaseFileObjectWrapper(fileManager, p, fileObject);
         return new Javac9JavaFileObjectWrapper(fileObject);
     }
 

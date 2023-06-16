@@ -9,7 +9,9 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 import io.unlogged.core.CleanupRegistry;
-import io.unlogged.core.javac.JavacTransformer;
+import io.unlogged.core.DiagnosticsReceiver;
+import io.unlogged.javac.JavacTransformer;
+import io.unlogged.javac.Javac;
 import sun.misc.Unsafe;
 
 import javax.annotation.processing.*;
@@ -40,7 +42,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private final CleanupRegistry cleanup = new CleanupRegistry();
     public Element transformedEntryPoint = null;
     private ProcessingEnvironment unwrappedProcessingEnv;
-    private Context context;
+//    private Context context;
     private JavacProcessingEnvironment javacProcessingEnv;
     private Trees trees;
     private JavacTransformer transformer;
@@ -215,7 +217,7 @@ public class UnloggedProcessor extends AbstractProcessor {
         placePostCompileAndDontMakeForceRoundDummiesHook();
         trees = Trees.instance(javacProcessingEnv);
         unwrappedProcessingEnv = jbUnwrap(ProcessingEnvironment.class, procEnv);
-        context = ((JavacProcessingEnvironment) unwrappedProcessingEnv).getContext();
+//        context = ((JavacProcessingEnvironment) unwrappedProcessingEnv).getContext();
         transformer = new JavacTransformer(procEnv.getMessager(), trees);
 
 
@@ -238,21 +240,21 @@ public class UnloggedProcessor extends AbstractProcessor {
             @SuppressWarnings("unchecked")
             Map<Object, Object> ht = (Map<Object, Object>) Permit.get(htField, context);
             final JavaFileManager originalFiler = (JavaFileManager) ht.get(key);
-//            System.err.println("JavaFileManager: " + originalFiler.getClass().getCanonicalName());
-//            if (!(originalFiler instanceof InterceptingJavaFileManager)) {
-//                final Messager messager = processingEnv.getMessager();
-//                DiagnosticsReceiver receiver = new MessagerDiagnosticsReceiver(messager);
-//
-//                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver);
-//                ht.put(key, newFilerManager);
-//                Field filerFileManagerField = Permit.getField(JavacFiler.class, "fileManager");
-//                filerFileManagerField.set(javacFiler, newFilerManager);
-//
-//                if (io.unlogged.core.javac.Javac.getJavaCompilerVersion() > 8
-//                        && !io.unlogged.core.handlers.JavacHandlerUtil.inNetbeansCompileOnSave(context)) {
-//                    replaceFileManagerJdk9(context, newFilerManager);
-//                }
-//            }
+            System.err.println("JavaFileManager: " + originalFiler.getClass().getCanonicalName());
+            if (!(originalFiler instanceof InterceptingJavaFileManager)) {
+                final Messager messager = processingEnv.getMessager();
+                DiagnosticsReceiver receiver = new MessagerDiagnosticsReceiver(messager);
+
+                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver);
+                ht.put(key, newFilerManager);
+                Field filerFileManagerField = Permit.getField(JavacFiler.class, "fileManager");
+                filerFileManagerField.set(javacFiler, newFilerManager);
+
+                if (Javac.getJavaCompilerVersion() > 8
+                        && !io.unlogged.core.handlers.JavacHandlerUtil.inNetbeansCompileOnSave(context)) {
+                    replaceFileManagerJdk9(context, newFilerManager);
+                }
+            }
         } catch (Exception e) {
             throw Util.sneakyThrow(e);
         }
@@ -361,7 +363,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
         if (roundEnv.processingOver()) {
-            transformer.finish();
+            transformer.finish(javacProcessingEnv.getContext(), cleanup);
             return false;
         }
 
@@ -394,7 +396,7 @@ public class UnloggedProcessor extends AbstractProcessor {
             roots.put(unit, 0L);
         }
 
-        transformer.transform(context, new ArrayList<>(roots.keySet()), cleanup);
+        transformer.transform(javacProcessingEnv.getContext(), new ArrayList<>(roots.keySet()), cleanup);
 
         return true;
     }

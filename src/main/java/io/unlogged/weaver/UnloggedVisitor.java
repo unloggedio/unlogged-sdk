@@ -1,16 +1,16 @@
 package io.unlogged.weaver;
 
 import com.insidious.common.weaver.*;
+import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import io.unlogged.core.ImportList;
 import io.unlogged.core.TypeLibrary;
-import io.unlogged.core.TypeResolver;
 import io.unlogged.core.handlers.JavacHandlerUtil;
-import io.unlogged.core.javac.JavacASTAdapter;
-import io.unlogged.core.javac.JavacNode;
-import io.unlogged.core.javac.JavacTreeMaker;
+import io.unlogged.javac.JavacASTAdapter;
+import io.unlogged.javac.JavacNode;
+import io.unlogged.javac.JavacTreeMaker;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -18,10 +18,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static io.unlogged.core.AST.Kind.TYPE;
+import static io.unlogged.javac.Javac.RECORD;
+
 public class UnloggedVisitor extends JavacASTAdapter {
 
     private final Map<String, Boolean> methodRoots = new HashMap<>();
-    private final Map<JCTree, ClassInfo> classRoots = new HashMap<>();
+    private final Map<JCTree.JCClassDecl, ClassInfo> classRoots = new HashMap<>();
+    private final Map<JCTree.JCClassDecl, JCTree.JCCompilationUnit> classToCompilationRoots = new HashMap<>();
     private final Map<ClassInfo, JavacNode> classJavacNodeMap = new HashMap<>();
     private final Map<ClassInfo, java.util.List<MethodInfo>> classMethodInfoList = new HashMap<>();
     private final Map<ClassInfo, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
@@ -44,15 +48,26 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     }
 
+    public Map<JCTree.JCClassDecl, JCTree.JCCompilationUnit> getClassToCompilationRoots() {
+        return classToCompilationRoots;
+    }
+
     @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
+        if (1 < 2) {
+            return;
+        }
 
         JavacNode classNode = methodNode.up();
-        if (!JavacHandlerUtil.isClass(classNode) || true) {
+        if (!JavacHandlerUtil.isClassAndDoesNotHaveFlags(classNode,
+                Flags.INTERFACE | Flags.ENUM | Flags.ANNOTATION | RECORD | Flags.ABSTRACT)) {
             // no probing for interfaces and enums
             return;
         }
-        JCTree classElement = classNode.get();
+        if (classNode.up().getKind() == TYPE) {
+            return;
+        }
+        JCTree.JCClassDecl classElement = (JCTree.JCClassDecl) classNode.get();
         String packageDeclaration = classNode.getPackageDeclaration();
         String className = classNode.getName();
         if (packageDeclaration != null) {
@@ -65,39 +80,43 @@ public class UnloggedVisitor extends JavacASTAdapter {
         if (!classRoots.containsKey(classElement)) {
 
             ImportList importList = classNode.getImportList();
-            TypeResolver resolver = new TypeResolver(importList);
+//            TypeResolver resolver = new TypeResolver(importList);
 
             JCTree.JCClassDecl classDeclaration = (JCTree.JCClassDecl) classNode.get();
             Element element = classNode.getElement();
-            String superClassFQN = "";
-            if (classDeclaration.getExtendsClause() != null) {
-                String superClassName = ((JCTree.JCIdent) classDeclaration.getExtendsClause()).getName().toString();
-                superClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary, superClassName);
-                if (superClassFQN == null && packageDeclaration != null) {
-                    superClassFQN = packageDeclaration + "." + superClassName;
-                }
+            if (element == null) {
+                return;
             }
+            String superClassFQN = "";
+//            if (classDeclaration.getExtendsClause() != null) {
+//                String superClassName = ((JCTree.JCIdent) classDeclaration.getExtendsClause()).getName().toString();
+//                superClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary, superClassName);
+//                if (superClassFQN == null && packageDeclaration != null) {
+//                    superClassFQN = packageDeclaration + "." + superClassName;
+//                }
+//            }
             String[] interfaces = {};
             List<JCTree.JCExpression> interfaceClasses = classDeclaration.getImplementsClause();
-            if (interfaceClasses != null) {
-                interfaces = new String[interfaceClasses.size()];
-                for (int i = 0; i < interfaceClasses.size(); i++) {
-                    JCTree.JCIdent interfaceClause = (JCTree.JCIdent) interfaceClasses.get(i);
-                    String interfaceClassName = interfaceClause.getName().toString();
-                    String interfaceClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary,
-                            interfaceClassName);
-                    if (interfaceClassFQN == null && packageDeclaration != null) {
-                        interfaceClassFQN = packageDeclaration + "." + interfaceClassName;
-                    }
-                    interfaces[i] = interfaceClassFQN;
-                }
-            }
+//            if (interfaceClasses != null) {
+//                interfaces = new String[interfaceClasses.size()];
+//                for (int i = 0; i < interfaceClasses.size(); i++) {
+//                    JCTree.JCIdent interfaceClause = (JCTree.JCIdent) interfaceClasses.get(i);
+//                    String interfaceClassName = interfaceClause.getName().toString();
+//                    String interfaceClassFQN = resolver.typeRefToFullyQualifiedName(classNode, typeLibrary,
+//                            interfaceClassName);
+//                    if (interfaceClassFQN == null && packageDeclaration != null) {
+//                        interfaceClassFQN = packageDeclaration + "." + interfaceClassName;
+//                    }
+//                    interfaces[i] = interfaceClassFQN;
+//                }
+//            }
 
             classInfo = new ClassInfo(
                     dataInfoProvider.nextClassId(), "classContainer", classNode.up().getFileName(),
                     className, LogLevel.Normal, String.valueOf(element.hashCode()),
                     "classLoader", interfaces, superClassFQN, "signature");
             classRoots.put(classElement, classInfo);
+            classToCompilationRoots.put(classElement, (JCTree.JCCompilationUnit) classNode.top().get());
             classDataInfoList.put(classInfo, new ArrayList<>());
             classMethodInfoList.put(classInfo, new ArrayList<>());
         } else {
@@ -142,7 +161,10 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
             String methodParameterTypeFQN = "void";
             if (methodParameterType instanceof JCTree.JCIdent) {
-                methodParameterTypeFQN = ((JCTree.JCIdent) methodParameterType).sym.getQualifiedName().toString();
+                // todo delete this
+                if (((JCTree.JCIdent) methodParameterType).sym != null) {
+                    methodParameterTypeFQN = ((JCTree.JCIdent) methodParameterType).sym.getQualifiedName().toString();
+                }
             } else if (methodParameterType instanceof JCTree.JCPrimitiveTypeTree) {
                 JCTree.JCPrimitiveTypeTree primitiveType = (JCTree.JCPrimitiveTypeTree) methodParameterType;
                 methodParameterTypeFQN = primitiveType.toString();
@@ -158,7 +180,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
                             paramProbeDataInfo.getDataId());
             parameterProbes.add(paramProbe);
         }
-
 
 
         System.out.println("Visit method: " + className + "." + methodName + "( " + methodSignature + "  )");
@@ -185,10 +206,10 @@ public class UnloggedVisitor extends JavacASTAdapter {
             newStatements.addAll(parameterProbes);
 
             for (JCTree.JCStatement statement : blockStatements) {
-                currentLineNumber = getPositionToLine(classNode, statement.getStartPosition());
-                System.out.println("===>\t\tStatement type: " + statement.getClass());
-                ListBuffer<JCTree.JCStatement> normalizedStatements = normalizeStatements(statement, classNode);
-                newStatements.addAll(normalizedStatements);
+//                currentLineNumber = getPositionToLine(classNode, statement.getStartPosition());
+//                System.out.println("===>\t\tStatement type: " + statement.getClass());
+//                ListBuffer<JCTree.JCStatement> normalizedStatements = normalizeStatements(statement, classNode);
+                newStatements.add(statement);
             }
 
 
@@ -233,6 +254,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     private int getPositionToLine(JavacNode classNode, int startPosition) {
         String codeString = classNode.get().getTree().toString();
+        if (startPosition > codeString.length()) {
+            return 0;
+        }
         codeString = codeString.substring(0, startPosition);
         return codeString.split("\\n").length;
     }
@@ -388,7 +412,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
             DataInfo methodNameProbe = new DataInfo(
                     currentClassId, currentMethodId, dataInfoProvider.nextProbeId(), currentLineNumber,
                     0, EventType.CALL, Descriptor.Void,
-                    "Name=" + (methodCallInformation != null ? methodCallInformation.getMethodName(): "")
+                    "Name=" + (methodCallInformation != null ? methodCallInformation.getMethodName() : "")
             );
             normalizedExpressions.addStatement(createLogStatement(
                     javacNode, treeMaker.Literal(castedExpression.getMethodSelect()), methodNameProbe.getDataId()
@@ -473,7 +497,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
         return "(IL)Ljava.lang.Integer;";
     }
 
-    public Map<JCTree, ClassInfo> getClassRoots() {
+    public Map<JCTree.JCClassDecl, ClassInfo> getClassRoots() {
         return classRoots;
     }
 

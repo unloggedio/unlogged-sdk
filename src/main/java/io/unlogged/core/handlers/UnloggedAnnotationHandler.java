@@ -5,10 +5,10 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import io.unlogged.Unlogged;
 import io.unlogged.core.AnnotationValues;
-import io.unlogged.core.javac.Javac;
-import io.unlogged.core.javac.JavacAnnotationHandler;
-import io.unlogged.core.javac.JavacNode;
-import io.unlogged.core.javac.JavacTreeMaker;
+import io.unlogged.javac.Javac;
+import io.unlogged.javac.JavacAnnotationHandler;
+import io.unlogged.javac.JavacNode;
+import io.unlogged.javac.JavacTreeMaker;
 
 import static io.unlogged.core.handlers.JavacHandlerUtil.*;
 
