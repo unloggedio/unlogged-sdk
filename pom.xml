@@ -68,6 +68,28 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>9.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-tree</artifactId>
+            <version>9.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-commons</artifactId>
+            <version>9.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-analysis</artifactId>
+            <version>9.5</version>
+        </dependency>
+
+
+        <dependency>
             <groupId>video.bug</groupId>
             <artifactId>common</artifactId>
             <version>1.3.43</version>
@@ -175,10 +197,10 @@
                 <version>3.3.0</version>
                 <configuration>
                     <relocations>
-                        <relocation>
-                            <pattern>org.objectweb.asm</pattern>
-                            <shadedPattern>selogger.org.objectweb.asm</shadedPattern>
-                        </relocation>
+<!--                        <relocation>-->
+<!--                            <pattern>org.objectweb.asm</pattern>-->
+<!--                            <shadedPattern>selogger.org.objectweb.asm</shadedPattern>-->
+<!--                        </relocation>-->
                         <relocation>
                             <pattern>com.google.code.gson</pattern>
                             <shadedPattern>selogger.com.google.code.gson</shadedPattern>

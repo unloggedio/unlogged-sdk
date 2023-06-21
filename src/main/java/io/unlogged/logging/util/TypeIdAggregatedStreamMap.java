@@ -117,7 +117,7 @@ public class TypeIdAggregatedStreamMap {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream record = new DataOutputStream(byteArrayOutputStream);
         String typeNameFromClass = getTypeNameFromClass(type);
-        String classLoaderIdentifier = TypeIdUtil.getClassLoaderIdentifier(type.getClassLoader(), type.getName());
+        String classLoaderIdentifier = TypeIdUtil.getClassLoaderIdentifier(type.getName());
 
 
         int newId = nextId++;

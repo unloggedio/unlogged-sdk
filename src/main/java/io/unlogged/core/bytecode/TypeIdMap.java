@@ -1,4 +1,6 @@
-package io.unlogged.logging.util;
+package io.unlogged.core.bytecode;
+
+import io.unlogged.logging.util.TypeIdUtil;
 
 import java.io.File;
 import java.io.FileWriter;

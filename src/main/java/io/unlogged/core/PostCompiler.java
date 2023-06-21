@@ -21,6 +21,8 @@
  */
 package io.unlogged.core;
 
+import io.unlogged.core.bytecode.PreventNullAnalysisRemover;
+
 import java.io.*;
 import java.util.Collections;
 import java.util.List;
@@ -59,8 +61,8 @@ public final class PostCompiler {
 //		try {
 //			transformations = SpiLoadUtil.readAllFromIterator(SpiLoadUtil.findServices(PostCompilerTransformation.class, PostCompilerTransformation.class.getClassLoader()));
 //		} catch (IOException e) {
-        transformations = Collections.emptyList();
-        StringWriter sw = new StringWriter();
+        transformations = Collections.singletonList(new PreventNullAnalysisRemover());
+//        StringWriter sw = new StringWriter();
 //			e.printStackTrace(new PrintWriter(sw, true));
 //        diagnostics.addError("Could not load post-compile transformers: "
 //					+ e.getMessage()
@@ -90,6 +92,7 @@ public final class PostCompiler {
                     try {
                         copy = applyTransformations(original, fileName, diagnostics);
                     } catch (Exception e) {
+                        e.printStackTrace();
                         diagnostics.addWarning(String.format(
                                 "Error during the transformation of '%s'; no post-compilation has been applied",
                                 fileName));

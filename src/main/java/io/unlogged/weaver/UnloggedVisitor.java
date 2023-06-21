@@ -54,9 +54,9 @@ public class UnloggedVisitor extends JavacASTAdapter {
 
     @Override
     public void visitMethod(JavacNode methodNode, JCTree.JCMethodDecl jcMethodDecl) {
-        if (1 < 2) {
-            return;
-        }
+//        if (1 < 2) {
+//            return;
+//        }
 
         JavacNode classNode = methodNode.up();
         if (!JavacHandlerUtil.isClassAndDoesNotHaveFlags(classNode,
