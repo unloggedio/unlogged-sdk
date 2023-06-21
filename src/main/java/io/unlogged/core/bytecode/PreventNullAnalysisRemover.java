@@ -23,6 +23,7 @@ package io.unlogged.core.bytecode;
 
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
+import io.unlogged.weaver.TypeHierarchy;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,10 +33,10 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 
     private final Weaver weaver;
 
-    public PreventNullAnalysisRemover() {
+    public PreventNullAnalysisRemover(TypeHierarchy typeHierarchy) {
         File outputDir = new File("weaver-output");
         outputDir.mkdir();
-        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")));
+        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
 
     }
 

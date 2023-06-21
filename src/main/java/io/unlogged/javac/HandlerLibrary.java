@@ -39,6 +39,7 @@ import io.unlogged.core.configuration.ConfigurationKeysLoader;
 import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.handlers.UnloggedAnnotationHandler;
 import io.unlogged.weaver.DataInfoProvider;
+import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.UnloggedVisitor;
 
 import javax.annotation.processing.Messager;
@@ -64,10 +65,15 @@ public class HandlerLibrary {
     private final Collection<VisitorContainer> visitorHandlers = new ArrayList<VisitorContainer>();
     private final Messager messager;
     //    private final Weaver weaver;
-    private final UnloggedVisitor unloggedVisitor = new UnloggedVisitor(new DataInfoProvider());
+    private final UnloggedVisitor unloggedVisitor;
     private final Trees trees;
+    private static final TypeHierarchy typeHierarchy = new TypeHierarchy();
     private SortedSet<Long> priorities;
     private SortedSet<Long> prioritiesRequiringResolutionReset;
+
+    public static TypeHierarchy getTypeHierarchy() {
+        return typeHierarchy;
+    }
 
     /**
      * Creates a new HandlerLibrary that will report any problems or errors to the provided messager.
@@ -77,6 +83,7 @@ public class HandlerLibrary {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
         this.trees = trees;
+        unloggedVisitor = new UnloggedVisitor(new DataInfoProvider(), typeHierarchy);
 //        String agentArgs = "";
 //        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
 //        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);

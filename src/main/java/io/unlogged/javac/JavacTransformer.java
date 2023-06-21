@@ -50,12 +50,12 @@ public class JavacTransformer {
 
 
     public void transform(Context context, List<JCCompilationUnit> compilationUnits, CleanupRegistry cleanup) {
-//        for (JCCompilationUnit unit : compilationUnits) {
-//            JavacAST ast = new JavacAST(messager, context, unit, cleanup);
-//            ast.traverse(new AnnotationVisitor(0));
-//            handlers.callASTVisitors(ast);
-//            if (ast.isChanged()) UnloggedOptions.markChanged(context, (JCCompilationUnit) ast.top().get());
-//        }
+        for (JCCompilationUnit unit : compilationUnits) {
+            JavacAST ast = new JavacAST(messager, context, unit, cleanup);
+            ast.traverse(new AnnotationVisitor(0));
+            handlers.callASTVisitors(ast);
+            if (ast.isChanged()) UnloggedOptions.markChanged(context, (JCCompilationUnit) ast.top().get());
+        }
     }
 
     public void finish(Context context, CleanupRegistry cleanup) {

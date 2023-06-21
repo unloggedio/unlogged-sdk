@@ -3,6 +3,7 @@ package io.unlogged.core.bytecode;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
+import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
@@ -38,8 +39,8 @@ public class ClassTransformer extends ClassVisitor {
      * @param inputClass specifies a byte array containing the target class.
      * @throws IOException may be thrown if an error occurs during the weaving.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass) throws IOException {
-        this(weaver, config, new ClassReader(inputClass));
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass, TypeHierarchy typeHierarchy) throws IOException {
+        this(weaver, config, new ClassReader(inputClass), typeHierarchy);
     }
 
     /**
@@ -49,9 +50,9 @@ public class ClassTransformer extends ClassVisitor {
      * @param config specifies the configuration.
      * @param reader specifies a class reader to read the target class.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader) {
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy) {
         // Create a writer for the target class
-        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES));
+        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy));
         // Start weaving, and store the result to a byte array
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();

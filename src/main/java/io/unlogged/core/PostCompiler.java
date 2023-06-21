@@ -22,6 +22,7 @@
 package io.unlogged.core;
 
 import io.unlogged.core.bytecode.PreventNullAnalysisRemover;
+import io.unlogged.javac.HandlerLibrary;
 
 import java.io.*;
 import java.util.Collections;
@@ -36,7 +37,7 @@ public final class PostCompiler {
     private PostCompiler() {/* prevent instantiation*/}
 
     public static byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) {
-        if (System.getProperty("lombok.disablePostCompiler", null) != null) return original;
+        if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
         init(diagnostics);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
@@ -61,7 +62,7 @@ public final class PostCompiler {
 //		try {
 //			transformations = SpiLoadUtil.readAllFromIterator(SpiLoadUtil.findServices(PostCompilerTransformation.class, PostCompilerTransformation.class.getClassLoader()));
 //		} catch (IOException e) {
-        transformations = Collections.singletonList(new PreventNullAnalysisRemover());
+        transformations = Collections.singletonList(new PreventNullAnalysisRemover(HandlerLibrary.getTypeHierarchy()));
 //        StringWriter sw = new StringWriter();
 //			e.printStackTrace(new PrintWriter(sw, true));
 //        diagnostics.addError("Could not load post-compile transformers: "
