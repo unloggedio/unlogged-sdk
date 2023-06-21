@@ -10,7 +10,6 @@ import com.insidious.common.cqengine.ObjectInfoDocument;
 import com.insidious.common.cqengine.StringInfoDocument;
 import com.insidious.common.cqengine.TypeInfoDocument;
 import io.unlogged.logging.IErrorLogger;
-import io.unlogged.logging.perthread.IndexOutputStream;
 import orestes.bloomfilter.BloomFilter;
 
 import java.io.*;
@@ -129,7 +128,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
                 + " [" + stringsToIndex.size() + "]"
         );
         long start = System.currentTimeMillis();
-        int itemCount = objectsToIndex.size() + typesToIndex.size()  + stringsToIndex.size();
+        int itemCount = objectsToIndex.size() + typesToIndex.size() + stringsToIndex.size();
 
         if (itemCount == 0) {
             return;
@@ -174,7 +173,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
                 ZipEntry classWeaveEntry = new ZipEntry(WEAVE_DAT_FILE);
                 archivedIndexOutputStream.putNextEntry(classWeaveEntry);
 
-                FileInputStream weaveInputStream = new FileInputStream(classWeavePath);
+                InputStream weaveInputStream = this.getClass().getClassLoader().getResourceAsStream(classWeavePath);
                 copy(weaveInputStream, archivedIndexOutputStream);
                 weaveInputStream.close();
                 archivedIndexOutputStream.closeEntry();

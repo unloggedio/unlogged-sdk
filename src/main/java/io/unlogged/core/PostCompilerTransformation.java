@@ -21,6 +21,8 @@
  */
 package io.unlogged.core;
 
+import java.io.IOException;
+
 public interface PostCompilerTransformation {
-	byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics);
+	byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) throws IOException;
 }

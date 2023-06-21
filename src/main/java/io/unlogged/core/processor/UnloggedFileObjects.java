@@ -41,7 +41,7 @@ public final class UnloggedFileObjects {
 
     static Compiler getCompiler(JavaFileManager jfm) {
         String jfmClassName = jfm != null ? jfm.getClass().getName() : "null";
-        System.err.println("[TODO] Java compiler name: " + jfmClassName);
+//        System.err.println("[TODO] Java compiler name: " + jfmClassName);
 //		if (jfmClassName.equals("com.sun.tools.javac.util.DefaultFileManager")) return Compiler.JAVAC6;
 //		if (jfmClassName.equals("com.sun.tools.javac.util.JavacFileManager")) return Compiler.JAVAC6;
         if (jfmClassName.equals("com.sun.tools.javac.file.JavacFileManager")) {

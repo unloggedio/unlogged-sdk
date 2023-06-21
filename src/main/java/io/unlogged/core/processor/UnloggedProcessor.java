@@ -10,8 +10,8 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
-import io.unlogged.javac.JavacTransformer;
 import io.unlogged.javac.Javac;
+import io.unlogged.javac.JavacTransformer;
 import sun.misc.Unsafe;
 
 import javax.annotation.processing.*;
@@ -42,14 +42,14 @@ public class UnloggedProcessor extends AbstractProcessor {
     private final CleanupRegistry cleanup = new CleanupRegistry();
     public Element transformedEntryPoint = null;
     private ProcessingEnvironment unwrappedProcessingEnv;
-//    private Context context;
+    //    private Context context;
     private JavacProcessingEnvironment javacProcessingEnv;
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
 
     public UnloggedProcessor() {
-        System.out.println("HelloUnloggedProcessor");
+//        System.out.println("HelloUnloggedProcessor");
     }
 
     private static <T> T jbUnwrap(Class<? extends T> iface, T wrapper) {
@@ -202,7 +202,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 
 
         String agentArgs = "";
-        System.out.println("[unlogged] Starting agent: with arguments [" + agentArgs + "]");
+//        System.out.println("[unlogged] Starting agent: with arguments [" + agentArgs + "]");
         synchronized (initialized) {
             if (initialized.get()) {
                 return;
@@ -240,7 +240,7 @@ public class UnloggedProcessor extends AbstractProcessor {
             @SuppressWarnings("unchecked")
             Map<Object, Object> ht = (Map<Object, Object>) Permit.get(htField, context);
             final JavaFileManager originalFiler = (JavaFileManager) ht.get(key);
-            System.err.println("JavaFileManager: " + originalFiler.getClass().getCanonicalName());
+//            System.err.println("JavaFileManager: " + originalFiler.getClass().getCanonicalName());
             if (!(originalFiler instanceof InterceptingJavaFileManager)) {
                 final Messager messager = processingEnv.getMessager();
                 DiagnosticsReceiver receiver = new MessagerDiagnosticsReceiver(messager);
@@ -361,6 +361,9 @@ public class UnloggedProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+
+        if (System.getProperty("unlogged.disable", null) != null) return false;
+
 
         if (roundEnv.processingOver()) {
             transformer.finish(javacProcessingEnv.getContext(), cleanup);

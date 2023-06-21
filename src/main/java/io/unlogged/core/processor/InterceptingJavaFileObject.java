@@ -48,6 +48,9 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 	
 	@Override
 	public OutputStream openOutputStream() throws IOException {
+		if (delegate.getName().contains("test-classes")) {
+			return delegate.openOutputStream();
+		}
 		return PostCompiler.wrapOutputStream(delegate.openOutputStream(), fileName, diagnostics);
 	}
 	

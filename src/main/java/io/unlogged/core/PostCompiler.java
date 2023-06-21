@@ -59,21 +59,22 @@ public final class PostCompiler {
 
     private static synchronized void init(DiagnosticsReceiver diagnostics) {
         if (transformations != null) return;
-//		try {
+        try {
 //			transformations = SpiLoadUtil.readAllFromIterator(SpiLoadUtil.findServices(PostCompilerTransformation.class, PostCompilerTransformation.class.getClassLoader()));
-//		} catch (IOException e) {
-        transformations = Collections.singletonList(new PreventNullAnalysisRemover(HandlerLibrary.getTypeHierarchy()));
-//        StringWriter sw = new StringWriter();
-//			e.printStackTrace(new PrintWriter(sw, true));
-//        diagnostics.addError("Could not load post-compile transformers: "
-//					+ e.getMessage()
-//                + "\n" + sw.toString());
-//		}
+            transformations = Collections.singletonList(
+                    new PreventNullAnalysisRemover(HandlerLibrary.getTypeHierarchy()));
+        } catch (IOException e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw, true));
+            diagnostics.addError("Could not load post-compile transformers: "
+                    + e.getMessage()
+                    + "\n" + sw.toString());
+        }
     }
 
     public static OutputStream wrapOutputStream(final OutputStream originalStream, final String fileName, final DiagnosticsReceiver diagnostics) throws IOException {
 //		return originalStream;
-        if (System.getProperty("lombok.disablePostCompiler", null) != null) return originalStream;
+        if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 
         // close() can be called more than once and should be idempotent, therefore, ensure we never transform more than once.
         final AtomicBoolean closed = new AtomicBoolean();

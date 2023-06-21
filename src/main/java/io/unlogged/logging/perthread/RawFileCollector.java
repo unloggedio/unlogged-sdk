@@ -75,7 +75,7 @@ public class RawFileCollector implements Runnable {
         ArchivedIndexWriter archivedIndexWriterOld = archivedIndexWriter;
 
         archivedIndexWriter = new ArchivedIndexWriter(indexFileNameGenerator.getNextFile(),
-                outputDir + "/class.weave.dat", errorLogger);
+                "class.weave.dat", errorLogger);
         fileCount = 0;
         if (archivedIndexWriterOld != null) {
             boolean added = archiveQueue.offer(archivedIndexWriterOld);

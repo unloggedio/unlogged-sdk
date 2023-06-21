@@ -1,6 +1,8 @@
 package io.unlogged;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.util.ClassTypeUtil;
@@ -61,7 +63,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 Class<?> objectClass;
                 ClassLoader targetClassLoader;
 
-                Object objectInstanceByClass;
+                Object objectInstanceByClass = null;
 
                 objectInstanceByClass = logger.getObjectByClassName(agentCommandRequest.getClassName());
                 List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
@@ -73,14 +75,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         }
                     }
                 }
+                ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
                 if (objectInstanceByClass == null) {
-                    objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(), logger.getTargetClassLoader());
+                    objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(), targetClassLoader1);
+//                    if (objectInstanceByClass == null) {
+//                        throw new NoSuchMethodException(
+//                                "Instance of class [" + agentCommandRequest.getClassName() + "] " +
+//                                        "not found and could not be created");
+//                    }
                 }
 
-                objectClass = Class.forName(agentCommandRequest.getClassName(), false, logger.getTargetClassLoader());
+                objectClass = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
+                        Class.forName(agentCommandRequest.getClassName(), false, targetClassLoader1);
 
-                targetClassLoader = objectInstanceByClass != null ? objectInstanceByClass.getClass().getClassLoader()
-                 : logger.getTargetClassLoader();
+                targetClassLoader = objectInstanceByClass != null ?
+                        objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
                 Method methodToExecute = null;
 
@@ -97,18 +106,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    methodParameterTypes[i] = ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart,
-                            targetClassLoader);
+                    methodParameterTypes[i] =
+                            ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
                 }
 
 
                 try {
                     methodToExecute = objectClass.getMethod(agentCommandRequest.getMethodName(), methodParameterTypes);
                 } catch (NoSuchMethodException noSuchMethodException) {
-                    System.err.println("method not found matching name [" + agentCommandRequest.getMethodName() + "]" +
-                            " with parameters [" + methodSignatureParts + "]" +
-                            " in class [" + agentCommandRequest.getClassName() + "]");
-                    System.err.println("NoSuchMethodException: " + noSuchMethodException.getMessage());
+//                    System.err.println("method not found matching name [" + agentCommandRequest.getMethodName() + "]" +
+//                            " with parameters [" + methodSignatureParts + "]" +
+//                            " in class [" + agentCommandRequest.getClassName() + "]");
+//                    System.err.println("NoSuchMethodException: " + noSuchMethodException.getMessage());
                 }
 
                 if (methodToExecute == null) {
@@ -134,6 +143,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 Class<?>[] parameterTypesClass = methodToExecute.getParameterTypes();
                 Object[] parameters = new Object[methodParameters.size()];
+                TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(targetClassLoader);
 
                 for (int i = 0; i < methodParameters.size(); i++) {
                     String methodParameter = methodParameters.get(i);
@@ -144,10 +154,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         parameterObject = objectMapper.readValue(methodParameter,
                                 Class.forName("org.springframework.util.LinkedMultiValueMap"));
                     } else {
-                        parameterObject = objectMapper.readValue(methodParameter, parameterType);
+
+                        JavaType typeReference = typeFactory
+                                .constructFromCanonical(agentCommandRequest.getParameterTypes().get(i));
+                        parameterObject = objectMapper.readValue(methodParameter, typeReference);
                     }
-//                System.err.println(
-//                        "Assign parameter [" + i + "] value type [" + parameterType + "] -> " + parameterObject);
+
                     parameters[i] = parameterObject;
                 }
 
@@ -167,12 +179,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         agentCommandResponse.setMethodReturnValue(Float.floatToIntBits((Float) methodReturnValue));
                     } else if (methodReturnValue instanceof Flux) {
                         Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-                        agentCommandResponse.setMethodReturnValue(
-                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
+                        agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(returnedFlux.collectList().block()));
                     } else if (methodReturnValue instanceof Mono) {
                         Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-                        agentCommandResponse.setMethodReturnValue(
-                                objectMapper.writeValueAsString(returnedFlux.block()));
+                        agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(returnedFlux.block()));
                     } else {
                         agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(methodReturnValue));
                     }
@@ -180,10 +190,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
                     agentCommandResponse.setResponseType(ResponseType.NORMAL);
                 } catch (Throwable exception) {
-                    exception.printStackTrace();
+                    if (exception instanceof InvocationTargetException) {
+                        exception.getCause().printStackTrace();
+                    } else {
+                        exception.printStackTrace();
+                    }
                     Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
                     agentCommandResponse.setMessage(exceptionCause.getMessage());
-                    agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+                    try {
+                        agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+                    } catch (Exception e) {
+                        // failed to serialize thrown exception
+                    }
                     agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
                     agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
                 }

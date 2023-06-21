@@ -24,67 +24,77 @@ package io.unlogged.core.bytecode;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
 import io.unlogged.weaver.TypeHierarchy;
+import org.objectweb.asm.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 
 public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 
     private final Weaver weaver;
 
-    public PreventNullAnalysisRemover(TypeHierarchy typeHierarchy) {
-        File outputDir = new File("weaver-output");
-        outputDir.mkdir();
-        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
+
+    private final File classWeaveDatFile = new File("target/classes/class.weave.dat");
+    private final FileOutputStream weaveWriter;
+//    private final ZipOutputStream zippedClassWeaveDat;
+
+    public PreventNullAnalysisRemover(TypeHierarchy typeHierarchy) throws IOException {
+//        File outputDir = new File("weaver-output");
+//        outputDir.mkdir();
+//        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
+        weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
+//        if (classWeaveDatFile.exists()) {
+//            classWeaveDatFile.delete();
+//        }
+//        classWeaveDatFile.createNewFile();
+        weaveWriter = new FileOutputStream(classWeaveDatFile);
+//        zippedClassWeaveDat = new ZipOutputStream(weaveWriter);
+//        zippedClassWeaveDat.putNextEntry(new ZipEntry("class.weave.dat"));
 
     }
 
     @Override
-    public byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) {
+    public byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) throws IOException {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
+        InstrumentedClass instrumentedClassBytes = new InstrumentedClass(original, new byte[0]);
         try {
-            return weaver.weave(fileName, classFileMetadata.getClassName(), original);
+            instrumentedClassBytes = weaver.weave(fileName, classFileMetadata.getClassName(), original);
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        // existing bytecode instrumentation here
+        byte[] classWeaveInfo = instrumentedClassBytes.getClassWeaveInfo();
+        weaveWriter.write(classWeaveInfo);
+        weaveWriter.flush();
 
-//		byte[] fixedByteCode = fixJSRInlining(original);
+
+//        if (instrumentedClassBytes.classWeaveInfo.length == 0) {
+            return instrumentedClassBytes.getBytes();
+//        }
+
+//        ClassReader reader = new ClassReader(instrumentedClassBytes.getBytes());
+//        ClassWriter writer = new ClassWriter(reader, 0);
 //
-//		ClassReader reader = new ClassReader(fixedByteCode);
-//		ClassWriter writer = new FixedClassWriter(reader, 0);
+//        final AtomicBoolean changesMade = new AtomicBoolean();
 //
-//		final AtomicBoolean changesMade = new AtomicBoolean();
 //
-//		class PreventNullAnalysisVisitor extends MethodVisitor {
-//			PreventNullAnalysisVisitor(MethodVisitor mv) {
-//				super(Opcodes.ASM9, mv);
-//			}
-//
-//			@Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-//				boolean hit = true;
-//				if (hit && opcode != Opcodes.INVOKESTATIC) hit = false;
-//				if (hit && !"preventNullAnalysis".equals(name)) hit = false;
-//				if (hit && !"lombok/Lombok".equals(owner)) hit = false;
-//				if (hit && !"(Ljava/lang/Object;)Ljava/lang/Object;".equals(desc)) hit = false;
-//				if (hit) {
-//					changesMade.set(true);
-//					if (System.getProperty("lombok.debugAsmOnly", null) != null) super.visitMethodInsn(opcode, owner, name, desc, itf); // DEBUG for issue 470!
-//				} else {
-//					super.visitMethodInsn(opcode, owner, name, desc, itf);
-//				}
-//			}
-//		}
-//
-//		reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
-//			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-//				return new PreventNullAnalysisVisitor(super.visitMethod(access, name, desc, signature, exceptions));
-//			}
-//		}, 0);
-//		return changesMade.get() ? writer.toByteArray() : null;
-//		return original;
+//        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
+//            @Override
+//            public void visitEnd() {
+//                super.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
+//                        "unloggedClassWeaveBytes", Type.VOID, null, )
+//                super.visitEnd();
+//            }
+//        }, 0);
+//        return changesMade.get() ? writer.toByteArray() : null;
+//        return original;
     }
 }

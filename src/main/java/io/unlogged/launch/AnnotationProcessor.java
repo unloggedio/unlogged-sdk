@@ -47,6 +47,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public void init(ProcessingEnvironment processingEnv) {
+        if (System.getProperty("unlogged.disable", null) != null) return;
+
         disableJava9SillyWarning();
         AstModificationNotifierData.lombokInvoked = true;
         instance.init(processingEnv);
@@ -76,6 +78,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        if (System.getProperty("unlogged.disable", null) != null) return false;
         return instance.process(annotations, roundEnv);
     }
 

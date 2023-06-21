@@ -18,7 +18,7 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
 
     @Override
     public void handle(AnnotationValues<Unlogged> annotation, JCTree.JCAnnotation ast, JavacNode annotationNode) {
-        System.out.println("Handle annotation: " + Unlogged.class.getCanonicalName());
+//        System.out.println("Handle annotation: " + Unlogged.class.getCanonicalName());
 
         JavacNode methodNode = annotationNode.up();
         JavacHandlerUtil.MemberExistsResult fieldExists = JavacHandlerUtil.fieldExists(UNLOGGED_RUNTIME_FIELD_NAME,
