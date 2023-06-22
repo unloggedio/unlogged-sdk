@@ -22,7 +22,8 @@
 package io.unlogged.core;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 public interface PostCompilerTransformation {
-	byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) throws IOException;
+	byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) throws IOException;
 }

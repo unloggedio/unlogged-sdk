@@ -5,6 +5,7 @@ import io.unlogged.core.DiagnosticsReceiver;
 
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
+import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -82,9 +83,11 @@ public final class UnloggedFileObjects {
         throw new IllegalArgumentException(sb.toString());
     }
 
-    static JavaFileObject createIntercepting(Compiler compiler, JavaFileObject delegate, String fileName, DiagnosticsReceiver diagnostics) {
+    static JavaFileObject createIntercepting(Compiler compiler, JavaFileObject delegate, String fileName,
+                                             DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) {
         return compiler.wrap(
-                new InterceptingJavaFileObject(delegate, fileName, diagnostics, compiler.getDecoderMethod()));
+                new InterceptingJavaFileObject(delegate, fileName,
+                        diagnostics, compiler.getDecoderMethod(), classWeaveOutputStream));
     }
 
     private static Compiler java9Compiler(JavaFileManager jfm) {

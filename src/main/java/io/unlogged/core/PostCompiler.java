@@ -36,13 +36,14 @@ public final class PostCompiler {
 
     private PostCompiler() {/* prevent instantiation*/}
 
-    public static byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) {
+    public static byte[] applyTransformations(byte[] original, String fileName,
+                                              DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
         init(diagnostics);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
             try {
-                byte[] next = transformation.applyTransformations(previous, fileName, diagnostics);
+                byte[] next = transformation.applyTransformations(previous, fileName, diagnostics, classWeaveOutputStream);
                 if (next != null) {
                     previous = next;
                 }
@@ -72,7 +73,11 @@ public final class PostCompiler {
         }
     }
 
-    public static OutputStream wrapOutputStream(final OutputStream originalStream, final String fileName, final DiagnosticsReceiver diagnostics) throws IOException {
+    public static OutputStream wrapOutputStream(
+            final OutputStream originalStream,
+            final String fileName,
+            final DiagnosticsReceiver diagnostics,
+            OutputStream classWeaveOutputStream) throws IOException {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 
@@ -92,7 +97,7 @@ public final class PostCompiler {
                 byte[] copy = null;
                 if (original.length > 0) {
                     try {
-                        copy = applyTransformations(original, fileName, diagnostics);
+                        copy = applyTransformations(original, fileName, diagnostics, classWeaveOutputStream);
                     } catch (Exception e) {
                         e.printStackTrace();
                         diagnostics.addWarning(String.format(

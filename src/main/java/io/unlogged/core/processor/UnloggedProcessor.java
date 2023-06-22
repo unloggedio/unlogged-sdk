@@ -8,6 +8,7 @@ import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
+import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.javac.Javac;
@@ -382,7 +383,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 //            if (transformedEntryPoint == null) {
 //                // first entry point
 //                transformedEntryPoint = entryPoint;
-//                transformer.transformEntryPoint(context, transformedEntryPoint, cleanup);
+////                transformer.transformEntryPoint(context, transformedEntryPoint, cleanup);
 //            } else if (transformedEntryPoint != entryPoint) {
 //                throw new RuntimeException(
 //                        "More than 1 class annotated with @Unlogged annotation. Only the entry point " +

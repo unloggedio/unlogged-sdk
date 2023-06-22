@@ -10,11 +10,30 @@ import io.unlogged.javac.JavacAnnotationHandler;
 import io.unlogged.javac.JavacNode;
 import io.unlogged.javac.JavacTreeMaker;
 
+import java.util.Iterator;
+
 import static io.unlogged.core.handlers.JavacHandlerUtil.*;
 
 public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> {
 
     public static final String UNLOGGED_RUNTIME_FIELD_NAME = "unloggedRuntimeInstance";
+
+    public static String join(java.util.List<String> list, String separator) {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+
+        String item;
+        for (Iterator var4 = list.iterator(); var4.hasNext(); sb.append(item)) {
+            item = (String) var4.next();
+            if (first) {
+                first = false;
+            } else {
+                sb.append(separator);
+            }
+        }
+
+        return sb.toString();
+    }
 
     @Override
     public void handle(AnnotationValues<Unlogged> annotation, JCTree.JCAnnotation ast, JavacNode annotationNode) {
@@ -32,7 +51,7 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
         JCTree.JCExpression runtimeFieldType = chainDotsString(methodNode, "io.unlogged.Runtime");
         JCTree.JCExpression factoryMethod = chainDotsString(methodNode, "io.unlogged.Runtime.getInstance");
         JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
-                maker.Literal("")
+                maker.Literal("i=" + join(annotation.getAsStringList("includePackage"), ","))
         };
 
         JCTree.JCMethodInvocation factoryMethodCall = maker.Apply(
@@ -51,4 +70,5 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
         }
 
     }
+
 }

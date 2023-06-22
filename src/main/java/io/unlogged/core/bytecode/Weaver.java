@@ -186,9 +186,10 @@ public class Weaver {
         DataOutputStream out = new DataOutputStream(boas);
 
         try {
-            byte[] classInfoBytes = classInfo.toBytes();
+//            byte[] classInfoBytes = classInfo.toBytes();
+//            out.write(classInfoBytes);
+            classInfo.writeToOutputStream(out);
 //            System.err.println("ClassBytes: " + new String(classInfoBytes));
-            out.write(classInfoBytes);
 
 
         } catch (IOException e) {
@@ -201,8 +202,9 @@ public class Weaver {
             ArrayList<DataInfo> dataInfoEntries = result.getDataEntries();
             out.writeInt(dataInfoEntries.size());
             for (DataInfo dataInfo : dataInfoEntries) {
-                byte[] classWeaveBytes = dataInfo.toBytes();
-                out.write(classWeaveBytes);
+//                byte[] classWeaveBytes = dataInfo.toBytes();
+//                out.write(classWeaveBytes);
+                dataInfo.writeToStream(out);
             }
         } catch (IOException e) {
             e.printStackTrace(logger);
@@ -214,8 +216,9 @@ public class Weaver {
             ArrayList<MethodInfo> methods = result.getMethods();
             out.writeInt(methods.size());
             for (MethodInfo method : methods) {
-                byte[] methodBytes = method.toBytes();
-                out.write(methodBytes);
+//                byte[] methodBytes = method.toBytes();
+//                out.write(methodBytes);
+                method.writeToOutputStream(out);
 
             }
         } catch (IOException e) {

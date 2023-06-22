@@ -70,6 +70,10 @@ public class Runtime {
 
             errorLogger = new SimpleFileLogger(outputDir);
 
+            errorLogger.log("Java version: " + System.getProperty("java.version"));
+            errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
+            errorLogger.log("Params: " + args);
+
             System.out.println("[unlogged]" +
                     " session Id: [" + config.getSessionId() + "]" +
                     " on hostname [" + NetworkClient.getHostname() + "]");

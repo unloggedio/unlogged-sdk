@@ -24,15 +24,10 @@ package io.unlogged.core.bytecode;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
 import io.unlogged.weaver.TypeHierarchy;
-import org.objectweb.asm.*;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.io.OutputStream;
 
 
 public class PreventNullAnalysisRemover implements PostCompilerTransformation {
@@ -40,8 +35,8 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
     private final Weaver weaver;
 
 
-    private final File classWeaveDatFile = new File("target/classes/class.weave.dat");
-    private final FileOutputStream weaveWriter;
+//    private final File classWeaveDatFile = new File("target/classes/class.weave.dat");
+//    private final FileOutputStream weaveWriter;
 //    private final ZipOutputStream zippedClassWeaveDat;
 
     public PreventNullAnalysisRemover(TypeHierarchy typeHierarchy) throws IOException {
@@ -53,14 +48,15 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 //            classWeaveDatFile.delete();
 //        }
 //        classWeaveDatFile.createNewFile();
-        weaveWriter = new FileOutputStream(classWeaveDatFile);
+//        weaveWriter = new FileOutputStream(classWeaveDatFile);
 //        zippedClassWeaveDat = new ZipOutputStream(weaveWriter);
 //        zippedClassWeaveDat.putNextEntry(new ZipEntry("class.weave.dat"));
 
     }
 
     @Override
-    public byte[] applyTransformations(byte[] original, String fileName, DiagnosticsReceiver diagnostics) throws IOException {
+    public byte[] applyTransformations(byte[] original, String fileName,
+                                       DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) throws IOException {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
         InstrumentedClass instrumentedClassBytes = new InstrumentedClass(original, new byte[0]);
@@ -72,12 +68,12 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
         }
 
         byte[] classWeaveInfo = instrumentedClassBytes.getClassWeaveInfo();
-        weaveWriter.write(classWeaveInfo);
-        weaveWriter.flush();
+        classWeaveOutputStream.write(classWeaveInfo);
+        classWeaveOutputStream.flush();
 
 
 //        if (instrumentedClassBytes.classWeaveInfo.length == 0) {
-            return instrumentedClassBytes.getBytes();
+        return instrumentedClassBytes.getBytes();
 //        }
 
 //        ClassReader reader = new ClassReader(instrumentedClassBytes.getBytes());
