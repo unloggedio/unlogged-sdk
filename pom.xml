@@ -93,6 +93,16 @@
             <groupId>video.bug</groupId>
             <artifactId>common</artifactId>
             <version>1.3.43</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>redis.clients</groupId>
+                    <artifactId>jedis</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.msgpack</groupId>
+                    <artifactId>msgpack</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -197,10 +207,10 @@
                 <version>3.3.0</version>
                 <configuration>
                     <relocations>
-<!--                        <relocation>-->
-<!--                            <pattern>org.objectweb.asm</pattern>-->
-<!--                            <shadedPattern>selogger.org.objectweb.asm</shadedPattern>-->
-<!--                        </relocation>-->
+                        <!--                        <relocation>-->
+                        <!--                            <pattern>org.objectweb.asm</pattern>-->
+                        <!--                            <shadedPattern>selogger.org.objectweb.asm</shadedPattern>-->
+                        <!--                        </relocation>-->
                         <relocation>
                             <pattern>com.google.code.gson</pattern>
                             <shadedPattern>selogger.com.google.code.gson</shadedPattern>

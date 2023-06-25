@@ -153,36 +153,36 @@ public class Runtime {
                 return instance;
             }
             instance = new Runtime(args);
-            for (Pair<String, List<Integer>> pendingClassRegistration : pendingClassRegistrations) {
-                registerClass(pendingClassRegistration.getFirst(), pendingClassRegistration.getSecond());
-            }
+//            for (Pair<String, List<Integer>> pendingClassRegistration : pendingClassRegistrations) {
+//                registerClass(pendingClassRegistration.getFirst(), pendingClassRegistration.getSecond());
+//            }
 
         }
         return instance;
     }
 
-    // this method is called by all classes which were probed during compilation time
-    public static boolean registerClass(String classInfoBytes, List<Integer> probeIdsToRecord) {
-        if (instance != null) {
-            byte[] decodedBytes = Base64.getDecoder().decode(classInfoBytes);
-            ClassInfo classInfo = new ClassInfo();
-
-            try {
-                ByteArrayInputStream in = new ByteArrayInputStream(decodedBytes);
-                classInfo.readFromDataStream(in);
-            } catch (IOException e) {
-//            throw new RuntimeException(e);
-                return false;
-            }
-
-            instance.logger.recordWeaveInfo(decodedBytes, classInfo, probeIdsToRecord);
-
-        } else {
-
-            pendingClassRegistrations.add(new Pair<>(classInfoBytes, probeIdsToRecord));
-        }
-        return true;
-    }
+//    // this method is called by all classes which were probed during compilation time
+//    public static boolean registerClass(String classInfoBytes, List<Integer> probeIdsToRecord) {
+//        if (instance != null) {
+//            byte[] decodedBytes = Base64.getDecoder().decode(classInfoBytes);
+//            ClassInfo classInfo = new ClassInfo();
+//
+//            try {
+//                ByteArrayInputStream in = new ByteArrayInputStream(decodedBytes);
+//                classInfo.readFromDataStream(in);
+//            } catch (IOException e) {
+////            throw new RuntimeException(e);
+//                return false;
+//            }
+//
+//            instance.logger.recordWeaveInfo(decodedBytes, classInfo, probeIdsToRecord);
+//
+//        } else {
+//
+//            pendingClassRegistrations.add(new Pair<>(classInfoBytes, probeIdsToRecord));
+//        }
+//        return true;
+//    }
 
     /**
      * Close data streams if necessary

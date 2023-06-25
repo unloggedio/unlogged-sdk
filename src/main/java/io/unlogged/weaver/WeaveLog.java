@@ -19,25 +19,24 @@ public class WeaveLog {
 
     public static final String SEPARATOR = ",";
     private final int classId;
-    private int methodId;
-    private int dataId;
+    private final DataInfoProvider dataInfoProvider;
+//    private int methodId;
     private final ArrayList<DataInfo> dataEntries;
     private final ArrayList<MethodInfo> methodEntries;
     private final StringWriter logger;
     private final PrintWriter loggerWrapper;
     private String fullClassName;
+    private int methodId;
 
     /**
      * Create an instance having the given state.
      *
      * @param classId      is the ID used by the target class (if succeeded)
-     * @param nextMethodId is the first ID of the methods of the target class
-     * @param nextDataId   is the first ID of the data IDs of the target class
+     * @param dataInfoProvider   is the first ID of the data IDs of the target class
      */
-    public WeaveLog(int classId, int nextMethodId, int nextDataId) {
+    public WeaveLog(int classId, DataInfoProvider dataInfoProvider) {
         this.classId = classId;
-        this.methodId = nextMethodId;
-        this.dataId = nextDataId;
+        this.dataInfoProvider = dataInfoProvider;
         dataEntries = new ArrayList<>();
         methodEntries = new ArrayList<>();
         logger = new StringWriter();
@@ -62,20 +61,6 @@ public class WeaveLog {
         this.fullClassName = name;
     }
 
-    /**
-     * @return the next method ID after this weaving.
-     */
-    public int getNextMethodId() {
-        return methodId;
-    }
-
-    /**
-     * @return the next data ID.
-     * This method is to transfer the current Data ID to the next weaving target class.
-     */
-    public int getNextDataId() {
-        return dataId;
-    }
 
     /**
      * Record a woven method name.
@@ -88,9 +73,10 @@ public class WeaveLog {
      * @param methodHash hash for the method being visited
      */
     public void startMethod(String className, String methodName, String methodDesc, int access, String sourceFileName, String methodHash) {
-        MethodInfo entry = new MethodInfo(classId, methodId, className, methodName, methodDesc, access, sourceFileName, methodHash);
+        methodId = dataInfoProvider.nextMethodId();
+        MethodInfo entry = new MethodInfo(classId, methodId, className, methodName, methodDesc, access,
+                sourceFileName, methodHash);
         methodEntries.add(entry);
-        methodId++;
     }
 
     /**
@@ -104,9 +90,11 @@ public class WeaveLog {
      * @return the next available id which can be used for the dataInfo
      */
     public int nextDataId(int line, int instructionIndex, EventType eventType, Descriptor valueDesc, String attributes) {
-        DataInfo entry = new DataInfo(classId, methodId - 1, dataId, line, instructionIndex, eventType, valueDesc, attributes);
+        int dataId = dataInfoProvider.nextProbeId();
+        DataInfo entry = new DataInfo(classId, methodId, dataId, line, instructionIndex, eventType,
+                valueDesc, attributes);
         dataEntries.add(entry);
-        return dataId++;
+        return dataId;
     }
 
     /**

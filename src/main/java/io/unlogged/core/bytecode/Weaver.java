@@ -5,6 +5,7 @@ import com.insidious.common.weaver.ClassInfo;
 import com.insidious.common.weaver.DataInfo;
 import com.insidious.common.weaver.LogLevel;
 import com.insidious.common.weaver.MethodInfo;
+import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -18,7 +19,7 @@ import java.util.ArrayList;
  */
 public class Weaver {
 
-//    public static final String PROPERTY_FILE = "weaving.properties";
+    //    public static final String PROPERTY_FILE = "weaving.properties";
     public static final String SEPARATOR = ",";
 //    public static final char SEPARATOR_CHAR = ',';
 //    public static final String CLASS_ID_FILE = "classes.txt";
@@ -33,6 +34,7 @@ public class Weaver {
     private final String lineSeparator = "\n";
     private final WeaveConfig config;
     private final TypeHierarchy typeHierarchy;
+    private final DataInfoProvider dataInfoProvider;
     private Writer dataIdWriter;
     private PrintStream logger;
     private int classId;
@@ -48,14 +50,16 @@ public class Weaver {
      * <p>
      * //     * @param outputDir location to save the weave data
      *
-     * @param config weave configuration
+     * @param config           weave configuration
+     * @param dataInfoProvider
      */
-    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy) {
+    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy, DataInfoProvider dataInfoProvider) {
 //        assert outputDir.isDirectory() && outputDir.canWrite();
 
         this.typeHierarchy = typeHierarchy;
 //        this.outputDir = outputDir;
         this.config = config;
+        this.dataInfoProvider = dataInfoProvider;
         confirmedDataId = 0;
         confirmedMethodId = 0;
         classId = 0;
@@ -104,7 +108,7 @@ public class Weaver {
 
         String hash = getClassHash(target);
         LogLevel level = LogLevel.Normal;
-        WeaveLog weaveLog = new WeaveLog(classId, confirmedMethodId, confirmedDataId);
+        WeaveLog weaveLog = new WeaveLog(classId, dataInfoProvider);
 //        try {
         ClassTransformer classTransformer;
         try {
@@ -113,14 +117,14 @@ public class Weaver {
             if ("Method code too large!".equals(e.getMessage())) {
                 // Retry to generate a smaller bytecode by ignoring a large array init block
                 try {
-                    weaveLog = new WeaveLog(classId, confirmedMethodId, confirmedDataId);
+                    weaveLog = new WeaveLog(classId, dataInfoProvider);
                     level = LogLevel.IgnoreArrayInitializer;
                     WeaveConfig smallerConfig = new WeaveConfig(config, level);
                     classTransformer = new ClassTransformer(weaveLog, smallerConfig, target, typeHierarchy);
 //                    log("LogLevel.IgnoreArrayInitializer: " + container + "/" + className);
                 } catch (RuntimeException e2) {
                     if ("Method code too large!".equals(e.getMessage())) {
-                        weaveLog = new WeaveLog(classId, confirmedMethodId, confirmedDataId);
+                        weaveLog = new WeaveLog(classId, dataInfoProvider);
                         // Retry to generate further smaller bytecode by ignoring except for entry and exit events
                         level = LogLevel.OnlyEntryExit;
                         WeaveConfig smallestConfig = new WeaveConfig(config, level);
@@ -195,7 +199,7 @@ public class Weaver {
         } catch (IOException e) {
             e.printStackTrace(logger);
         }
-        classId++;
+        classId = dataInfoProvider.nextClassId();
 
 //        confirmedDataId = result.getNextDataId();
         try {

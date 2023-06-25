@@ -68,6 +68,7 @@ public class HandlerLibrary {
     private final UnloggedVisitor unloggedVisitor;
     private final Trees trees;
     private static final TypeHierarchy typeHierarchy = new TypeHierarchy();
+    private static final DataInfoProvider dataInfoProvider = new DataInfoProvider();
     private SortedSet<Long> priorities;
     private SortedSet<Long> prioritiesRequiringResolutionReset;
 
@@ -83,7 +84,7 @@ public class HandlerLibrary {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
         this.trees = trees;
-        unloggedVisitor = new UnloggedVisitor(new DataInfoProvider(), typeHierarchy);
+        unloggedVisitor = new UnloggedVisitor(dataInfoProvider, typeHierarchy);
 //        String agentArgs = "";
 //        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
 //        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
