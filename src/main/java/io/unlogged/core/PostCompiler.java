@@ -37,13 +37,14 @@ public final class PostCompiler {
     private PostCompiler() {/* prevent instantiation*/}
 
     public static byte[] applyTransformations(byte[] original, String fileName,
-                                              DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) {
+                                              DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream, OutputStream probeOutputStream) {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
         init(diagnostics);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
             try {
-                byte[] next = transformation.applyTransformations(previous, fileName, diagnostics, classWeaveOutputStream);
+                byte[] next = transformation.applyTransformations(
+                        previous, fileName, diagnostics, classWeaveOutputStream, probeOutputStream);
                 if (next != null) {
                     previous = next;
                 }
@@ -77,7 +78,8 @@ public final class PostCompiler {
             final OutputStream originalStream,
             final String fileName,
             final DiagnosticsReceiver diagnostics,
-            OutputStream classWeaveOutputStream) throws IOException {
+            OutputStream classWeaveOutputStream,
+            OutputStream probeOutputStream) throws IOException {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 
@@ -97,7 +99,8 @@ public final class PostCompiler {
                 byte[] copy = null;
                 if (original.length > 0) {
                     try {
-                        copy = applyTransformations(original, fileName, diagnostics, classWeaveOutputStream);
+                        copy = applyTransformations(original, fileName, diagnostics, classWeaveOutputStream,
+                                probeOutputStream);
                     } catch (Exception e) {
                         e.printStackTrace();
                         diagnostics.addWarning(String.format(

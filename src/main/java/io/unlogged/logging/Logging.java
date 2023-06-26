@@ -9,6 +9,7 @@ import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.List;
 
 
 /**
@@ -39,12 +40,13 @@ public class Logging {
     }
 
     public static DetailedEventStreamAggregatedLogger initialiseDetailedAggregatedLogger(
-            AggregatedFileLogger aggregatedLogger, File outputDir
+            AggregatedFileLogger aggregatedLogger, File outputDir, List<Integer> probesToRecord
     ) throws IOException {
         TypeIdAggregatedStreamMap typeToId = new TypeIdAggregatedStreamMap(aggregatedLogger);
         ObjectIdAggregatedStream objectIdMap = new ObjectIdAggregatedStream(aggregatedLogger, typeToId, outputDir);
 
-        DetailedEventStreamAggregatedLogger instance = new DetailedEventStreamAggregatedLogger(objectIdMap, aggregatedLogger);
+        DetailedEventStreamAggregatedLogger instance = new DetailedEventStreamAggregatedLogger(objectIdMap,
+                aggregatedLogger, probesToRecord);
         INSTANCE = instance;
         return instance;
     }

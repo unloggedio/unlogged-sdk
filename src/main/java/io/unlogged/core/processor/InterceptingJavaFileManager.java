@@ -15,6 +15,8 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 	private final UnloggedFileObjects.Compiler compiler;
 	private final FileObject classWeaveDat;
 	private final OutputStream classWeaveOutputStream;
+	private final FileObject probesToCaptureDat;
+	private final FileOutputStream probesToCaptureOutputStream;
 
 	InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics) {
 		super(original);
@@ -30,6 +32,14 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 			String classWeaveOutputPath = classWeaveDat.toUri().getPath();
 			File weaveOutputFile = new File(classWeaveOutputPath);
 			classWeaveOutputStream = new FileOutputStream(weaveOutputFile);
+
+			probesToCaptureDat = fileManager.getFileForOutput(StandardLocation.CLASS_OUTPUT, "",
+					"probes.dat", null);
+			String probeToCapturePath = probesToCaptureDat.toUri().getPath();
+			File probesToCaptureOutputFile = new File(probeToCapturePath);
+			probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile);
+
+
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -39,13 +49,16 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 		JavaFileObject fileObject = fileManager.getJavaFileForOutput(location, className, kind, sibling);
 		if (kind != Kind.CLASS) return fileObject;
 		
-		return UnloggedFileObjects.createIntercepting(compiler, fileObject, className, diagnostics, classWeaveOutputStream);
+		return UnloggedFileObjects.createIntercepting(compiler,
+				fileObject, className, diagnostics, classWeaveOutputStream, probesToCaptureOutputStream);
 	}
 
 	@Override
 	public void close() throws IOException {
 		classWeaveOutputStream.flush();
 		classWeaveOutputStream.close();
+		probesToCaptureOutputStream.flush();
+		probesToCaptureOutputStream.close();
 		super.close();
 	}
 }

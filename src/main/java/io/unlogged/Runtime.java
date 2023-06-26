@@ -1,6 +1,5 @@
 package io.unlogged;
 
-import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
@@ -12,14 +11,12 @@ import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
+import io.unlogged.util.StreamUtil;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -78,6 +75,19 @@ public class Runtime {
                     " session Id: [" + config.getSessionId() + "]" +
                     " on hostname [" + NetworkClient.getHostname() + "]");
 
+            List<Integer> probesToRecord = new ArrayList<>();
+            InputStream probesFile = this.getClass().getClassLoader().getResourceAsStream("probes.dat");
+            byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(probeToRecordBytes));
+            try {
+                while (true) {
+                    int probeId = dis.readInt();
+                    probesToRecord.add(probeId);
+                }
+            } catch (EOFException e) {
+
+            }
+
             switch (weaveParameters.getMode()) {
 
 
@@ -122,7 +132,7 @@ public class Runtime {
                             fileCollector1);
 
                     logger = Logging.initialiseDetailedAggregatedLogger(perThreadBinaryFileAggregatedLogger1,
-                            outputDir);
+                            outputDir, probesToRecord);
                     break;
 
             }

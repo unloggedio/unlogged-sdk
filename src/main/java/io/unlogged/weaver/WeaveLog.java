@@ -90,7 +90,7 @@ public class WeaveLog {
      * @return the next available id which can be used for the dataInfo
      */
     public int nextDataId(int line, int instructionIndex, EventType eventType, Descriptor valueDesc, String attributes) {
-        int dataId = dataInfoProvider.nextProbeId();
+        int dataId = dataInfoProvider.nextProbeId(eventType);
         DataInfo entry = new DataInfo(classId, methodId, dataId, line, instructionIndex, eventType,
                 valueDesc, attributes);
         dataEntries.add(entry);

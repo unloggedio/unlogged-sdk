@@ -207,16 +207,18 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
      *
      * @param objectIdMap      object to id converter
      * @param aggregatedLogger writer
+     * @param probesToRecord
      */
     public DetailedEventStreamAggregatedLogger(
 //            String includedPackage,
             ObjectIdAggregatedStream objectIdMap,
-            AggregatedFileLogger aggregatedLogger
-    ) {
+            AggregatedFileLogger aggregatedLogger,
+            List<Integer> probesToRecord) {
 
 //        this.includedPackage = includedPackage;
         this.aggregatedLogger = aggregatedLogger;
         this.objectIdMap = objectIdMap;
+        this.probesToRecord.addAll(probesToRecord);
 
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
@@ -496,6 +498,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("org.redis")
                         || className.startsWith("redis")
                         || className.startsWith("co.elastic")
+                        || className.startsWith("io.unlogged")
                         || className.startsWith("java.lang.Class")
                         || className.startsWith("io.undertow")
                         || className.startsWith("org.thymeleaf")
@@ -515,7 +518,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("java.util.concurrent")
                         || className.startsWith("com.amazon")
                         || className.startsWith("com.hubspot")
-                        || className.endsWith("[]")
                         || value instanceof Iterator
                 ) {
 //                    System.err.println("Removing probe: " + dataId);

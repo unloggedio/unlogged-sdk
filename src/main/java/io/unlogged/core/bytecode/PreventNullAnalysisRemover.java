@@ -34,6 +34,7 @@ import java.io.OutputStream;
 public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 
     private final Weaver weaver;
+    private final DataInfoProvider dataInfoProvider = new DataInfoProvider();
 
 
 //    private final File classWeaveDatFile = new File("target/classes/class.weave.dat");
@@ -44,7 +45,6 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 //        File outputDir = new File("weaver-output");
 //        outputDir.mkdir();
 //        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
-        DataInfoProvider dataInfoProvider = new DataInfoProvider();
         weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy, dataInfoProvider);
 //        if (classWeaveDatFile.exists()) {
 //            classWeaveDatFile.delete();
@@ -58,11 +58,15 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 
     @Override
     public byte[] applyTransformations(byte[] original, String fileName,
-                                       DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream) throws IOException {
+                                       DiagnosticsReceiver diagnostics,
+                                       OutputStream classWeaveOutputStream,
+                                       OutputStream probeOutputStream
+    ) throws IOException {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
-        InstrumentedClass instrumentedClassBytes = new InstrumentedClass(original, new byte[0]);
+        InstrumentedClass instrumentedClassBytes;
         try {
+            dataInfoProvider.setProbeOutputStream(probeOutputStream);
             instrumentedClassBytes = weaver.weave(fileName, classFileMetadata.getClassName(), original);
 
         } catch (IOException e) {
