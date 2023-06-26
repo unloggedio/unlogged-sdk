@@ -144,30 +144,35 @@ public class RawFileCollector implements Runnable {
         if (!isDraining.compareAndSet(false, true)) {
             return;
         }
-        errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drain items to index: " +
-                objectsToIndex.size() + ", " + typesToIndex.size() + ", " + stringsToIndex.size());
-        List<StringInfoDocument> stringInfoDocuments = new ArrayList<>();
+        try {
 
 
-        List<ObjectInfoDocument> objectInfoDocuments = new ArrayList<>(objectsToIndex.size());
-        objectsToIndex.drainTo(objectInfoDocuments);
+            errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drain items to index: " +
+                    objectsToIndex.size() + ", " + typesToIndex.size() + ", " + stringsToIndex.size());
+            List<StringInfoDocument> stringInfoDocuments = new ArrayList<>();
 
-        List<TypeInfoDocument> newTypes = new ArrayList<>();
-        typesToIndex.drainTo(newTypes);
 
-        typeInfoDocuments.addAll(newTypes);
+            List<ObjectInfoDocument> objectInfoDocuments = new ArrayList<>(objectsToIndex.size());
+            objectsToIndex.drainTo(objectInfoDocuments);
 
-        stringsToIndex.drainTo(stringInfoDocuments);
+            List<TypeInfoDocument> newTypes = new ArrayList<>();
+            typesToIndex.drainTo(newTypes);
 
-        if (objectInfoDocuments.size() == 0 && stringInfoDocuments.size() == 0 && typeInfoDocuments.size() == 0) {
-            errorLogger.log("no new data to record, return");
-            return;
+            typeInfoDocuments.addAll(newTypes);
+
+            stringsToIndex.drainTo(stringInfoDocuments);
+
+            if (objectInfoDocuments.size() == 0 && stringInfoDocuments.size() == 0 && typeInfoDocuments.size() == 0) {
+                errorLogger.log("no new data to record, return");
+                return;
+            }
+
+            writer.drainQueueToIndex(objectInfoDocuments, EMPTY_TYPE_LIST, stringInfoDocuments);
+            errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drained");
+        } finally {
+            isDraining.set(false);
         }
 
-        writer.drainQueueToIndex(objectInfoDocuments, EMPTY_TYPE_LIST, stringInfoDocuments);
-        errorLogger.log("[" + writer.getArchiveFile().getName() + "] Drained");
-
-        isDraining.set(false);
 
     }
 
@@ -175,23 +180,23 @@ public class RawFileCollector implements Runnable {
     public void run() {
         try {
             while (true) {
-            long start = System.currentTimeMillis();
-            errorLogger.log(start + " : run raw file collector cron: " + shutdown);
-            if (shutdown) {
-                return;
-            }
-            try {
-                EXECUTOR_SERVICE.submit(() -> {
-                    try {
-                        drainItemsToIndex(archivedIndexWriter);
-                    } catch (Throwable e) {
-                        errorLogger.log(e);
-                    }
-                });
-                upload();
-            } catch (IOException e) {
-                errorLogger.log(e);
-            }
+                long start = System.currentTimeMillis();
+                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
+                if (shutdown) {
+                    return;
+                }
+                try {
+                    EXECUTOR_SERVICE.submit(() -> {
+                        try {
+                            drainItemsToIndex(archivedIndexWriter);
+                        } catch (Throwable e) {
+                            errorLogger.log(e);
+                        }
+                    });
+                    upload();
+                } catch (IOException e) {
+                    errorLogger.log(e);
+                }
                 Thread.sleep(1000);
             }
         } catch (Throwable e) {
