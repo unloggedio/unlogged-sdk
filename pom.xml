@@ -7,7 +7,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.0</version>
+    <version>0.0.1</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -18,6 +18,50 @@
         <jackson.scope>compile</jackson.scope>
 
     </properties>
+
+    <distributionManagement>
+
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+        <!--                <repository>-->
+        <!--                    <id>gitlab-maven</id>-->
+        <!--                    <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>-->
+        <!--                </repository>-->
+        <!--                <snapshotRepository>-->
+        <!--                    <id>gitlab-maven</id>-->
+        <!--                    <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>-->
+        <!--                </snapshotRepository>-->
+    </distributionManagement>
+    <developers>
+        <developer>
+            <name>Parth Mudgal</name>
+            <email>artpar@gmail.com</email>
+            <id>artpar</id>
+            <organization>Unlogged Inc</organization>
+            <organizationUrl>https://unlogged.io</organizationUrl>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>IST</timezone>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>AGPL 3</name>
+        </license>
+    </licenses>
+    <scm>
+        <url>https://github.com/unloggedio/unlogged-sdk</url>
+        <developerConnection>scm:git:git@github.com:unloggedio/unlogged-sdk.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
 
     <profiles>
 
