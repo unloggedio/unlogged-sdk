@@ -50,8 +50,15 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
 
         JCTree.JCExpression runtimeFieldType = chainDotsString(methodNode, "io.unlogged.Runtime");
         JCTree.JCExpression factoryMethod = chainDotsString(methodNode, "io.unlogged.Runtime.getInstance");
+
+        java.util.List<String> includePackageNameList = annotation.getAsStringList("includePackage");
+        String includedPackageName = annotationNode.getPackageDeclaration();
+        if (includePackageNameList != null && includePackageNameList.size() > 0) {
+            includedPackageName = join(includePackageNameList, ",");
+        }
+
         JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
-                maker.Literal("i=" + join(annotation.getAsStringList("includePackage"), ","))
+                maker.Literal("i=" + includedPackageName)
         };
 
         JCTree.JCMethodInvocation factoryMethodCall = maker.Apply(

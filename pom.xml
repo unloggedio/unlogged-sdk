@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.0.2</version>
+    <version>0.0.3</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -333,7 +333,14 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.9.1</version>
                 <configuration>
-                    <excludePackageNames>io.unlogged.core.*:io.unlogged.core.javac.*:com.sun.tools.*</excludePackageNames>
+<!--                    <excludePackageNames>io.unlogged.core.*:io.unlogged.weaver.*:io.unlogged.core.javac.*:com.sun.tools.*</excludePackageNames>-->
+<!--                    <debug>true</debug>-->
+<!--                    <excludes>-->
+<!--                        JavacTreeMaker.java-->
+<!--                    </excludes>-->
+                    <sourceFileIncludes>
+                        <fileInclude>io/unlogged/*.java</fileInclude>
+                    </sourceFileIncludes>
                 </configuration>
                 <executions>
                     <execution>
