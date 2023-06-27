@@ -22,7 +22,7 @@
 package io.unlogged.core;
 
 import io.unlogged.core.bytecode.PreventNullAnalysisRemover;
-import io.unlogged.javac.HandlerLibrary;
+import io.unlogged.core.javac.HandlerLibrary;
 
 import java.io.*;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package io.unlogged.weaver;
+package io.unlogged.core.weaver;
 
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.ListBuffer;

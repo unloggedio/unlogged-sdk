@@ -836,7 +836,7 @@ public class HandlerUtil {
     }
 
     /**
-     * @param node   Any node (used to fetch config of capitalization strategy).
+     * @param ast   Any node (used to fetch config of capitalization strategy).
      * @param prefix Something like {@code get} or {@code set} or {@code is}.
      * @param suffix Something like {@code running}.
      * @return prefix + smartly title-cased suffix. For example, {@code setRunning}.

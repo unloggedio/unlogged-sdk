@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.unlogged.javac;
+package io.unlogged.core.javac;
 
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Symtab;

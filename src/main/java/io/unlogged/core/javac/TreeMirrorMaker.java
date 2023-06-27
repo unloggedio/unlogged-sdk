@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.unlogged.javac;
+package io.unlogged.core.javac;
 
 import com.sun.source.tree.LabeledStatementTree;
 import com.sun.source.tree.VariableTree;

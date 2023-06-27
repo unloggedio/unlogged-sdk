@@ -148,7 +148,7 @@ public class SpiLoadUtil {
 	 * This method will find the @{code T} in {@code public class Foo extends BaseType<T>}.
 	 * 
 	 * It returns an annotation type because it is used exclusively to figure out which annotations are
-	 * being handled by {@link lombok.eclipse.EclipseAnnotationHandler} and {@link lombok.javac.JavacAnnotationHandler}.
+	 * being handled by {link lombok.eclipse.EclipseAnnotationHandler} and {link lombok.javac.JavacAnnotationHandler}.
 	 */
 	public static Class<? extends Annotation> findAnnotationClass(Class<?> c, Class<?> base) {
 		if (c == Object.class || c == null) return null;

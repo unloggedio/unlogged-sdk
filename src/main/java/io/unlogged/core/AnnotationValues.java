@@ -61,8 +61,14 @@ public class AnnotationValues<A extends Annotation> {
 		
 		/**
 		 * Like the other constructor, but used for when the annotation method is initialized with an array value.
+		 * @param node the annotated node
+		 * @param raws list of raw expressions for the annotation
+		 * @param expressions list of actual expressions for the annotation
+		 * @param valueGuesses Guesses for each raw expression
+		 * @param isExplicit is explicitly defined or by default
 		 */
-		public AnnotationValue(UnloggedNode<?, ?, ?> node, List<String> raws, List<Object> expressions, List<Object> valueGuesses, boolean isExplicit) {
+		public AnnotationValue(UnloggedNode<?, ?, ?> node, List<String> raws,
+							   List<Object> expressions, List<Object> valueGuesses, boolean isExplicit) {
 			this.node = node;
 			this.raws = raws;
 			this.expressions = expressions;
@@ -108,7 +114,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * Creates a new AnnotationValues.
 	 * 
 	 * @param type The annotation type. For example, "Getter.class"
-	 * @param values a Map of method names to AnnotationValue instances, for example 'value -> annotationValue instance'.
+	 * @param values a Map of method names to AnnotationValue instances, for example 'value -&gt; annotationValue
+	 *                  instance'.
 	 * @param ast The Annotation node.
 	 */
 	public AnnotationValues(Class<A> type, Map<String, AnnotationValue> values, UnloggedNode<?, ?, ?> ast) {
@@ -117,7 +124,7 @@ public class AnnotationValues<A extends Annotation> {
 		this.ast = ast;
 	}
 	
-	public static <A extends Annotation> AnnotationValues<A> of(Class<A> type) {
+	private static <A extends Annotation> AnnotationValues<A> of(Class<A> type) {
 		return new AnnotationValues<A>(type, Collections.<String, AnnotationValue>emptyMap(), null);
 	}
 	
@@ -125,7 +132,7 @@ public class AnnotationValues<A extends Annotation> {
 	 * Creates a new annotation wrapper with all default values, and using the provided ast as lookup anchor for
 	 * class literals.
 	 */
-	public static <A extends Annotation> AnnotationValues<A> of(Class<A> type, UnloggedNode<?, ?, ?> ast) {
+	private static <A extends Annotation> AnnotationValues<A> of(Class<A> type, UnloggedNode<?, ?, ?> ast) {
 		return new AnnotationValues<A>(type, Collections.<String, AnnotationValue>emptyMap(), ast);
 	}
 	
@@ -222,6 +229,7 @@ public class AnnotationValues<A extends Annotation> {
 	 * 
 	 * If some of the methods cannot be implemented, this method still works; it's only when you call a method
 	 * that has a problematic value that an AnnotationValueDecodeFail exception occurs.
+	 * @return an instance of AnnotationValues
 	 */
 	@SuppressWarnings("unchecked")
 	public A getInstance() {
@@ -372,6 +380,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * 
 	 * You should use this method for annotation methods that return {@code Class} objects. Remember that
 	 * class literals end in ".class" which you probably want to strip off.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return the raw expressions used for the provided
 	 */
 	public List<String> getRawExpressions(String annotationMethodName) {
 		AnnotationValue v = values.get(annotationMethodName);
@@ -380,6 +390,8 @@ public class AnnotationValues<A extends Annotation> {
 	
 	/**
 	 * Returns the actual expressions used for the provided {@code annotationMethodName}.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return the actual expressions used for the provided
 	 */
 	public List<Object> getActualExpressions(String annotationMethodName) {
 		AnnotationValue v = values.get(annotationMethodName);
@@ -395,6 +407,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * Convenience method to return the first result in a {@link #getRawExpressions(String)} call.
 	 * 
 	 * You should use this method if the annotation method is not an array type.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return the raw expressions used for the provided
 	 */
 	public String getRawExpression(String annotationMethodName) {
 		List<String> l = getRawExpressions(annotationMethodName);
@@ -405,6 +419,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * Convenience method to return the first result in a {@link #getActualExpressions(String)} call.
 	 * 
 	 * You should use this method if the annotation method is not an array type.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return the first result in a {@link #getActualExpressions(String)} call
 	 */
 	public Object getActualExpression(String annotationMethodName) {
 		List<Object> l = getActualExpressions(annotationMethodName);
@@ -413,24 +429,39 @@ public class AnnotationValues<A extends Annotation> {
 
 	/**
 	 * Returns the guessed value for the provided {@code annotationMethodName}.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return the guessed value for the provided {@code annotationMethodName}
 	 */
 	public Object getValueGuess(String annotationMethodName) {
 		AnnotationValue v = values.get(annotationMethodName);
 		return v == null || v.valueGuesses.isEmpty() ? null : v.valueGuesses.get(0);
 	}
 	
-	/** Generates an error message on the stated annotation value (you should only call this method if you know it's there!) */
+	/** Generates an error message on the stated annotation
+	 * value (you should only call this method if you know it's there!)
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @param message message describing the error
+	 */
 	public void setError(String annotationMethodName, String message) {
 		setError(annotationMethodName, message, -1);
 	}
 	
-	/** Generates a warning message on the stated annotation value (you should only call this method if you know it's there!) */
+	/** Generates a warning message on the stated annotation
+	 * value (you should only call this method if you know it's there!)
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @param message message describing the warning
+	 */
 	public void setWarning(String annotationMethodName, String message) {
 		setWarning(annotationMethodName, message, -1);
 	}
 	
 	/** Generates an error message on the stated annotation value, which must have an array initializer.
-	 * The index-th item in the initializer will carry the error (you should only call this method if you know it's there!) */
+	 * The index-th item in the initializer will carry the error
+	 * (you should only call this method if you know it's there!)
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @param message message describing the error
+	 * @param index of the item against which the error is being set
+	 */
 	public void setError(String annotationMethodName, String message, int index) {
 		AnnotationValue v = values.get(annotationMethodName);
 		if (v == null) return;
@@ -438,7 +469,12 @@ public class AnnotationValues<A extends Annotation> {
 	}
 	
 	/** Generates a warning message on the stated annotation value, which must have an array initializer.
-	 * The index-th item in the initializer will carry the error (you should only call this method if you know it's there!) */
+	 * The index-th item in the initializer will carry the error
+	 * (you should only call this method if you know it's there!)
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @param message message describing the warning
+	 * @param index of the item against which the error is being set
+	 */
 	public void setWarning(String annotationMethodName, String message, int index) {
 		AnnotationValue v = values.get(annotationMethodName);
 		if (v == null) return;
@@ -449,6 +485,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * Attempts to translate class literals to their fully qualified names, such as 'Throwable.class' to 'java.lang.Throwable'.
 	 * 
 	 * This process is at best a guess, but it will take into account import statements.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return List of fully qualified names for the method return values
 	 */
 	public List<String> getProbableFQTypes(String annotationMethodName) {
 		List<String> result = new ArrayList<String>();
@@ -463,6 +501,8 @@ public class AnnotationValues<A extends Annotation> {
 	 * Convenience method to return the first result in a {@link #getProbableFQType(String)} call.
 	 * 
 	 * You should use this method if the annotation method is not an array type.
+	 * @param annotationMethodName name of the method in the annotation definition
+	 * @return A fully qualified names for the method return values
 	 */
 	public String getProbableFQType(String annotationMethodName) {
 		List<String> l = getProbableFQTypes(annotationMethodName);
@@ -553,7 +593,7 @@ public class AnnotationValues<A extends Annotation> {
 	 * Creates an amalgamation where any values in this AnnotationValues that aren't explicit are 'enriched' by explicitly set stuff from {@code defaults}.
 	 * Note that this code may modify self and then returns self, or it returns defaults - do not rely on immutability nor on getting self.
 	 */
-	public AnnotationValues<A> integrate(AnnotationValues<A> defaults) {
+	private AnnotationValues<A> integrate(AnnotationValues<A> defaults) {
 		if (values.isEmpty()) return defaults;
 		for (Map.Entry<String, AnnotationValue> entry : defaults.values.entrySet()) {
 			if (!entry.getValue().isExplicit) continue;
@@ -565,7 +605,7 @@ public class AnnotationValues<A extends Annotation> {
 	}
 	
 	/** Returns {@code true} if the annotation has zero parameters. */
-	public boolean isMarking() {
+	private boolean isMarking() {
 		for (AnnotationValue v : values.values()) if (v.isExplicit) return false;
 		return true;
 	}

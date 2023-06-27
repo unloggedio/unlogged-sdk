@@ -8,11 +8,10 @@ import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
-import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
-import io.unlogged.javac.Javac;
-import io.unlogged.javac.JavacTransformer;
+import io.unlogged.core.javac.Javac;
+import io.unlogged.core.javac.JavacTransformer;
 import sun.misc.Unsafe;
 
 import javax.annotation.processing.*;

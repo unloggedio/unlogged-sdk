@@ -3,7 +3,6 @@ package io.unlogged.logging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insidious.common.weaver.ClassInfo;
-import io.unlogged.weaver.WeaveLog;
 
 import java.util.List;
 

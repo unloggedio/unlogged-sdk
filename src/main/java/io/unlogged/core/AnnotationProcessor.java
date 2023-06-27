@@ -73,7 +73,8 @@ public class AnnotationProcessor extends AbstractProcessor {
      * It simply returns the processing environment, but in case of gradle incremental compilation,
      * the delegate ProcessingEnvironment of the gradle wrapper is returned.
      */
-    public static ProcessingEnvironment getJavacProcessingEnvironment(ProcessingEnvironment procEnv, List<String> delayedWarnings) {
+    private static ProcessingEnvironment getJavacProcessingEnvironment(ProcessingEnvironment procEnv,
+                                                                       List<String> delayedWarnings) {
         return tryRecursivelyObtainJavacProcessingEnvironment(procEnv);
     }
 
@@ -104,7 +105,8 @@ public class AnnotationProcessor extends AbstractProcessor {
             Set<? extends Element> rootElements = roundEnv.getRootElements();
             if (!rootElements.isEmpty()) {
                 Element firstRoot = rootElements.iterator().next();
-                for (String warning : delayedWarnings) processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, warning, firstRoot);
+                for (String warning : delayedWarnings)
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, warning, firstRoot);
                 delayedWarnings.clear();
             }
         }
@@ -179,7 +181,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
             try {
                 ClassLoader classLoader = findAndPatchClassLoader(javacProcEnv);
-                processor = (Processor) Class.forName("io.unlogged.core.processor.UnloggedProcessor", false, classLoader)
+                processor = (Processor) Class.forName("io.unlogged.core.processor.UnloggedProcessor", false,
+                                classLoader)
                         .getConstructor().newInstance();
             } catch (Exception e) {
                 delayedWarnings.add(

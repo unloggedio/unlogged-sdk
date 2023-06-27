@@ -76,6 +76,7 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	 * Attempts to find the absolute path (in URI form) to the source file represented by this AST.
 	 * 
 	 * May return {@code null} if this cannot be done. We don't yet know under which conditions this will happen.
+	 * @return the absolute file location as a URI
 	 */
 	public abstract URI getAbsoluteFileLocation();
 	
@@ -91,7 +92,9 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 		return changed;
 	}
 	
-	/** Set the node object that wraps the internal Compilation Unit node. */
+	/** Set the node object that wraps the internal Compilation Unit node.
+	 * @param top node ot be used as the top node of the AST
+	 */
 	protected void setTop(L top) {
 		this.top = top;
 	}
@@ -100,6 +103,7 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	 * Return the content of the package declaration on this AST's top (Compilation Unit) node.
 	 * 
 	 * Example: "java.util".
+	 * @return package name from the AST
 	 */
 	public final String getPackageDeclaration() {
 		return packageDeclaration;
@@ -107,13 +111,16 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	
 	/**
 	 * Return the contents of each non-static import statement on this AST's top (Compilation Unit) node.
+	 * @return an instance of ImportList which is a list of all imports found in this AST
 	 */
 	public final ImportList getImportList() {
 		return imports;
 	}
 	
 	/**
-	 * Return the contents of each non-static import statement on this AST's top (Compilation Unit) node, packed into a (cached) TypeResolver.
+	 * @return the contents of each non-static import
+	 * statement on this AST's top (Compilation Unit) node,
+	 * packed into a (cached) TypeResolver.
 	 */
 	public final TypeResolver getImportListAsTypeResolver() {
 		if (importsAsResolver != null) return importsAsResolver;
@@ -123,6 +130,8 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	/**
 	 * Puts the given node in the map so that javac/Eclipse's own internal AST object can be translated to
 	 * an AST.Node object. Also registers the object as visited to avoid endless loops.
+	 * @param node Node to put
+	 * @return the same node which can be used in chained calls
 	 */
 	protected L putInMap(L node) {
 		nodeMap.put(node.get(), node);
@@ -130,7 +139,10 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 		return node;
 	}
 	
-	/** Returns the node map, that can map javac/Eclipse internal AST objects to AST.Node objects. */
+	/** @return the node map, that can map javac/Eclipse
+	 * internal AST objects to AST.Node objects.
+	 *
+	 */
 	protected Map<N, L> getNodeMap() {
 		return nodeMap;
 	}
@@ -146,6 +158,8 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	 * Marks the stated node as handled (to avoid endless loops if 2 nodes refer to each other, or a node
 	 * refers to itself). Will then return true if it was already set as handled before this call - in which
 	 * case you should do nothing lest the AST build process loops endlessly.
+	 * @param node the stated node to be marked as handled
+	 * @return false if it was already marked, else return true
 	 */
 	protected boolean setAndGetAsHandled(N node) {
 		return identityDetector.put(node, node) != null;
@@ -155,26 +169,33 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 		return fileName;
 	}
 	
-	/** The AST.Node object representing the Compilation Unit. */
+	/** The AST.Node object
+	 * representing the Compilation Unit.
+	 * @return the top node
+	 */
 	public L top() {
 		return top;
 	}
 	
-	/** Maps a javac/Eclipse internal AST Node to the appropriate AST.Node object. */
+	/** Maps a javac/Eclipse internal AST
+	 * Node to the appropriate AST.Node object.
+	 * @param node the javac/eclipse node
+	 * @return translated AST.Node object
+	 */
 	public L get(N node) {
 		return nodeMap.get(node);
 	}
 	
 	/**
-	 * Returns the JLS spec version that the compiler uses to parse and compile this AST.
 	 * For example, if -source 1.6 is on the command line, this will return {@code 6}.
+	 * @return the JLS spec version that the compiler uses to parse and compile this AST.
 	 */
 	public int getSourceVersion() {
 		return 6;
 	}
 	
 	/**
-	 * Returns the latest version of the java language specification supported by the host compiler.
+	 * @return the latest version of the java language specification supported by the host compiler.
 	 * For example, if compiling with javac v1.7, this returns {@code 7}.
 	 * 
 	 * NB: Even if -source (lower than maximum) is specified, this method still returns the maximum supported number.
@@ -200,7 +221,12 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 		return targetNode;
 	}
 	
-	/** Build an AST.Node object for the stated internal (javac/Eclipse) AST Node object. */
+	/** Build an AST.Node object for the
+	 * stated internal (javac/Eclipse) AST Node object.
+	 * @param item the internal object
+	 * @param kind kind of the internal object
+	 * @return translated AST.Node object
+	 */
 	protected abstract L buildTree(N item, Kind kind);
 	
 	/**
@@ -220,9 +246,11 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	
 	private static final ConcurrentMap<Class<?>, FieldAccess[]> fieldsOfASTClasses = new ConcurrentHashMap<Class<?>, FieldAccess[]>();
 	
-	/** Returns FieldAccess objects for the stated class. Each field that contains objects of the kind returned by
-	 * {@link #getStatementTypes()}, either directly or inside of an array or java.util.collection (or array-of-arrays,
+	/** Returns FieldAccess objects for the stated class. Each field that contains objects of the kind returned,
+	 * either directly or inside of an array or java.util.collection (or array-of-arrays,
 	 * or collection-of-collections, et cetera), is returned.
+	 * @param c Class
+	 * @return Array of Fields of the Class c
 	 */
 	protected FieldAccess[] fieldsOf(Class<?> c) {
 		FieldAccess[] fields = fieldsOfASTClasses.get(c);
@@ -279,8 +307,13 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	}
 	
 	/**
-	 * buildTree implementation that uses reflection to find all child nodes by way of inspecting
-	 * the fields. */
+	 * buildTree implementation that uses
+	 * reflection to find all child nodes by way of inspecting the fields.
+	 * @param nodeType type of node to be built
+	 * @param statement  statements for the node
+	 * @param fa FieldAccess
+	 * @return Collection of Built item
+	 */
 	protected Collection<L> buildWithField(Class<L> nodeType, N statement, FieldAccess fa) {
 		List<L> list = new ArrayList<L>();
 		buildWithField0(nodeType, statement, fa, list);
@@ -289,6 +322,10 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	
 	/**
 	 * Uses reflection to find the given direct child on the given statement, and replace it with a new child.
+	 * @param statement the container in which a statement is to be replaces
+	 * @param oldN the old statement
+	 * @param newN the replacement
+	 * @return true if replacement was done, else return false
 	 */
 	protected boolean replaceStatementInNode(N statement, N oldN, N newN) {
 		for (FieldAccess fa : fieldsOf(statement.getClass())) {
@@ -351,6 +388,9 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	 * @param field The field that contains the array or list of AST nodes.
 	 * @param fieldRef The object that you can supply to the field's {@code get} method.
 	 * @param chain If the collection is immutable, you need to update the pointer to the collection in each element in the chain.
+	 * @param collection  collection in which the element is being set
+	 * @param idx index position to be replaced
+	 * @param newN the replacement
 	 * 
 	 * @throws IllegalAccessException This exception won't happen, but we allow you to throw it so you can avoid having to catch it.
 	 */
@@ -425,7 +465,10 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	}
 	
 	/**
-	 * @return The {@code lombok.config} configuration value for the provided {@code key}, or {@code null} if that key is not in the config / there is no config.
+	 * @return The {@code lombok.config} configuration value for the
+	 * provided {@code key}, or {@code null} if that key is not in the config / there is no config.
+	 * @param <T> The type of configuration being read
+	 * @param key the key to be read
 	 */
 	public final <T> T readConfiguration(ConfigurationKey<T> key) {
 		long start = configTracker == null ? 0L : configTracker.start();
@@ -437,7 +480,10 @@ public abstract class AST<A extends AST<A, L, N>, L extends UnloggedNode<A, L, N
 	}
 	
 	/**
-	 * @return The {@code lombok.config} configuration value for the provided {@code key}, or {@code defaultValue} if that key is not in the config / there is no config.
+	 * @return The {@code lombok.config} configuration value for the
+	 * provided {@code key}, or {@code defaultValue} if that key is not in the config / there is no config.
+	 * @param <T> The type of configuration being read
+	 * @param key the key to be read
 	 */
 	public final <T> T readConfigurationOr(ConfigurationKey<T> key, T defaultValue) {
 		long start = configTracker == null ? 0L : configTracker.start();

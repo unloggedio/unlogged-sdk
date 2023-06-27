@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
  * <p>
  * The recommended usage is to create a type token:
  * <pre>
- *    private static ConfigurationKey&lt;String> KEY = new ConfigurationKey&lt;String>("keyName", "description") {};
+ *    private static ConfigurationKey&lt;String&gt; KEY = new ConfigurationKey&lt;String&gt;("keyName", "description") {};
  * </pre>
  */
 public abstract class ConfigurationKey<T> {

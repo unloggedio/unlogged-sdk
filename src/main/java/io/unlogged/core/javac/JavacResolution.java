@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.unlogged.javac;
+package io.unlogged.core.javac;
 
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Symbol.TypeSymbol;
@@ -41,7 +41,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
-import static io.unlogged.javac.JavacTreeMaker.TypeTag.typeTag;
+import static io.unlogged.core.javac.JavacTreeMaker.TypeTag.typeTag;
 
 
 public class JavacResolution {

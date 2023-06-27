@@ -3,7 +3,7 @@ package io.unlogged.core.bytecode.method;
 import com.insidious.common.weaver.Descriptor;
 import com.insidious.common.weaver.EventType;
 import io.unlogged.core.bytecode.WeaveConfig;
-import io.unlogged.weaver.WeaveLog;
+import io.unlogged.core.weaver.WeaveLog;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.LocalVariablesSorter;
 import org.objectweb.asm.tree.*;

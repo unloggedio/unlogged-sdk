@@ -37,10 +37,10 @@ import io.unlogged.core.UnloggedImmutableList;
 import io.unlogged.core.configuration.CheckerFrameworkVersion;
 import io.unlogged.core.configuration.NullAnnotationLibrary;
 import io.unlogged.core.configuration.NullCheckExceptionType;
-import io.unlogged.javac.Javac;
-import io.unlogged.javac.JavacNode;
-import io.unlogged.javac.JavacTreeMaker;
-import io.unlogged.javac.JavacTreeMaker.TypeTag;
+import io.unlogged.core.javac.Javac;
+import io.unlogged.core.javac.JavacNode;
+import io.unlogged.core.javac.JavacTreeMaker;
+import io.unlogged.core.javac.JavacTreeMaker.TypeTag;
 import io.unlogged.core.processor.Permit;
 
 import java.lang.annotation.Annotation;
@@ -57,8 +57,8 @@ import static com.sun.tools.javac.code.Flags.GENERATEDCONSTR;
 import static io.unlogged.core.AST.Kind;
 import static io.unlogged.core.AnnotationValues.AnnotationValue;
 import static io.unlogged.core.handlers.HandlerUtil.*;
-import static io.unlogged.javac.Javac.*;
-import static io.unlogged.javac.JavacAugments.JCTree_generatedNode;
+import static io.unlogged.core.javac.Javac.*;
+import static io.unlogged.core.javac.JavacAugments.JCTree_generatedNode;
 
 /**
  * Container for static utility methods useful to handlers written for javac.

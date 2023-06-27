@@ -1,15 +1,14 @@
-package io.unlogged.weaver;
+package io.unlogged.core.weaver;
 
 import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
-import com.sun.tools.javac.util.ListBuffer;
 import io.unlogged.core.TypeLibrary;
 import io.unlogged.core.TypeResolver;
 import io.unlogged.core.handlers.JavacHandlerUtil;
-import io.unlogged.javac.JavacASTAdapter;
-import io.unlogged.javac.JavacNode;
-import io.unlogged.javac.JavacTreeMaker;
+import io.unlogged.core.javac.JavacASTAdapter;
+import io.unlogged.core.javac.JavacNode;
+import io.unlogged.core.javac.JavacTreeMaker;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;

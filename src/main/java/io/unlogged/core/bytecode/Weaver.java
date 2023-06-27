@@ -5,9 +5,9 @@ import com.insidious.common.weaver.ClassInfo;
 import com.insidious.common.weaver.DataInfo;
 import com.insidious.common.weaver.LogLevel;
 import com.insidious.common.weaver.MethodInfo;
-import io.unlogged.weaver.DataInfoProvider;
-import io.unlogged.weaver.TypeHierarchy;
-import io.unlogged.weaver.WeaveLog;
+import io.unlogged.core.weaver.DataInfoProvider;
+import io.unlogged.core.weaver.TypeHierarchy;
+import io.unlogged.core.weaver.WeaveLog;
 
 import java.io.*;
 import java.security.MessageDigest;

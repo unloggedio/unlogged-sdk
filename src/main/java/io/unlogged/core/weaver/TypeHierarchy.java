@@ -1,4 +1,4 @@
-package io.unlogged.weaver;
+package io.unlogged.core.weaver;
 
 
 import java.util.HashMap;

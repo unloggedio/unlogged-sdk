@@ -320,7 +320,7 @@ public class ClassFileMetaData {
 	/**
 	 * Returns the name of the superclass in JVM format, such as {@code java/lang/Object}
 	 * 
-	 * NB: If you try this on Object itself, you'll get {@code null}.<br />
+	 * NB: If you try this on Object itself, you'll get {@code null}.
 	 * NB2: For interfaces and annotation interfaces, you'll always get {@code java/lang/Object}
 	 */
 	public String getSuperClassName() {
@@ -344,7 +344,7 @@ public class ClassFileMetaData {
 	/**
 	 * A {@code toString()} like utility to dump all contents of the constant pool into a string.
 	 * 
-	 * NB: No guarantees are made about the exact layout of this string. It is for informational purposes only, don't try to parse it.<br />
+	 * NB: No guarantees are made about the exact layout of this string. It is for informational purposes only, don't try to parse it.
 	 * NB2: After a double or long, there's a JVM spec-mandated gap, which is listed as {@code (cont.)} in the returned string.
 	 */
 	public String poolContent() {

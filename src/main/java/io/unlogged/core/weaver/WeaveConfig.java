@@ -1,4 +1,4 @@
-package io.unlogged.weaver;
+package io.unlogged.core.weaver;
 
 import com.insidious.common.weaver.LogLevel;
 

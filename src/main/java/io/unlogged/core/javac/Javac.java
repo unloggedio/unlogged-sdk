@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.unlogged.javac;
+package io.unlogged.core.javac;
 
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Source;
@@ -45,9 +45,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.unlogged.javac.JavacTreeMaker.*;
-import static io.unlogged.javac.JavacTreeMaker.TreeTag.treeTag;
-import static io.unlogged.javac.JavacTreeMaker.TypeTag.typeTag;
+import static io.unlogged.core.javac.JavacTreeMaker.*;
+import static io.unlogged.core.javac.JavacTreeMaker.TreeTag.treeTag;
+import static io.unlogged.core.javac.JavacTreeMaker.TypeTag.typeTag;
 
 
 /**

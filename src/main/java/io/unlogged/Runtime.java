@@ -12,8 +12,8 @@ import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
 import io.unlogged.util.StreamUtil;
-import io.unlogged.weaver.WeaveConfig;
-import io.unlogged.weaver.WeaveParameters;
+import io.unlogged.core.weaver.WeaveConfig;
+import io.unlogged.core.weaver.WeaveParameters;
 
 import java.io.*;
 import java.util.ArrayList;

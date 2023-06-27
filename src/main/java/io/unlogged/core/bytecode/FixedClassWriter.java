@@ -21,7 +21,7 @@
  */
 package io.unlogged.core.bytecode;
 
-import io.unlogged.weaver.TypeHierarchy;
+import io.unlogged.core.weaver.TypeHierarchy;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 

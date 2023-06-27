@@ -55,7 +55,7 @@ public abstract class FieldAugment<T, F> {
 	 * Otherwise the field will be provided virtually.
 	 * <p>
 	 * <em>WARNING</em>: The values put into the augment should NOT reference in any way the object you've added the augment to, or memory leaks may occur.
-	 * If you do need to add such references, use {@link #circularSafeAugment(Class, Class, String, Object)} instead.
+	 * If you do need to add such references, use {link circularSafeAugment(Class, Class, String, Object)} instead.
 	 * <p>
 	 * This code assumes that for any combination of {@code type} and {@code name} this method is only called once.
 	 * Otherwise, whether state is shared is undefined.
@@ -63,7 +63,9 @@ public abstract class FieldAugment<T, F> {
 	 * @param type to augment
 	 * @param fieldType type of the field
 	 * @param name of the field
-	 * @param defaultValue the value of the augment if it hasn't been set yet.
+	 * @param <T> Type of the class in which field is being added
+	 * @param <F> Type of the field being added
+	 * @return an object that can be used to read and write this field
 	 * @throws NullPointerException if {@code type}, {@code fieldType} or {@code name} is {@code null}
 	 */
 	public static <T, F> FieldAugment<T, F> augment(Class<T> type, Class<? super F> fieldType, String name) {
@@ -84,7 +86,14 @@ public abstract class FieldAugment<T, F> {
 	/**
 	 * (Virtually) adds a field to an existing type and returns an object that can be used to read and write this field.
 	 * <p>
-	 * This method does the same as {@link #augment(Class, Class, String, Object)}, except it is safe to set values that reference back to their containing object.
+	 * This method does the same as {link augment(Class, Class, String, Object)}, except it is safe to set values that reference back to their containing object.
+	 * @param type to augment
+	 * @param fieldType type of the field
+	 * @param name of the field
+	 * @param <T> Type of the class in which field is being added
+	 * @param <F> Type of the field being added
+	 * @return an object that can be used to read and write this field
+	 * @throws NullPointerException if {@code type}, {@code fieldType} or {@code name} is {@code null}
 	 */
 	public static <T, F> FieldAugment<T, F> circularSafeAugment(Class<T> type, Class<? super F> fieldType, String name) {
 		checkNotNull(type, "type");
@@ -140,11 +149,15 @@ public abstract class FieldAugment<T, F> {
 	}
 	
 	/**
+	 * @param object the object from which we want to get the field
+	 * @return the field of the object
 	 * @throws NullPointerException if {@code object} is {@code null}
 	 */
 	public abstract F get(T object);
 	
 	/**
+	 * @param object the object from which we want to get the field
+	 * @param value the new value of the field
 	 * @throws NullPointerException if {@code object} or {@code value} is {@code null}
 	 */
 	public final void set(T object, F value) {
@@ -152,30 +165,40 @@ public abstract class FieldAugment<T, F> {
 	}
 	
 	/**
+	 * @param object the object from which we want to get the field
+	 * @param value the new value of the field
 	 * @return the value of the field <strong>before</strong> the operation.
 	 * @throws NullPointerException if {@code object} or {@code value} is {@code null}.
 	 */
 	public abstract F getAndSet(T object, F value);
 	
 	/**
+	 * @param object the object from which we want to get the field
 	 * @return the value of the field <strong>before</strong> the operation.
 	 * @throws NullPointerException if {@code object} is {@code null}
 	 */
 	public abstract F clear(T object);
 	
 	/**
+	 * @param object the object from which we want to clear the field
+	 * @param expected the expected value of the field before clearning
 	 * @return the value of the field <strong>after</strong> the operation. If the value was equal to {@code expected} or already cleared {@code null}, otherwise the current value.
 	 * @throws NullPointerException if {@code object} or {@code expected} is {@code null}
 	 */
 	public abstract F compareAndClear(T object, F expected);
 	
 	/**
+	 * @param object the object on which we are operating
+	 * @param value the new value of the field
 	 * @return the value of the field <strong>after</strong> the operation.
 	 * @throws NullPointerException if {@code object} or {@code value} is {@code null}
 	 */
 	public abstract F setIfAbsent(T object, F value);
 	
 	/**
+	 * @param object the object on which we are operating
+	 * @param expected the expected current value of the field
+	 * @param value the new value to be set if expectation is correct
 	 * @return the value of the field <strong>after</strong> the operation.
 	 * @throws NullPointerException if {@code object}, {@code expected} or {@code value} is {@code null}
 	 */
