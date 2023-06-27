@@ -1,4 +1,4 @@
-package io.unlogged.core.weaver;
+package io.unlogged.weaver;
 
 public class MethodCallInformation {
     String subject;

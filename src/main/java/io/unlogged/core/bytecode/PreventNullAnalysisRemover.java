@@ -23,8 +23,8 @@ package io.unlogged.core.bytecode;
 
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
-import io.unlogged.core.weaver.DataInfoProvider;
-import io.unlogged.core.weaver.TypeHierarchy;
+import io.unlogged.weaver.DataInfoProvider;
+import io.unlogged.weaver.TypeHierarchy;
 
 import java.io.IOException;
 import java.io.OutputStream;

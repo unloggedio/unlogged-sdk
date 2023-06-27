@@ -1,4 +1,4 @@
-package io.unlogged.core.weaver;
+package io.unlogged.weaver;
 
 import com.insidious.common.weaver.DataInfo;
 import com.insidious.common.weaver.Descriptor;

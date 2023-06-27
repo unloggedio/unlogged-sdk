@@ -1,4 +1,4 @@
-package io.unlogged.core.weaver;
+package io.unlogged.weaver;
 
 import com.insidious.common.weaver.*;
 import com.sun.tools.javac.tree.JCTree;

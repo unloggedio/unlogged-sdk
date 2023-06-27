@@ -3,8 +3,8 @@ package io.unlogged.core.bytecode;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
-import io.unlogged.core.weaver.TypeHierarchy;
-import io.unlogged.core.weaver.WeaveLog;
+import io.unlogged.weaver.TypeHierarchy;
+import io.unlogged.weaver.WeaveLog;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 

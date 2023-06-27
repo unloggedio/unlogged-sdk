@@ -38,9 +38,9 @@ import io.unlogged.core.TypeResolver;
 import io.unlogged.core.configuration.ConfigurationKeysLoader;
 import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.handlers.UnloggedAnnotationHandler;
-import io.unlogged.core.weaver.DataInfoProvider;
-import io.unlogged.core.weaver.TypeHierarchy;
-import io.unlogged.core.weaver.UnloggedVisitor;
+import io.unlogged.weaver.DataInfoProvider;
+import io.unlogged.weaver.TypeHierarchy;
+import io.unlogged.weaver.UnloggedVisitor;
 
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
