@@ -30,43 +30,29 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 
-public class PreventNullAnalysisRemover implements PostCompilerTransformation {
+public class ProbeInstrumenter implements PostCompilerTransformation {
 
     private final Weaver weaver;
-    private final DataInfoProvider dataInfoProvider = new DataInfoProvider();
+    private DataInfoProvider dataInfoProvider;
 
-
-//    private final File classWeaveDatFile = new File("target/classes/class.weave.dat");
-//    private final FileOutputStream weaveWriter;
-//    private final ZipOutputStream zippedClassWeaveDat;
-
-    public PreventNullAnalysisRemover(TypeHierarchy typeHierarchy) throws IOException {
-//        File outputDir = new File("weaver-output");
-//        outputDir.mkdir();
-//        weaver = new Weaver(outputDir, new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
-        weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy, dataInfoProvider);
-//        if (classWeaveDatFile.exists()) {
-//            classWeaveDatFile.delete();
-//        }
-//        classWeaveDatFile.createNewFile();
-//        weaveWriter = new FileOutputStream(classWeaveDatFile);
-//        zippedClassWeaveDat = new ZipOutputStream(weaveWriter);
-//        zippedClassWeaveDat.putNextEntry(new ZipEntry("class.weave.dat"));
-
+    public ProbeInstrumenter(TypeHierarchy typeHierarchy) throws IOException {
+        weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
     }
+
 
     @Override
     public byte[] applyTransformations(byte[] original, String fileName,
                                        DiagnosticsReceiver diagnostics,
                                        OutputStream classWeaveOutputStream,
-                                       OutputStream probeOutputStream
-    ) throws IOException {
+                                       DataInfoProvider dataInfoProvider) throws IOException {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
         InstrumentedClass instrumentedClassBytes;
         try {
-            dataInfoProvider.setProbeOutputStream(probeOutputStream);
+
+            weaver.setDataInfoProvider(dataInfoProvider);
             instrumentedClassBytes = weaver.weave(fileName, classFileMetadata.getClassName(), original);
+            dataInfoProvider.flushIdInformation();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -85,17 +71,46 @@ public class PreventNullAnalysisRemover implements PostCompilerTransformation {
 //        ClassWriter writer = new ClassWriter(reader, 0);
 //
 //        final AtomicBoolean changesMade = new AtomicBoolean();
+//        if (fileName.contains("$")) {
+//            classWeaveBytesToBeWritten.write(classWeaveInfo);
+//            return instrumentedClassBytes.getBytes();
+//        }
 //
 //
 //        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
+//            private boolean foundClassInit = false;
+//
 //            @Override
 //            public void visitEnd() {
-//                super.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
-//                        "unloggedClassWeaveBytes", Type.VOID, null, )
-//                super.visitEnd();
+////                changesMade.set(true);
+////                FieldVisitor fieldVisitor =
+////                        super.visitField(
+////                                Opcodes.ACC_FINAL + Opcodes.ACC_STATIC, "classWeaveBytes", "[B", null,
+////                                classWeaveInfo);
+////                if (fieldVisitor != null) {
+////                    fieldVisitor.visitEnd();
+////                }
+//            }
+//
+//            @Override
+//            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+//                MethodVisitor methodVisitor = super.visitMethod(access, name, descriptor, signature, exceptions);
+//                if (name.equals("<clinit>")) {
+//                    foundClassInit = true;
+//                    MethodVisitor staticFieldInitializerAdapter = new MethodVisitor(Opcodes.ASM6, methodVisitor) {
+//                        @Override
+//                        public void visitCode() {
+//                            super.visitCode();
+//
+////                            super.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/logging/Runtime", "registerClass",
+////                                    "([B)V", false);
+//                        }
+//                    };
+//                }
+//                return methodVisitor;
 //            }
 //        }, 0);
-//        return changesMade.get() ? writer.toByteArray() : null;
-//        return original;
+//        return changesMade.get() ? writer.toByteArray() : instrumentedClassBytes.getBytes();
+////        return original;
     }
 }

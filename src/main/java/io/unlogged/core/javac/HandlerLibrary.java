@@ -38,7 +38,6 @@ import io.unlogged.core.TypeResolver;
 import io.unlogged.core.configuration.ConfigurationKeysLoader;
 import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.handlers.UnloggedAnnotationHandler;
-import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.UnloggedVisitor;
 
@@ -60,6 +59,7 @@ import static io.unlogged.core.handlers.JavacHandlerUtil.recursiveSetGeneratedBy
  * building an AnnotationValues instance.
  */
 public class HandlerLibrary {
+    private static final TypeHierarchy typeHierarchy = new TypeHierarchy();
     private final TypeLibrary typeLibrary = new TypeLibrary();
     private final Map<String, List<AnnotationHandlerContainer<?>>> annotationHandlers = new HashMap<String, List<AnnotationHandlerContainer<?>>>();
     private final Collection<VisitorContainer> visitorHandlers = new ArrayList<VisitorContainer>();
@@ -67,14 +67,8 @@ public class HandlerLibrary {
     //    private final Weaver weaver;
     private final UnloggedVisitor unloggedVisitor;
     private final Trees trees;
-    private static final TypeHierarchy typeHierarchy = new TypeHierarchy();
-    private static final DataInfoProvider dataInfoProvider = new DataInfoProvider();
     private SortedSet<Long> priorities;
     private SortedSet<Long> prioritiesRequiringResolutionReset;
-
-    public static TypeHierarchy getTypeHierarchy() {
-        return typeHierarchy;
-    }
 
     /**
      * Creates a new HandlerLibrary that will report any problems or errors to the provided messager.
@@ -84,11 +78,15 @@ public class HandlerLibrary {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
         this.trees = trees;
-        unloggedVisitor = new UnloggedVisitor(dataInfoProvider, typeHierarchy);
+        unloggedVisitor = new UnloggedVisitor(typeHierarchy);
 //        String agentArgs = "";
 //        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
 //        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
 //        this.weaver = new Weaver(new File("./session"), weaveConfig);
+    }
+
+    public static TypeHierarchy getTypeHierarchy() {
+        return typeHierarchy;
     }
 
     /**

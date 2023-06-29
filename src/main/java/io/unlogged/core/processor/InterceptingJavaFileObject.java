@@ -24,6 +24,7 @@ package io.unlogged.core.processor;
 
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompiler;
+import io.unlogged.weaver.DataInfoProvider;
 
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
@@ -39,20 +40,19 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 	private final DiagnosticsReceiver diagnostics;
 	private final Method decoderMethod;
 	private final OutputStream classWeaveOutputStream;
-	private OutputStream probeOutputStream;
+	private final DataInfoProvider dataInfoProvider;
 
 	public InterceptingJavaFileObject(JavaFileObject original, String fileName,
 									  DiagnosticsReceiver diagnostics,
 									  Method decoderMethod,
 									  OutputStream classWeaveOutputStream,
-									  OutputStream probeOutputStream
-	) {
+									  DataInfoProvider dataInfoProvider) {
 		this.delegate = original;
 		this.fileName = fileName;
 		this.diagnostics = diagnostics;
 		this.decoderMethod = decoderMethod;
 		this.classWeaveOutputStream = classWeaveOutputStream;
-		this.probeOutputStream = probeOutputStream;
+		this.dataInfoProvider = dataInfoProvider;
 	}
 	
 	@Override
@@ -61,7 +61,7 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 			return delegate.openOutputStream();
 		}
 		return PostCompiler.wrapOutputStream(delegate.openOutputStream(), fileName, diagnostics, classWeaveOutputStream,
-				probeOutputStream);
+				dataInfoProvider);
 	}
 	
 	@Override

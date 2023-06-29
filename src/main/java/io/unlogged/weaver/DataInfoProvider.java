@@ -2,16 +2,22 @@ package io.unlogged.weaver;
 
 import com.insidious.common.weaver.EventType;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DataInfoProvider {
 
-    private final AtomicInteger classId = new AtomicInteger(0);
-    private final AtomicInteger methodId = new AtomicInteger(0);
-    private final AtomicInteger probeId = new AtomicInteger(0);
+    private final AtomicInteger classId;
+    private final AtomicInteger methodId;
+    private final AtomicInteger probeId;
     private OutputStream probeOutputStream;
+    private File idsInfoOutputFile;
+
+    public DataInfoProvider(int classId, int methodId, int probeId) {
+        this.classId = new AtomicInteger(classId);
+        this.methodId = new AtomicInteger(methodId);
+        this.probeId = new AtomicInteger(probeId);
+    }
 
     public int nextClassId() {
         return classId.addAndGet(1);
@@ -50,5 +56,16 @@ public class DataInfoProvider {
 
     public void setProbeOutputStream(OutputStream probeOutputStream) {
         this.probeOutputStream = probeOutputStream;
+    }
+
+    public void setIdsInfoFile(File idsInfoOutputFile) {
+        this.idsInfoOutputFile = idsInfoOutputFile;
+    }
+
+    public void flushIdInformation() throws IOException {
+        DataOutputStream infoWriter = new DataOutputStream(new FileOutputStream(idsInfoOutputFile));
+        infoWriter.writeInt(classId.get());
+        infoWriter.writeInt(methodId.get());
+        infoWriter.writeInt(probeId.get());
     }
 }

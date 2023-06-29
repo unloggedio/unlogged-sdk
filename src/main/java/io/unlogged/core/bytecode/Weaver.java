@@ -27,42 +27,37 @@ public class Weaver {
 //    public static final String DATA_ID_FILE = "dataids.txt";
 //    public static final String ERROR_LOG_FILE = "log.txt";
 
-    public static final String CATEGORY_WOVEN_CLASSES = "woven-classes";
-    public static final String CATEGORY_ERROR_CLASSES = "error-classes";
+//    public static final String CATEGORY_WOVEN_CLASSES = "woven-classes";
+//    public static final String CATEGORY_ERROR_CLASSES = "error-classes";
 
     //    private final File outputDir;
     private final String lineSeparator = "\n";
     private final WeaveConfig config;
     private final TypeHierarchy typeHierarchy;
-    private final DataInfoProvider dataInfoProvider;
+    private DataInfoProvider dataInfoProvider;
     private Writer dataIdWriter;
     private PrintStream logger;
-    private int classId;
     private int confirmedDataId;
     private int confirmedMethodId;
     private Writer methodIdWriter;
     private boolean dumpOption;
     private MessageDigest digest;
-
     /**
      * Set up the object to manage a weaving process.
      * This constructor creates files to store the information.
      * <p>
      * //     * @param outputDir location to save the weave data
      *
-     * @param config           weave configuration
-     * @param dataInfoProvider
+     * @param config weave configuration
      */
-    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy, DataInfoProvider dataInfoProvider) {
+    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy) {
 //        assert outputDir.isDirectory() && outputDir.canWrite();
 
         this.typeHierarchy = typeHierarchy;
 //        this.outputDir = outputDir;
         this.config = config;
-        this.dataInfoProvider = dataInfoProvider;
         confirmedDataId = 0;
         confirmedMethodId = 0;
-        classId = 0;
 
 //        try {
 //            logger = new PrintStream(new File(outputDir, ERROR_LOG_FILE));
@@ -83,6 +78,10 @@ public class Weaver {
             this.digest = null;
         }
 
+    }
+
+    public void setDataInfoProvider(DataInfoProvider dataInfoProvider) {
+        this.dataInfoProvider = dataInfoProvider;
     }
 
     /**
@@ -108,6 +107,7 @@ public class Weaver {
 
         String hash = getClassHash(target);
         LogLevel level = LogLevel.Normal;
+        int classId = dataInfoProvider.nextClassId();
         WeaveLog weaveLog = new WeaveLog(classId, dataInfoProvider);
 //        try {
         ClassTransformer classTransformer;
@@ -190,24 +190,15 @@ public class Weaver {
         DataOutputStream out = new DataOutputStream(boas);
 
         try {
-//            byte[] classInfoBytes = classInfo.toBytes();
-//            out.write(classInfoBytes);
             classInfo.writeToOutputStream(out);
-//            System.err.println("ClassBytes: " + new String(classInfoBytes));
-
-
         } catch (IOException e) {
             e.printStackTrace(logger);
         }
-        classId = dataInfoProvider.nextClassId();
 
-//        confirmedDataId = result.getNextDataId();
         try {
             ArrayList<DataInfo> dataInfoEntries = result.getDataEntries();
             out.writeInt(dataInfoEntries.size());
             for (DataInfo dataInfo : dataInfoEntries) {
-//                byte[] classWeaveBytes = dataInfo.toBytes();
-//                out.write(classWeaveBytes);
                 dataInfo.writeToStream(out);
             }
         } catch (IOException e) {
@@ -220,8 +211,6 @@ public class Weaver {
             ArrayList<MethodInfo> methods = result.getMethods();
             out.writeInt(methods.size());
             for (MethodInfo method : methods) {
-//                byte[] methodBytes = method.toBytes();
-//                out.write(methodBytes);
                 method.writeToOutputStream(out);
 
             }

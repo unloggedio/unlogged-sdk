@@ -1,21 +1,21 @@
 package io.unlogged.core.processor;
 
 import io.unlogged.core.DiagnosticsReceiver;
+import io.unlogged.weaver.DataInfoProvider;
 
 import javax.tools.*;
 import javax.tools.JavaFileObject.Kind;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 
 final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
     private final DiagnosticsReceiver diagnostics;
     private final UnloggedFileObjects.Compiler compiler;
-//    private final FileObject classWeaveDat;
+    //    private final FileObject classWeaveDat;
     private final OutputStream classWeaveOutputStream;
-//    private final FileObject probesToCaptureDat;
+    //    private final FileObject probesToCaptureDat;
     private final FileOutputStream probesToCaptureOutputStream;
+    private final File idsInfoOutputFile;
+    private final DataInfoProvider dataInfoProvider;
 
     InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics) {
         super(original);
@@ -30,27 +30,51 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
             FileObject notARealFile = fileManager.getFileForOutput(StandardLocation.CLASS_OUTPUT, "",
                     "notAFile", null);
             String classesPath = "";
+            String actualClassesPath = "";
             String notARealFileOutputUri = notARealFile.toUri().getPath();
             if (notARealFileOutputUri.contains("/classes/")) {
                 classesPath = notARealFileOutputUri.substring(0,
                         notARealFileOutputUri.indexOf("/classes/")) + "/classes/";
-
+                actualClassesPath = classesPath;
             } else if (notARealFileOutputUri.contains("/test-classes/")) {
-                classesPath = notARealFileOutputUri.substring(0, notARealFileOutputUri.indexOf("/test-classes/")) +
-                        "/test-classes/";
+                classesPath = notARealFileOutputUri.substring(0,
+                        notARealFileOutputUri.indexOf("/test-classes/")) + "/test-classes/";
+                actualClassesPath = notARealFileOutputUri.substring(0,
+                        notARealFileOutputUri.indexOf("/test-classes/")) + "/classes/";
             }
 
 //            classWeaveDat = fileManager.getFileForOutput(StandardLocation.CLASS_OUTPUT, "",
 //                    "class.weave.dat", null);
 
             File weaveOutputFile = new File(classesPath + "class.weave.dat");
-            classWeaveOutputStream = new FileOutputStream(weaveOutputFile);
+            classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
 
-//            probesToCaptureDat = fileManager.getFileForOutput(StandardLocation.CLASS_OUTPUT, "",
-//                    "probes.dat", null);
 
             File probesToCaptureOutputFile = new File(classesPath + "probes.dat");
-            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile);
+            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile, true);
+
+
+            int classId = 0;
+            int methodId = 0;
+            int probeId = 0;
+
+            idsInfoOutputFile = new File(actualClassesPath + "unlogged.ids.dat");
+            if (idsInfoOutputFile.exists()) {
+                try {
+                    DataInputStream idsInfoReader = new DataInputStream(new FileInputStream(idsInfoOutputFile));
+                    classId = idsInfoReader.readInt();
+                    methodId = idsInfoReader.readInt();
+                    probeId = idsInfoReader.readInt();
+                } catch (IOException e) {
+                    // nothing to do, out ids info file is bad
+                }
+            }
+
+            dataInfoProvider = new DataInfoProvider(classId, methodId, probeId);
+            dataInfoProvider.setIdsInfoFile(idsInfoOutputFile);
+            dataInfoProvider.setProbeOutputStream(probesToCaptureOutputStream);
+
+//            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile, true);
 
 
         } catch (IOException e) {
@@ -63,8 +87,9 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
         JavaFileObject fileObject = fileManager.getJavaFileForOutput(location, className, kind, sibling);
         if (kind != Kind.CLASS) return fileObject;
 
-        return UnloggedFileObjects.createIntercepting(compiler,
-                fileObject, className, diagnostics, classWeaveOutputStream, probesToCaptureOutputStream);
+        return UnloggedFileObjects.createIntercepting(
+                compiler, fileObject, className, diagnostics,
+                classWeaveOutputStream, dataInfoProvider);
     }
 
     @Override

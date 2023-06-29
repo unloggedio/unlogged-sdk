@@ -22,7 +22,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
     private final Map<ClassInfo, JavacNode> classJavacNodeMap = new HashMap<>();
     private final Map<ClassInfo, java.util.List<MethodInfo>> classMethodInfoList = new HashMap<>();
     private final Map<ClassInfo, java.util.List<DataInfo>> classDataInfoList = new HashMap<>();
-    private final DataInfoProvider dataInfoProvider;
     private final TypeLibrary typeLibrary = new TypeLibrary();
     private final Random random = new Random();
     private final TypeHierarchy typeHierarchy;
@@ -30,8 +29,7 @@ public class UnloggedVisitor extends JavacASTAdapter {
     private int currentMethodId;
     private int currentLineNumber;
 
-    public UnloggedVisitor(DataInfoProvider dataInfoProvider, TypeHierarchy typeHierarchy) {
-        this.dataInfoProvider = dataInfoProvider;
+    public UnloggedVisitor(TypeHierarchy typeHierarchy) {
         this.typeHierarchy = typeHierarchy;
     }
 
@@ -69,8 +67,11 @@ public class UnloggedVisitor extends JavacASTAdapter {
             typeName = appliedType.getType().toString();
         } else if (typeExpression instanceof JCTree.JCIdent) {
 
+        } else if (typeExpression instanceof JCTree.JCFieldAccess) {
+            JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) typeExpression;
+            typeName = fieldAccess.toString();
         } else {
-            System.err.println("Expression if not a JCTypeApply: " + typeExpression.getClass());
+            System.err.println("Expression is not a JCTypeApply: " + typeExpression.getClass());
         }
 
 

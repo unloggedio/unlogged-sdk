@@ -21,8 +21,9 @@
  */
 package io.unlogged.core;
 
-import io.unlogged.core.bytecode.PreventNullAnalysisRemover;
+import io.unlogged.core.bytecode.ProbeInstrumenter;
 import io.unlogged.core.javac.HandlerLibrary;
+import io.unlogged.weaver.DataInfoProvider;
 
 import java.io.*;
 import java.util.Collections;
@@ -36,15 +37,16 @@ public final class PostCompiler {
 
     private PostCompiler() {/* prevent instantiation*/}
 
-    public static byte[] applyTransformations(byte[] original, String fileName,
-                                              DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream, OutputStream probeOutputStream) {
+    public static byte[] applyTransformations(
+            byte[] original, String fileName, DiagnosticsReceiver diagnostics,
+            OutputStream classWeaveOutputStream, DataInfoProvider dataInfoProvider) {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
         init(diagnostics);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
             try {
                 byte[] next = transformation.applyTransformations(
-                        previous, fileName, diagnostics, classWeaveOutputStream, probeOutputStream);
+                        previous, fileName, diagnostics, classWeaveOutputStream, dataInfoProvider);
                 if (next != null) {
                     previous = next;
                 }
@@ -64,7 +66,7 @@ public final class PostCompiler {
         try {
 //			transformations = SpiLoadUtil.readAllFromIterator(SpiLoadUtil.findServices(PostCompilerTransformation.class, PostCompilerTransformation.class.getClassLoader()));
             transformations = Collections.singletonList(
-                    new PreventNullAnalysisRemover(HandlerLibrary.getTypeHierarchy()));
+                    new ProbeInstrumenter(HandlerLibrary.getTypeHierarchy()));
         } catch (IOException e) {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw, true));
@@ -78,8 +80,7 @@ public final class PostCompiler {
             final OutputStream originalStream,
             final String fileName,
             final DiagnosticsReceiver diagnostics,
-            OutputStream classWeaveOutputStream,
-            OutputStream probeOutputStream) throws IOException {
+            OutputStream classWeaveOutputStream, DataInfoProvider dataInfoProvider) throws IOException {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 
@@ -99,8 +100,8 @@ public final class PostCompiler {
                 byte[] copy = null;
                 if (original.length > 0) {
                     try {
-                        copy = applyTransformations(original, fileName, diagnostics, classWeaveOutputStream,
-                                probeOutputStream);
+                        copy = applyTransformations(original,
+                                fileName, diagnostics, classWeaveOutputStream, dataInfoProvider);
                     } catch (Exception e) {
                         e.printStackTrace();
                         diagnostics.addWarning(String.format(

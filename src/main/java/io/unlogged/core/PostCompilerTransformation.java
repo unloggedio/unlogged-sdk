@@ -21,6 +21,8 @@
  */
 package io.unlogged.core;
 
+import io.unlogged.weaver.DataInfoProvider;
+
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -28,6 +30,5 @@ public interface PostCompilerTransformation {
 	byte[] applyTransformations(byte[] original, String fileName,
 								DiagnosticsReceiver diagnostics,
 								OutputStream classWeaveOutputStream,
-								OutputStream probeOutputStream
-	) throws IOException;
+                                DataInfoProvider dataInfoProvider) throws IOException;
 }

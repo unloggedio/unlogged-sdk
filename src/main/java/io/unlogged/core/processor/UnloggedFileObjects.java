@@ -2,9 +2,11 @@ package io.unlogged.core.processor;
 
 
 import io.unlogged.core.DiagnosticsReceiver;
+import io.unlogged.weaver.DataInfoProvider;
 
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
+import java.io.File;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -84,10 +86,11 @@ public final class UnloggedFileObjects {
     }
 
     static JavaFileObject createIntercepting(Compiler compiler, JavaFileObject delegate, String fileName,
-                                             DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream, OutputStream probeOutputStream) {
+                                             DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream,
+                                             DataInfoProvider dataInfoProvider) {
         return compiler.wrap(
                 new InterceptingJavaFileObject(delegate, fileName,
-                        diagnostics, compiler.getDecoderMethod(), classWeaveOutputStream, probeOutputStream));
+                        diagnostics, compiler.getDecoderMethod(), classWeaveOutputStream, dataInfoProvider));
     }
 
     private static Compiler java9Compiler(JavaFileManager jfm) {
