@@ -207,7 +207,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
      *
      * @param objectIdMap      object to id converter
      * @param aggregatedLogger writer
-     * @param probesToRecord
+     * @param probesToRecord   probe ids for which the object value need to be serialized and recorded in the event log
      */
     public DetailedEventStreamAggregatedLogger(
 //            String includedPackage,
@@ -745,6 +745,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                        " -> " + th.getMessage());
 //            }
 //        }
+    }
+
+    public void setProbesToRecord(List<Integer> newProbeIdList) {
+        probesToRecord.addAll(newProbeIdList);
     }
 
     private static class DummyClosable implements Closeable {
