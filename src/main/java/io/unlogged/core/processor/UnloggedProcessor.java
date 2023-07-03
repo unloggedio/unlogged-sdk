@@ -8,6 +8,7 @@ import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
+import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.javac.Javac;
@@ -29,6 +30,7 @@ import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @version 1.0
@@ -370,14 +372,15 @@ public class UnloggedProcessor extends AbstractProcessor {
             return false;
         }
 
-//        Set<? extends Element> annotatedClasses = roundEnv.getElementsAnnotatedWith(Unlogged.class);
-//        if (annotatedClasses.size() > 1) {
-//            throw new RuntimeException("More than 1 class annotated with @Unlogged annotation. Only the entry point " +
-//                    "method should be annotated with @Unlogged annotation: [" +
-//                    annotatedClasses.stream()
-//                            .map(Element::getSimpleName)
-//                            .collect(Collectors.toList()) + "]");
-//        } else if (annotatedClasses.size() == 1) {
+        Set<? extends Element> annotatedClasses = roundEnv.getElementsAnnotatedWith(Unlogged.class);
+        if (annotatedClasses.size() > 1) {
+            throw new RuntimeException("More than 1 class annotated with @Unlogged annotation. Only the entry point " +
+                    "method should be annotated with @Unlogged annotation: [" +
+                    annotatedClasses.stream()
+                            .map(Element::getSimpleName)
+                            .collect(Collectors.toList()) + "]");
+        }
+//        else if (annotatedClasses.size() == 1) {
 //            Element entryPoint = annotatedClasses.stream().findFirst().get();
 //            if (transformedEntryPoint == null) {
 //                // first entry point

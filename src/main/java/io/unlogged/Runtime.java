@@ -18,6 +18,7 @@ import io.unlogged.weaver.WeaveParameters;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -183,6 +184,26 @@ public class Runtime {
         synchronized (Runtime.class) {
             if (instance != null) {
                 return instance;
+            }
+
+            try {
+                StackTraceElement callerClassAndMethodStack = new Exception().getStackTrace()[1];
+                Class<?> callerClass = Class.forName(callerClassAndMethodStack.getClassName());
+                for (Method method : callerClass.getMethods()) {
+                    if (method.getAnnotation(Unlogged.class) != null) {
+                        // caller method
+                        Unlogged annotationData = method.getAnnotation(Unlogged.class);
+                        if (!annotationData.enable()) {
+                            return null;
+                        }
+                        break;
+                    }
+                }
+
+            } catch (ClassNotFoundException e) {
+                // should never happen
+                // disable if happened
+                return null;
             }
             instance = new Runtime(args);
 //            for (Pair<String, List<Integer>> pendingClassRegistration : pendingClassRegistrations) {

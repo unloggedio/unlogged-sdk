@@ -51,6 +51,11 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
         JCTree.JCExpression runtimeFieldType = chainDotsString(methodNode, "io.unlogged.Runtime");
         JCTree.JCExpression factoryMethod = chainDotsString(methodNode, "io.unlogged.Runtime.getInstance");
 
+        boolean enabled = annotation.getAsBoolean("enable");
+        if (!enabled) {
+            return;
+        }
+
         java.util.List<String> includePackageNameList = annotation.getAsStringList("includePackage");
         String includedPackageName = annotationNode.getPackageDeclaration();
         if (includePackageNameList != null && includePackageNameList.size() > 0) {
