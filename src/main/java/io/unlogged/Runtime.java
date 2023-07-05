@@ -87,9 +87,18 @@ public class Runtime {
 
             URL probesToRecordUrl = this.getClass().getClassLoader().getResource("probes.dat");
 
-            File file = new File(probesToRecordUrl.toURI());
-            lastProbesLoadTime = file.lastModified();
-            List<Integer> probesToRecord = probeFileToIdList(file);
+            List<Integer> probesToRecord = new ArrayList<>();
+            try {
+
+                File file = new File(probesToRecordUrl.toURI());
+                lastProbesLoadTime = file.lastModified();
+                probesToRecord = probeFileToIdList(file);
+            } catch (Exception e) {
+                // uri is not hierarchical when running a jar
+                probesToRecordUrl = null;
+                probesToRecord = probeFileStreamToIdList(
+                        this.getClass().getClassLoader().getResourceAsStream("probes.dat"));
+            }
 
             switch (weaveParameters.getMode()) {
 
@@ -138,24 +147,27 @@ public class Runtime {
                             outputDir, probesToRecord);
 
                     DetailedEventStreamAggregatedLogger detailedLogger = (DetailedEventStreamAggregatedLogger) logger;
-                    probeReaderExecutor.scheduleWithFixedDelay(
-                            () -> {
-                                try {
-                                    File probesFile = new File(probesToRecordUrl.toURI());
-                                    if (!probesFile.exists()) {
-                                        return;
+                    if (probesToRecordUrl != null) {
+                        URL finalProbesToRecordUrl = probesToRecordUrl;
+                        probeReaderExecutor.scheduleWithFixedDelay(
+                                () -> {
+                                    try {
+                                        File probesFile = new File(finalProbesToRecordUrl.toURI());
+                                        if (!probesFile.exists()) {
+                                            return;
+                                        }
+                                        long newProbesFileModifiedTime = probesFile.lastModified();
+                                        if (newProbesFileModifiedTime > lastProbesLoadTime) {
+                                            lastProbesLoadTime = newProbesFileModifiedTime;
+                                            List<Integer> newProbeIdList = probeFileToIdList(probesFile);
+                                            detailedLogger.setProbesToRecord(newProbeIdList);
+                                        }
+                                    } catch (URISyntaxException | IOException e) {
+                                        // should never happen
                                     }
-                                    long newProbesFileModifiedTime = probesFile.lastModified();
-                                    if (newProbesFileModifiedTime > lastProbesLoadTime) {
-                                        lastProbesLoadTime = newProbesFileModifiedTime;
-                                        List<Integer> newProbeIdList = probeFileToIdList(probesFile);
-                                        detailedLogger.setProbesToRecord(newProbeIdList);
-                                    }
-                                } catch (URISyntaxException | IOException e) {
-                                    // should never happen
-                                }
-                            }, 1000, 300, TimeUnit.MILLISECONDS
-                    );
+                                }, 1000, 300, TimeUnit.MILLISECONDS
+                        );
+                    }
                     break;
 
             }
@@ -216,8 +228,13 @@ public class Runtime {
 
     @NotNull
     private List<Integer> probeFileToIdList(File file) throws IOException {
-        List<Integer> probesToRecord = new ArrayList<>();
         InputStream probesFile = this.getClass().getClassLoader().getResourceAsStream(file.getName());
+        return probeFileStreamToIdList(probesFile);
+    }
+
+    @NotNull
+    private List<Integer> probeFileStreamToIdList(InputStream probesFile) throws IOException {
+        List<Integer> probesToRecord = new ArrayList<>();
         byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(probeToRecordBytes));
         try {
