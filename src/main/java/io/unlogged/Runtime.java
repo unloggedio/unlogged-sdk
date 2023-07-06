@@ -235,6 +235,9 @@ public class Runtime {
     @NotNull
     private List<Integer> probeFileStreamToIdList(InputStream probesFile) throws IOException {
         List<Integer> probesToRecord = new ArrayList<>();
+        if (probesFile == null) {
+            return probesToRecord;
+        }
         byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(probeToRecordBytes));
         try {

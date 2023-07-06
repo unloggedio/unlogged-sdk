@@ -3,10 +3,8 @@ package io.unlogged.logging.impl;
 import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
@@ -74,13 +72,29 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(() -> {
         String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
         if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
-            return new ObjectMapper();
+            ObjectMapper objectMapper1 = new ObjectMapper();
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
+            objectMapper1.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false);
+            return objectMapper1;
         } else {
             // For 2.13.1
-            // Load JsonMappingException class force load so that we dont get a StackOverflow when we are in a cycle
+            // Load JsonMappingException class force load so that we don't get a StackOverflow when we are in a cycle
             JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
             jme.prependPath(new JsonMappingException.Reference("from dummy"));
             JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
+            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false);
+
             jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
                 public boolean hasIgnoreMarker(AnnotatedMember m) {
