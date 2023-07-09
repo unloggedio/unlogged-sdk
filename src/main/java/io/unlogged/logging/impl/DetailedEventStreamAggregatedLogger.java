@@ -460,10 +460,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         String className;
         if (value != null) {
             className = value.getClass().getCanonicalName();
+            if (className == null) {
+                className = value.getClass().getName();
+            }
         } else {
             className = "";
         }
-        if (className != null && !className.contains("Lambda")) {
+        if (!className.contains("Lambda")) {
 //            System.err.println("Object instance: " + className);
             if (className.contains("_$")) {
                 className = className.substring(0, className.indexOf("_$"));
@@ -501,7 +504,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                }
                 if (value instanceof Class) {
                     bytes = ((Class<?>) value).getCanonicalName().getBytes(StandardCharsets.UTF_8);
-                } else if (className == null || className.startsWith("com.google")
+                } else if (className.startsWith("com.google")
                         || className.startsWith("org.apache.http")
                         || className.startsWith("java.util.stream")
                         || className.startsWith("org.elasticsearch.client")
@@ -519,8 +522,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("tech.jhipster")
                         || className.startsWith("com.github")
                         || className.startsWith("com.zaxxer")
-                        || (className.startsWith("org.glassfish")
-                        && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                        || (className.startsWith("org.glassfish") && !className.equals(
+                                "org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                         || className.startsWith("com.fasterxml")
                         || className.startsWith("org.slf4j")
                         || className.startsWith("org.springframework")
