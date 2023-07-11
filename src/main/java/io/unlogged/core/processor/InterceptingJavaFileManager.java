@@ -46,6 +46,21 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 //            classWeaveDat = fileManager.getFileForOutput(StandardLocation.CLASS_OUTPUT, "",
 //                    "class.weave.dat", null);
 
+            if (classesPath.contains("/build/")) {
+                // suspect gradle build
+                String subBuildPath = classesPath.substring(0, classesPath.indexOf("/build/"));
+                String gradleFilePath = classesPath.substring(0, classesPath.indexOf("/build/")) + "/build.gradle";
+                if (new File(gradleFilePath).exists()) {
+                    // definitely gradle build
+                    // so we need to put resources in build/resources/main/
+                    classesPath = subBuildPath + "/build/resources/main/";
+                    File resourcesFolder = new File(classesPath);
+                    if (!resourcesFolder.exists()) {
+                        resourcesFolder.mkdirs();
+                    }
+                }
+            }
+
             File weaveOutputFile = new File(classesPath + "class.weave.dat");
             classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
 
