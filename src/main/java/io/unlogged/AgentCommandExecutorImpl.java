@@ -221,7 +221,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     agentCommandResponse.setMessage(exceptionCause.getMessage());
                     try {
                         agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
+                        agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
+                        agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
                         // failed to serialize thrown exception
                     }
                     agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
