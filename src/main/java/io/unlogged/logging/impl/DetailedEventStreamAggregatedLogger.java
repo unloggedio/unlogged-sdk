@@ -157,10 +157,9 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 Class<?> featureClass = Class.forName(
                         "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
                 Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
-                configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING")
-                        .get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS")
-                        .get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING").get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null), false);
                 jacksonBuilder.addModule(module);
 //                System.out.println("Loaded hibernate module");
             } catch (ClassNotFoundException | NoSuchMethodException e) {
