@@ -5,7 +5,7 @@ Release Versions
     <dependency>
         <groupId>io.unlogged</groupId>
         <artifactId>unlogged-java-sdk</artifactId>
-        <version><!-- Not yet released --></version>
+        <version>0.0.12</version>
     </dependency>
 </dependencies>
 ```
@@ -16,7 +16,7 @@ Snapshot Versions
     <dependency>
         <groupId>io.unlogged</groupId>
         <artifactId>unlogged-java-sdk</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>0.0.12</version>
     </dependency>
 </dependencies>
 
