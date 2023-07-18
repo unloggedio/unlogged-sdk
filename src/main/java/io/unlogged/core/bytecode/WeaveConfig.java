@@ -35,17 +35,17 @@ public class WeaveConfig {
     private String sessionId;
     private boolean weaveExec = true;
     private boolean weaveMethodCall = true;
-    private boolean weaveFieldAccess = true;
-    private boolean weaveArray = true;
-    private boolean weaveLabel = true;
-    private boolean weaveSynchronization = true;
+    private boolean weaveFieldAccess = false;
+    private boolean weaveArray = false;
+    private boolean weaveLabel = false;
+    private boolean weaveSynchronization = false;
     private boolean weaveParameters = true;
-    private boolean weaveLocalAccess = true;
+    private boolean weaveLocalAccess = false;
     private String username;
     private String password;
-    private boolean weaveObject = true;
-    private boolean weaveLineNumber = true;
-    private boolean ignoreArrayInitializer = false;
+    private boolean weaveObject = false;
+    private boolean weaveLineNumber = false;
+    private boolean ignoreArrayInitializer = true;
     private boolean weaveNone = false;
     private String authToken;
 
@@ -125,10 +125,11 @@ public class WeaveConfig {
         String opt = options.toUpperCase();
 //        System.out.printf("[unlogged] Recording option: [%s] Server Address [%s] Username [%s] Password [%s]\n", opt, params.getServerAddress(), params.getUsername(), params.getPassword());
         if (opt.equals(KEY_RECORD_ALL)) {
-            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_FIELD + KEY_RECORD_ARRAY + KEY_RECORD_SYNC + KEY_RECORD_OBJECT + KEY_RECORD_PARAMETERS;
+            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_PARAMETERS;
 //            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_FIELD + KEY_RECORD_ARRAY + KEY_RECORD_SYNC + KEY_RECORD_OBJECT + KEY_RECORD_PARAMETERS + KEY_RECORD_LOCAL;
         } else if (opt.equals(KEY_RECORD_DEFAULT)) {
-            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_FIELD + KEY_RECORD_ARRAY + KEY_RECORD_SYNC + KEY_RECORD_OBJECT + KEY_RECORD_PARAMETERS;
+            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_PARAMETERS;
+//            opt = KEY_RECORD_EXEC + KEY_RECORD_CALL + KEY_RECORD_FIELD + KEY_RECORD_ARRAY + KEY_RECORD_SYNC + KEY_RECORD_OBJECT + KEY_RECORD_PARAMETERS;
         } else if (opt.equals(KEY_RECORD_NONE)) {
             opt = "";
             weaveNone = true;

@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class RawFileCollector implements Runnable {
     public static final int MAX_CONSECUTIVE_FAILURE_COUNT = 10;
@@ -70,12 +72,17 @@ public class RawFileCollector implements Runnable {
 
     }
 
+    private final Lock archiveSwapLock = new ReentrantLock();
+
     private void finalizeArchiveAndUpload() throws IOException {
 
-        ArchivedIndexWriter archivedIndexWriterOld = archivedIndexWriter;
 
+        archiveSwapLock.lock();
+        ArchivedIndexWriter archivedIndexWriterOld = archivedIndexWriter;
         archivedIndexWriter = new ArchivedIndexWriter(indexFileNameGenerator.getNextFile(),
                 "class.weave.dat", errorLogger);
+        archiveSwapLock.unlock();
+
         fileCount = 0;
         if (archivedIndexWriterOld != null) {
             boolean added = archiveQueue.offer(archivedIndexWriterOld);
@@ -84,6 +91,39 @@ public class RawFileCollector implements Runnable {
             }
         }
     }
+
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                long start = System.currentTimeMillis();
+                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
+                if (shutdown) {
+                    return;
+                }
+                try {
+                    EXECUTOR_SERVICE.submit(() -> {
+                        try {
+                            if (!archiveSwapLock.tryLock()) {
+                                return;
+                            }
+                            drainItemsToIndex(archivedIndexWriter);
+                            archiveSwapLock.unlock();
+                        } catch (Throwable e) {
+                            errorLogger.log(e);
+                        }
+                    });
+                    upload();
+                } catch (IOException e) {
+                    errorLogger.log(e);
+                }
+                Thread.sleep(1000);
+            }
+        } catch (Throwable e) {
+            errorLogger.log("failed to write archived index to disk: " + e.getMessage());
+        }
+    }
+
 
     public void shutdown() throws IOException {
         shutdown = true;
@@ -176,33 +216,6 @@ public class RawFileCollector implements Runnable {
 
     }
 
-    @Override
-    public void run() {
-        try {
-            while (true) {
-                long start = System.currentTimeMillis();
-                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
-                if (shutdown) {
-                    return;
-                }
-                try {
-                    EXECUTOR_SERVICE.submit(() -> {
-                        try {
-                            drainItemsToIndex(archivedIndexWriter);
-                        } catch (Throwable e) {
-                            errorLogger.log(e);
-                        }
-                    });
-                    upload();
-                } catch (IOException e) {
-                    errorLogger.log(e);
-                }
-                Thread.sleep(1000);
-            }
-        } catch (Throwable e) {
-            errorLogger.log("failed to write archived index to disk: " + e.getMessage());
-        }
-    }
 
     public void indexObjectTypeEntry(long id, int typeId) {
         objectsToIndex.offer(new ObjectInfoDocument(id, typeId));

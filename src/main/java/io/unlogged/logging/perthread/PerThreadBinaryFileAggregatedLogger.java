@@ -71,7 +71,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     private long currentTimestamp = System.currentTimeMillis();
     private RawFileCollector fileCollector = null;
     private FileEventCountThresholdChecker logFileTimeAgeChecker = null;
-    private AtomicLong eventId = new AtomicLong(0);
+    private final AtomicLong eventId = new AtomicLong(0);
     // set to true when we are unable to upload files to the server
     // this is reset every 10 mins to check if server is online again
     // files are deleted from the disk while this is true

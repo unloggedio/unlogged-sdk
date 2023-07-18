@@ -247,13 +247,17 @@ public class ArchivedIndexWriter implements IndexOutputStream {
                 String currentArchiveName = currentArchiveFile.getName().split(".zip")[0];
 
 
+                errorLogger.log("Close sqlite disk persistence for: " + currentArchiveName);
+                objectInfoDocumentIntegerDiskPersistence.close();
+                stringInfoDocumentStringDiskPersistence.close();
+                typeInfoDocumentStringDiskPersistence.close();
+
                 ZipEntry stringIndexEntry = new ZipEntry(INDEX_STRING_DAT_FILE);
                 archivedIndexOutputStream.putNextEntry(stringIndexEntry);
                 Path stringIndexFilePath = FileSystems.getDefault()
                         .getPath(outputDir + currentArchiveName + "-" + INDEX_STRING_DAT_FILE);
                 Files.copy(stringIndexFilePath, archivedIndexOutputStream);
-                stringIndexFilePath.toFile()
-                        .delete();
+                stringIndexFilePath.toFile().delete();
                 archivedIndexOutputStream.closeEntry();
 
                 ZipEntry typeIndexEntry = new ZipEntry(INDEX_TYPE_DAT_FILE);
@@ -261,8 +265,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
                 Path typeIndexFilePath = FileSystems.getDefault()
                         .getPath(outputDir + currentArchiveName + "-" + INDEX_TYPE_DAT_FILE);
                 Files.copy(typeIndexFilePath, archivedIndexOutputStream);
-                typeIndexFilePath.toFile()
-                        .delete();
+                typeIndexFilePath.toFile().delete();
                 archivedIndexOutputStream.closeEntry();
 
                 ZipEntry objectIndexEntry = new ZipEntry(INDEX_OBJECT_DAT_FILE);
