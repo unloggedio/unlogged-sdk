@@ -22,6 +22,7 @@
 package io.unlogged.core.javac;
 
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.ClassFinder;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.util.Context;
@@ -35,9 +36,9 @@ public class JavacTransformer {
     private final HandlerLibrary handlers;
     private final Messager messager;
 
-    public JavacTransformer(Messager messager, Trees trees) {
+    public JavacTransformer(Messager messager, Trees trees, Context context) {
         this.messager = messager;
-        this.handlers = HandlerLibrary.load(messager, trees);
+        this.handlers = HandlerLibrary.load(messager, trees, context);
     }
 
     public SortedSet<Long> getPriorities() {

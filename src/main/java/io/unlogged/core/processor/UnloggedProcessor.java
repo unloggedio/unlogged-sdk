@@ -220,7 +220,7 @@ public class UnloggedProcessor extends AbstractProcessor {
         trees = Trees.instance(javacProcessingEnv);
         unwrappedProcessingEnv = jbUnwrap(ProcessingEnvironment.class, procEnv);
 //        context = ((JavacProcessingEnvironment) unwrappedProcessingEnv).getContext();
-        transformer = new JavacTransformer(procEnv.getMessager(), trees);
+        transformer = new JavacTransformer(procEnv.getMessager(), trees, javacProcessingEnv.getContext());
 
 
 //        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);

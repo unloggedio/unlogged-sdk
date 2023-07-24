@@ -71,8 +71,7 @@ public final class PostCompiler {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw, true));
             diagnostics.addError("Could not load post-compile transformers: "
-                    + e.getMessage()
-                    + "\n" + sw.toString());
+                    + e.getMessage() + "\n" + sw);
         }
     }
 
@@ -80,7 +79,7 @@ public final class PostCompiler {
             final OutputStream originalStream,
             final String fileName,
             final DiagnosticsReceiver diagnostics,
-            OutputStream classWeaveOutputStream, DataInfoProvider dataInfoProvider) throws IOException {
+            OutputStream classWeaveOutputStream, DataInfoProvider dataInfoProvider) {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 

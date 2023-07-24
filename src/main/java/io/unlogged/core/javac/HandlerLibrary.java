@@ -26,6 +26,7 @@ import com.insidious.common.weaver.DataInfo;
 import com.insidious.common.weaver.EventType;
 import com.insidious.common.weaver.MethodInfo;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.ClassFinder;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
@@ -59,7 +60,7 @@ import static io.unlogged.core.handlers.JavacHandlerUtil.recursiveSetGeneratedBy
  * building an AnnotationValues instance.
  */
 public class HandlerLibrary {
-    private static final TypeHierarchy typeHierarchy = new TypeHierarchy();
+    private static TypeHierarchy typeHierarchy;
     private final TypeLibrary typeLibrary = new TypeLibrary();
     private final Map<String, List<AnnotationHandlerContainer<?>>> annotationHandlers = new HashMap<String, List<AnnotationHandlerContainer<?>>>();
     private final Collection<VisitorContainer> visitorHandlers = new ArrayList<VisitorContainer>();
@@ -72,13 +73,15 @@ public class HandlerLibrary {
 
     /**
      * Creates a new HandlerLibrary that will report any problems or errors to the provided messager.
-     * You probably want to use {@link #load(Messager, Trees)} instead.
+     * You probably want to use {@link #load(Messager, Trees, ClassFinder)} instead.
      */
-    public HandlerLibrary(Messager messager, Trees trees) {
+    public HandlerLibrary(Messager messager, Trees trees, Context context) {
         ConfigurationKeysLoader.LoaderLoader.loadAllConfigurationKeys();
         this.messager = messager;
         this.trees = trees;
+        typeHierarchy = new TypeHierarchy(context);
         unloggedVisitor = new UnloggedVisitor(typeHierarchy);
+
 //        String agentArgs = "";
 //        WeaveParameters weaveParameters = new WeaveParameters(agentArgs);
 //        WeaveConfig weaveConfig = new WeaveConfig(weaveParameters);
@@ -94,8 +97,8 @@ public class HandlerLibrary {
      * then uses SPI discovery to load all annotation and visitor based handlers so that future calls
      * to the handle methods will defer to these handlers.
      */
-    public static HandlerLibrary load(Messager messager, Trees trees) {
-        HandlerLibrary library = new HandlerLibrary(messager, trees);
+    public static HandlerLibrary load(Messager messager, Trees trees, Context context) {
+        HandlerLibrary library = new HandlerLibrary(messager, trees, context);
         try {
             loadAnnotationHandlers(library, trees);
 //            loadVisitorHandlers(library, trees);

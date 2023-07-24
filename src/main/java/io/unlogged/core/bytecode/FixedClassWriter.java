@@ -50,7 +50,7 @@ class FixedClassWriter extends ClassWriter {
             } catch (Exception e) {
                 // cant do with real class definitions
             }
-            String fromNew = typeHierarchy.findCommonSuper(type1, type2);
+            String fromNew = typeHierarchy.getCommonSuperClassWithRealClass(type1, type2);
             fromNew = fromNew.replace('.', '/');
             return fromNew;
 //			return super.getCommonSuperClass(type1, type2);
