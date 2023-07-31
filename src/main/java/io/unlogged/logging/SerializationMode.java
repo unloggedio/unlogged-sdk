@@ -1,5 +1,5 @@
 package io.unlogged.logging;
 
 public enum SerializationMode {
-    GSON, ELSA, KRYO, OOS, JACKSON, FST
+    ELSA, KRYO, OOS, JACKSON, FST
 }

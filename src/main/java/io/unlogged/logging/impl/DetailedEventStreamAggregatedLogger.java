@@ -48,6 +48,15 @@ import java.util.*;
 public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
+    private final List<String> JACKSON_PROPERTY_NAMES_SET_FALSE = Arrays.asList(
+            "FAIL_ON_UNKNOWN_PROPERTIES",
+            "FAIL_ON_IGNORED_PROPERTIES",
+            "FAIL_ON_NULL_FOR_PRIMITIVES",
+            "FAIL_ON_NULL_CREATOR_PROPERTIES",
+            "FAIL_ON_MISSING_CREATOR_PROPERTIES",
+            "FAIL_ON_NUMBERS_FOR_ENUMS",
+            "FAIL_ON_TRAILING_TOKENS"
+    );
     //    private final FSTConfiguration fstObjectMapper;
     private final AggregatedFileLogger aggregatedLogger;
     //    private final TypeIdAggregatedStreamMap typeToId;
@@ -73,13 +82,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
         if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
             ObjectMapper objectMapper1 = new ObjectMapper();
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
-            objectMapper1.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false);
+
+            for (DeserializationFeature value : DeserializationFeature.values()) {
+                if (JACKSON_PROPERTY_NAMES_SET_FALSE.contains(value.name())) {
+                    objectMapper1.configure(value, false);
+                }
+            }
             return objectMapper1;
         } else {
             // For 2.13.1
@@ -87,13 +95,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
             jme.prependPath(new JsonMappingException.Reference("from dummy"));
             JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
-            jacksonBuilder.configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false);
+
+            for (DeserializationFeature value : DeserializationFeature.values()) {
+                if (JACKSON_PROPERTY_NAMES_SET_FALSE.contains(value.name())) {
+                    jacksonBuilder.configure(value, false);
+                }
+            }
 
             jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
@@ -158,8 +165,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
                 Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
                 configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING").get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null), false);
+                configureMethod.invoke(module,
+                        featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null),
+                        false);
                 jacksonBuilder.addModule(module);
 //                System.out.println("Loaded hibernate module");
             } catch (ClassNotFoundException | NoSuchMethodException e) {
@@ -522,11 +531,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("com.github")
                         || className.startsWith("com.zaxxer")
                         || (className.startsWith("org.glassfish") && !className.equals(
-                                "org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                        "org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                         || className.startsWith("com.fasterxml")
                         || className.startsWith("org.slf4j")
-                        || (className.startsWith("org.springframework")
-                             && !className.startsWith("org.springframework.http"))
+                        || (className.startsWith("org.springframework") && (!className.startsWith("org" +
+                        ".springframework.http") && !className.startsWith("org.springframework.data.domain")))
                         || className.startsWith("java.io")
                         || className.contains("$Lambda$")
                         || className.contains("$$EnhancerBySpringCGLIB$$")
