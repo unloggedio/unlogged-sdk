@@ -139,7 +139,7 @@
         <dependency>
             <groupId>video.bug</groupId>
             <artifactId>common</artifactId>
-            <version>1.3.45</version>
+            <version>1.3.47</version>
             <exclusions>
                 <exclusion>
                     <groupId>redis.clients</groupId>
@@ -148,6 +148,10 @@
                 <exclusion>
                     <groupId>org.msgpack</groupId>
                     <artifactId>msgpack</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -321,11 +325,11 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.9.1</version>
                 <configuration>
-<!--                    <excludePackageNames>io.unlogged.core.*:io.unlogged.weaver.*:io.unlogged.core.javac.*:com.sun.tools.*</excludePackageNames>-->
-<!--                    <debug>true</debug>-->
-<!--                    <excludes>-->
-<!--                        JavacTreeMaker.java-->
-<!--                    </excludes>-->
+                    <!--                    <excludePackageNames>io.unlogged.core.*:io.unlogged.weaver.*:io.unlogged.core.javac.*:com.sun.tools.*</excludePackageNames>-->
+                    <!--                    <debug>true</debug>-->
+                    <!--                    <excludes>-->
+                    <!--                        JavacTreeMaker.java-->
+                    <!--                    </excludes>-->
                     <sourceFileIncludes>
                         <fileInclude>io/unlogged/*.java</fileInclude>
                     </sourceFileIncludes>

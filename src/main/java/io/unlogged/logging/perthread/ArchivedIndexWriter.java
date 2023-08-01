@@ -4,13 +4,11 @@ import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.index.hash.HashIndex;
 import com.googlecode.cqengine.index.radixinverted.InvertedRadixTreeIndex;
 import com.googlecode.cqengine.persistence.disk.DiskPersistence;
-import com.insidious.common.BloomFilterUtil;
 import com.insidious.common.UploadFile;
 import com.insidious.common.cqengine.ObjectInfoDocument;
 import com.insidious.common.cqengine.StringInfoDocument;
 import com.insidious.common.cqengine.TypeInfoDocument;
 import io.unlogged.logging.IErrorLogger;
-import orestes.bloomfilter.BloomFilter;
 
 import java.io.*;
 import java.nio.file.FileSystems;
@@ -36,8 +34,8 @@ public class ArchivedIndexWriter implements IndexOutputStream {
     private final Lock indexWriterLock = new ReentrantLock();
     private final String outputDir;
     private final File currentArchiveFile;
-    final private BloomFilter<Long> aggregatedValueSet;
-    final private BloomFilter<Integer> aggregatedProbeIdSet;
+    //    final private BloomFilter<Long> aggregatedValueSet;
+//    final private BloomFilter<Integer> aggregatedProbeIdSet;
     private final String classWeavePath;
     private BlockingQueue<StringInfoDocument> stringsToIndex;
     private BlockingQueue<TypeInfoDocument> typesToIndex;
@@ -62,9 +60,9 @@ public class ArchivedIndexWriter implements IndexOutputStream {
         errorLogger.log("prepare index archive: " + currentArchiveFile.getName());
         archivedIndexOutputStream = new ZipOutputStream(
                 new BufferedOutputStream(new FileOutputStream(currentArchiveFile)));
-        aggregatedValueSet = BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
-        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbes(
-                BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
+//        aggregatedValueSet = BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
+//        aggregatedProbeIdSet = BloomFilterUtil.newBloomFilterForProbes(
+//                BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
 
 
         initialiseIndexes();

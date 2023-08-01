@@ -1,12 +1,10 @@
 package io.unlogged.logging.perthread;
 
-import com.insidious.common.BloomFilterUtil;
 import com.insidious.common.UploadFile;
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
-import orestes.bloomfilter.BloomFilter;
 
 import java.io.*;
 import java.nio.channels.ClosedChannelException;
@@ -63,15 +61,15 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         bytes[0] = 4;
         return bytes;
     });
-    private final Map<Integer, BloomFilter<Long>> valueIdFilterSet = new HashMap<>();
-    private final Map<Integer, BloomFilter<Integer>> probeIdFilterSet = new HashMap<>();
+    //    private final Map<Integer, BloomFilter<Long>> valueIdFilterSet = new HashMap<>();
+//    private final Map<Integer, BloomFilter<Integer>> probeIdFilterSet = new HashMap<>();
     private final OffLoadTaskPayload[] TaskQueueArray = new OffLoadTaskPayload[TASK_QUEUE_CAPACITY];
+    private final AtomicLong eventId = new AtomicLong(0);
     ScheduledExecutorService threadPoolExecutor5Seconds = Executors.newScheduledThreadPool(2);
     ExecutorService threadPoolExecutor = Executors.newFixedThreadPool(4);
     private long currentTimestamp = System.currentTimeMillis();
     private RawFileCollector fileCollector = null;
     private FileEventCountThresholdChecker logFileTimeAgeChecker = null;
-    private final AtomicLong eventId = new AtomicLong(0);
     // set to true when we are unable to upload files to the server
     // this is reset every 10 mins to check if server is online again
     // files are deleted from the disk while this is true
@@ -168,17 +166,17 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             }
 
 
-            BloomFilter<Long> valueIdBloomFilter = valueIdFilterSet.get(currentThreadId);
-            BloomFilter<Integer> probeIdBloomFilter = probeIdFilterSet.get(currentThreadId);
+//            BloomFilter<Long> valueIdBloomFilter = valueIdFilterSet.get(currentThreadId);
+//            BloomFilter<Integer> probeIdBloomFilter = probeIdFilterSet.get(currentThreadId);
 
             count.put(currentThreadId, new AtomicInteger(0));
-            valueIdFilterSet.put(currentThreadId,
-                    BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
-            probeIdFilterSet.put(currentThreadId,
-                    BloomFilterUtil.newBloomFilterForProbes(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
+//            valueIdFilterSet.put(currentThreadId,
+//                    BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
+//            probeIdFilterSet.put(currentThreadId,
+//                    BloomFilterUtil.newBloomFilterForProbes(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
 
-            UploadFile newLogFile = new UploadFile(currentFile, currentThreadId, valueIdBloomFilter,
-                    probeIdBloomFilter);
+            UploadFile newLogFile = new UploadFile(currentFile, currentThreadId, null,
+                    null);
             errorLogger.log("new log file complete: " + newLogFile.getPath());
             fileList.offer(newLogFile);
 
@@ -192,10 +190,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
 
         count.put(currentThreadId, new AtomicInteger(0));
-        valueIdFilterSet.put(currentThreadId,
-                BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
-        probeIdFilterSet.put(currentThreadId,
-                BloomFilterUtil.newBloomFilterForProbes(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
+//        valueIdFilterSet.put(currentThreadId,
+//                BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
+//        probeIdFilterSet.put(currentThreadId,
+//                BloomFilterUtil.newBloomFilterForProbes(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
     }
 
     /**
@@ -373,9 +371,9 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(buffer);
 
-            valueIdFilterSet.get(currentThreadId).add(valueId);
             fileCollector.addValueId(valueId);
-            probeIdFilterSet.get(currentThreadId).add(probeId);
+//            valueIdFilterSet.get(currentThreadId).add(valueId);
+//            probeIdFilterSet.get(currentThreadId).add(probeId);
             fileCollector.addProbeId(probeId);
             if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
@@ -442,10 +440,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-            valueIdFilterSet.get(currentThreadId).add(valueId);
-            fileCollector.addValueId(valueId);
-            probeIdFilterSet.get(currentThreadId).add(probeId);
-            fileCollector.addProbeId(probeId);
+//            valueIdFilterSet.get(currentThreadId).add(valueId);
+//            probeIdFilterSet.get(currentThreadId).add(probeId);
+//            fileCollector.addValueId(valueId);
+//            fileCollector.addProbeId(probeId);
             if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
@@ -480,10 +478,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
             getThreadEventCount(currentThreadId).addAndGet(1);
-            valueIdFilterSet.get(currentThreadId).add(valueId);
-            fileCollector.addValueId(valueId);
-            probeIdFilterSet.get(currentThreadId).add(probeId);
-            fileCollector.addProbeId(probeId);
+//            valueIdFilterSet.get(currentThreadId).add(valueId);
+//            probeIdFilterSet.get(currentThreadId).add(probeId);
+//            fileCollector.addValueId(valueId);
+//            fileCollector.addProbeId(probeId);
 
 
         } catch (IOException e) {
