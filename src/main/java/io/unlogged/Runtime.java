@@ -54,14 +54,17 @@ public class Runtime {
         try {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
-            File outputDir = new File(weaveParameters.getOutputDirname());
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-            }
 
             ServerMetadata serverMetadata =
                     new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION);
 
+            httpServer = new AgentCommandServer(AGENT_SERVER_PORT, serverMetadata);
+
+
+            File outputDir = new File(weaveParameters.getOutputDirname());
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+            }
 
             if (!outputDir.isDirectory() || !outputDir.canWrite()) {
                 System.err.println("[unlogged] ERROR: " + outputDir.getAbsolutePath() + " is not writable.");
@@ -172,7 +175,7 @@ public class Runtime {
 
             }
 
-            httpServer = new AgentCommandServer(AGENT_SERVER_PORT, serverMetadata);
+
             httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(logger.getObjectMapper(), logger));
             httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 
