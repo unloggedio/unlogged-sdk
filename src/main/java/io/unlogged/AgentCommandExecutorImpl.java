@@ -1,7 +1,9 @@
 package io.unlogged;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
@@ -78,11 +80,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
                 if (objectInstanceByClass == null) {
                     objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(), targetClassLoader1);
-//                    if (objectInstanceByClass == null) {
-//                        throw new NoSuchMethodException(
-//                                "Instance of class [" + agentCommandRequest.getClassName() + "] " +
-//                                        "not found and could not be created");
-//                    }
                 }
 
                 objectClass = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
@@ -154,33 +151,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                 Class<?>[] parameterTypesClass = methodToExecute.getParameterTypes();
-                Object[] parameters = new Object[methodParameters.size()];
-                TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(targetClassLoader);
 
-                List<String> parameterTypes = agentCommandRequest.getParameterTypes();
-                for (int i = 0; i < methodParameters.size(); i++) {
-                    String methodParameter = methodParameters.get(i);
-                    Class<?> parameterType = parameterTypesClass[i];
-//                    System.err.println("Make value of type [" + parameterType + "] from value: " + methodParameter);
-                    Object parameterObject;
-                    if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
-                        parameterObject = objectMapper.readValue(methodParameter,
-                                Class.forName("org.springframework.util.LinkedMultiValueMap"));
+                Object[] parameters;
+                try {
+                    parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
+                            parameterTypesClass, agentCommandRequest.getParameterTypes());
+                } catch (InvalidDefinitionException ide1) {
+                    if (!targetClassLoader.equals(targetClassLoader1)) {
+                        parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
+                                parameterTypesClass, agentCommandRequest.getParameterTypes());
                     } else {
-
-                        JavaType typeReference;
-                        try {
-                            typeReference = typeFactory.constructFromCanonical(parameterTypes.get(i));
-                        } catch (Exception e) {
-                            // failed to construct from the canonical name,
-                            // happens when this is a generic type
-                            // so we try to construct using type from the method param class
-                            typeReference = typeFactory.constructType(parameterType);
-                        }
-                        parameterObject = objectMapper.readValue(methodParameter, typeReference);
+                        throw ide1;
                     }
-
-                    parameters[i] = parameterObject;
                 }
 
 
@@ -240,6 +222,41 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
 
 
+    }
+
+    private Object[] buildParametersUsingTargetClass(
+            ClassLoader targetClassLoader,
+            List<String> methodParameters,
+            Class<?>[] parameterTypesClass,
+            List<String> parameterTypes) throws JsonProcessingException, ClassNotFoundException {
+        TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(targetClassLoader);
+        Object[] parameters = new Object[methodParameters.size()];
+
+        for (int i = 0; i < methodParameters.size(); i++) {
+            String methodParameter = methodParameters.get(i);
+            Class<?> parameterType = parameterTypesClass[i];
+//                    System.err.println("Make value of type [" + parameterType + "] from value: " + methodParameter);
+            Object parameterObject;
+            if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
+                parameterObject = objectMapper.readValue(methodParameter,
+                        Class.forName("org.springframework.util.LinkedMultiValueMap"));
+            } else {
+
+                JavaType typeReference;
+                try {
+                    typeReference = typeFactory.constructFromCanonical(parameterTypes.get(i));
+                } catch (Exception e) {
+                    // failed to construct from the canonical name,
+                    // happens when this is a generic type
+                    // so we try to construct using type from the method param class
+                    typeReference = typeFactory.constructType(parameterType);
+                }
+                parameterObject = objectMapper.readValue(methodParameter, typeReference);
+            }
+
+            parameters[i] = parameterObject;
+        }
+        return parameters;
     }
 
 

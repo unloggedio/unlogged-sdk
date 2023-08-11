@@ -126,6 +126,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                        System.err.println("Annotation found: " + ac.hasAnnotation(lombokBuilderAnnotation));
 //                    }
 
+                    if (ac.getRawType().getCanonicalName().startsWith("java.")) {
+                        return null;
+                    }
+
                     if (isLombokPresent) {
                         try {
                             String classFullyQualifiedName = ac.getName();
@@ -133,7 +137,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                     classFullyQualifiedName.lastIndexOf(".") + 1);
                             String lombokClassBuilderName = ac.getName() + "$" + classSimpleName + "Builder";
 //                            System.err.println("Lookup builder by nameclean: " + lombokClassBuilderName);
-                            return targetClassLoader.loadClass(lombokClassBuilderName);
+                            if (ac.getRawType().getClassLoader() != null) {
+                                return ac.getRawType().getClassLoader().loadClass(lombokClassBuilderName);
+                            } else {
+                                return targetClassLoader.loadClass(lombokClassBuilderName);
+                            }
                         } catch (ClassNotFoundException e) {
                             return super.findPOJOBuilder(ac);
                         }
