@@ -6,10 +6,14 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
@@ -74,7 +78,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     private final ThreadLocal<ByteArrayOutputStream> output =
             ThreadLocal.withInitial(() -> new ByteArrayOutputStream(1_000_000));
     //    private final Set<String> classesToIgnore = new HashSet<>();
-    private final Kryo kryo;
+//    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
     private boolean isLombokPresent;
     private ClassLoader targetClassLoader;
@@ -88,6 +92,45 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     objectMapper1.configure(value, false);
                 }
             }
+            objectMapper1.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
+            objectMapper1.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
+
+            // potentially
+//            jacksonBuilder.findAndAddModules();
+            List<String> jacksonModules = Arrays.asList(
+                    "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
+                    "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+                    "com.fasterxml.jackson.datatype.joda.JodaModule",
+//                        "com.fasterxml.jackson.module.blackbird.BlackbirdModule",
+                    "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
+                    "com.fasterxml.jackson.module.mrbean.MrBeanModule",
+//                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
+                    "com.fasterxml.jackson.module.paranamer.ParanamerModule"
+            );
+            for (String jacksonModule : jacksonModules) {
+                try {
+                    //checks for presence of this module class, if not present throws exception
+                    Class<?> jdk8Module = Class.forName(jacksonModule);
+                    objectMapper1.registerModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
+                } catch (ClassNotFoundException e) {
+                    // jdk8 module not found
+                } catch (InvocationTargetException
+                         | InstantiationException
+                         | IllegalAccessException
+                         | NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            try {
+                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+                KotlinModule kotlinModule = new KotlinModule.Builder().build();
+                objectMapper1.registerModule(kotlinModule);
+            } catch (ClassNotFoundException e) {
+                // kotlin module for jackson not present on classpath
+            }
+
+
             return objectMapper1;
         } else {
             // For 2.13.1
@@ -106,6 +149,14 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 @Override
                 public boolean hasIgnoreMarker(AnnotatedMember m) {
                     return false;
+                }
+
+                @Override
+                public Object findSerializer(Annotated a) {
+                    if (Objects.equals(a.getRawType(), Date.class)) {
+                        return null;
+                    }
+                    return super.findSerializer(a);
                 }
 
                 @Override
@@ -174,10 +225,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
                 Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
                 configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING").get(null), true);
-                configureMethod.invoke(module,
-                        featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null),
-                        false);
+                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null), false);
                 jacksonBuilder.addModule(module);
 //                System.out.println("Loaded hibernate module");
             } catch (ClassNotFoundException | NoSuchMethodException e) {
@@ -261,10 +310,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         }
 
         if (SERIALIZATION_MODE == SerializationMode.KRYO) {
-            kryo = new Kryo();
-            kryo.register(byte[].class);
-            kryo.register(LinkedHashMap.class);
-            kryo.register(LinkedHashSet.class);
+//            kryo = new Kryo();
+//            kryo.register(byte[].class);
+//            kryo.register(LinkedHashMap.class);
+//            kryo.register(LinkedHashSet.class);
 //            objectMapper = null;
 //            fstObjectMapper = null;
         } else if (SERIALIZATION_MODE == SerializationMode.JACKSON) {
@@ -396,7 +445,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                        .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 //
 //            }
-            kryo = null;
+//            kryo = null;
 //            fstObjectMapper = null;
         } else if (SERIALIZATION_MODE == SerializationMode.FST) {
 
@@ -422,11 +471,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //            }, true);
 
 //            fstObjectMapper = defaultConfigMapper;
-            kryo = null;
+//            kryo = null;
 //            objectMapper = null;
         } else {
 //            fstObjectMapper = null;
-            kryo = null;
+//            kryo = null;
 //            objectMapper = null;
         }
 

@@ -98,12 +98,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 List<String> methodParameters = agentCommandRequest.getMethodParameters();
 
-                Class<?>[] methodParameterTypes = new Class[methodSignatureParts.size()];
+                Class<?>[] expectedMethodArgumentTypes = new Class[methodSignatureParts.size()];
 
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    methodParameterTypes[i] =
+                    expectedMethodArgumentTypes[i] =
                             ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
                 }
 
@@ -113,7 +113,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                     try {
                         methodToExecute = objectClass
-                                .getMethod(agentCommandRequest.getMethodName(), methodParameterTypes);
+                                .getMethod(agentCommandRequest.getMethodName(), expectedMethodArgumentTypes);
                     } catch (NoSuchMethodException noSuchMethodException) {
 
                     }
@@ -124,8 +124,24 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             methodList.add(method);
                             if (method.getName().equals(agentCommandRequest.getMethodName())
                                     && method.getParameterCount() == methodParameters.size()) {
-                                methodToExecute = method;
-                                break;
+
+                                Class<?>[] actualParameterTypes = method.getParameterTypes();
+
+                                boolean match = true;
+                                for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
+                                    Class<?> methodParameterType = expectedMethodArgumentTypes[i];
+                                    Class<?> actualParamType = actualParameterTypes[i];
+                                    if (!actualParamType.getCanonicalName().equals(methodParameterType.getCanonicalName())) {
+                                        match = false;
+                                        break;
+                                    }
+                                }
+
+                                if (match) {
+                                    methodToExecute = method;
+                                    break;
+                                }
+
                             }
                         }
                     }
