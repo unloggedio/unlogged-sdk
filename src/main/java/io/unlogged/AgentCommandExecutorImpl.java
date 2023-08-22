@@ -203,6 +203,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
                         agentCommandResponse.setMethodReturnValue(
                                 objectMapper.writeValueAsString(returnedFlux.block()));
+                    } else if (methodReturnValue instanceof String) {
+                        agentCommandResponse.setMethodReturnValue(methodReturnValue);
                     } else {
                         agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(methodReturnValue));
                     }
