@@ -195,14 +195,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         agentCommandResponse.setMethodReturnValue(Double.doubleToLongBits((Double) methodReturnValue));
                     } else if (methodReturnValue instanceof Float) {
                         agentCommandResponse.setMethodReturnValue(Float.floatToIntBits((Float) methodReturnValue));
-                    } else if (methodReturnValue instanceof Flux) {
-                        Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-                        agentCommandResponse.setMethodReturnValue(
-                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
-                    } else if (methodReturnValue instanceof Mono) {
-                        Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-                        agentCommandResponse.setMethodReturnValue(
-                                objectMapper.writeValueAsString(returnedFlux.block()));
+//                    } else if (methodReturnValue instanceof Flux) {
+//                        Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
+//                        agentCommandResponse.setMethodReturnValue(
+//                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
+//                    } else if (methodReturnValue instanceof Mono) {
+//                        Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
+//                        agentCommandResponse.setMethodReturnValue(
+//                                objectMapper.writeValueAsString(returnedFlux.block()));
                     } else if (methodReturnValue instanceof String) {
                         agentCommandResponse.setMethodReturnValue(methodReturnValue);
                     } else {

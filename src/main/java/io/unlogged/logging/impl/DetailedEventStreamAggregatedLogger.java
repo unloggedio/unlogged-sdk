@@ -1,6 +1,5 @@
 package io.unlogged.logging.impl;
 
-import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.Module;
@@ -11,9 +10,6 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
@@ -225,8 +221,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
                 Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
                 configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING").get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
-                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null), false);
+                configureMethod.invoke(module,
+                        featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
+                configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null),
+                        false);
                 jacksonBuilder.addModule(module);
 //                System.out.println("Loaded hibernate module");
             } catch (ClassNotFoundException | NoSuchMethodException e) {
