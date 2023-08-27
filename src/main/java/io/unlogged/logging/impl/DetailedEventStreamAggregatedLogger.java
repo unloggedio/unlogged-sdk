@@ -48,6 +48,8 @@ import java.util.*;
 public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
+    public static final String FAILED_TO_RECORD_MESSAGE =
+            "{\"error\": \"failed to serialize object\", \"message\":\"";
     private final List<String> JACKSON_PROPERTY_NAMES_SET_FALSE = Arrays.asList(
             "FAIL_ON_UNKNOWN_PROPERTIES",
             "FAIL_ON_IGNORED_PROPERTIES",
@@ -485,7 +487,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
 
             } catch (Throwable e) {
-                probesToRecord.remove(dataId);
+                if (e instanceof JsonMappingException) {
+                    bytes = (FAILED_TO_RECORD_MESSAGE + e.getMessage() + "\"}").getBytes();
+                } else {
+                    probesToRecord.remove(dataId);
+                }
 //                if (value != null) {
 //                    kryo.register(value.getClass());
 //                    String message = e.getMessage();
