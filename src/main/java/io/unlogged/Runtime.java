@@ -186,6 +186,7 @@ public class Runtime {
 
 
         } catch (Throwable thx) {
+            logger = Logging.initialiseDiscardLogger();
             thx.printStackTrace();
             System.err.println(
                     "[unlogged] agent init failed, this session will not be recorded => " + thx.getMessage());

@@ -34,7 +34,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
      * This object records the number of threads observed by SELogger.
      */
     private static final AtomicInteger nextThreadId = new AtomicInteger(0);
-    private static final int TASK_QUEUE_CAPACITY = 1024 * 1024 * 32;
+//    private static final int TASK_QUEUE_CAPACITY = 1024 * 1024 * 32;
 //    public final ArrayList<Byte> data = new ArrayList<>(1024 * 1024 * 4);
     /**
      * Assign an integer to this thread.
@@ -63,7 +63,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     });
     //    private final Map<Integer, BloomFilter<Long>> valueIdFilterSet = new HashMap<>();
 //    private final Map<Integer, BloomFilter<Integer>> probeIdFilterSet = new HashMap<>();
-    private final OffLoadTaskPayload[] TaskQueueArray = new OffLoadTaskPayload[TASK_QUEUE_CAPACITY];
+//    private final OffLoadTaskPayload[] TaskQueueArray = new OffLoadTaskPayload[TASK_QUEUE_CAPACITY];
     private final AtomicLong eventId = new AtomicLong(0);
     ScheduledExecutorService threadPoolExecutor5Seconds = Executors.newScheduledThreadPool(2);
     ExecutorService threadPoolExecutor = Executors.newFixedThreadPool(4);
