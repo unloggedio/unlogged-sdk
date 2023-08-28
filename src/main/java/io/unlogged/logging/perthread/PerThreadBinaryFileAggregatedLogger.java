@@ -29,7 +29,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
      * The number of events stored in a single file.
      */
     public static final int MAX_EVENTS_PER_FILE = 100 * 1000;
-    public static final int WRITE_BYTE_BUFFER_SIZE = 1024 * 1024 * 16;
+    public static final int WRITE_BYTE_BUFFER_SIZE = 1024 * 10 * 16;
     /**
      * This object records the number of threads observed by SELogger.
      */
