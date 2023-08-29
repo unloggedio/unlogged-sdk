@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.util.ClassTypeUtil;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -30,25 +28,29 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         this.logger = logger;
     }
 
-    private static void closeHibernateSessionIfPossible(Object sessionInstance)
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+    private static void closeHibernateSessionIfPossible(Object sessionInstance) {
         if (sessionInstance != null) {
 
-            Method getTransactionMethod = sessionInstance.getClass().getMethod("getTransaction");
-            Object transactionInstance = getTransactionMethod.invoke(sessionInstance);
+            try {
+
+
+                Method getTransactionMethod = sessionInstance.getClass().getMethod("getTransaction");
+                Object transactionInstance = getTransactionMethod.invoke(sessionInstance);
 //            System.err.println("Transaction to commit: " + transactionInstance);
-            Method rollbackMethod = transactionInstance.getClass().getMethod("rollback");
-            rollbackMethod.invoke(transactionInstance);
+                Method rollbackMethod = transactionInstance.getClass().getMethod("rollback");
+                rollbackMethod.invoke(transactionInstance);
 
 
-            Method sessionCloseMethod = sessionInstance.getClass().getMethod("close");
-            sessionCloseMethod.invoke(sessionInstance);
+                Method sessionCloseMethod = sessionInstance.getClass().getMethod("close");
+                sessionCloseMethod.invoke(sessionInstance);
+            } catch (Exception e) {
+                // failed to close session ?
+            }
         }
     }
 
     @Override
     public AgentCommandResponse executeCommand(AgentCommandRequest agentCommandRequest) throws Exception {
-//        System.err.println("AgentCommandRequest: " + agentCommandRequest);
 
         AgentCommandRequestType requestType = agentCommandRequest.getRequestType();
         if (requestType == null) {
@@ -131,7 +133,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
                                     Class<?> methodParameterType = expectedMethodArgumentTypes[i];
                                     Class<?> actualParamType = actualParameterTypes[i];
-                                    if (!actualParamType.getCanonicalName().equals(methodParameterType.getCanonicalName())) {
+                                    if (!actualParamType.getCanonicalName()
+                                            .equals(methodParameterType.getCanonicalName())) {
                                         match = false;
                                         break;
                                     }
@@ -246,18 +249,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             ClassLoader targetClassLoader,
             List<String> methodParameters,
             Class<?>[] parameterTypesClass,
-            List<String> parameterTypes) throws JsonProcessingException, ClassNotFoundException {
+            List<String> parameterTypes) throws JsonProcessingException {
         TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(targetClassLoader);
         Object[] parameters = new Object[methodParameters.size()];
 
         for (int i = 0; i < methodParameters.size(); i++) {
             String methodParameter = methodParameters.get(i);
             Class<?> parameterType = parameterTypesClass[i];
-//                    System.err.println("Make value of type [" + parameterType + "] from value: " + methodParameter);
-            Object parameterObject;
+            Object parameterObject = null;
             if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
-                parameterObject = objectMapper.readValue(methodParameter,
-                        Class.forName("org.springframework.util.LinkedMultiValueMap"));
+                try {
+                    parameterObject = objectMapper.readValue(methodParameter,
+                            Class.forName("org.springframework.util.LinkedMultiValueMap"));
+                } catch (ClassNotFoundException e) {
+                    // this should never happen
+                }
             } else {
 
                 JavaType typeReference;
@@ -313,21 +319,31 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    private Object tryOpenHibernateSessionIfHibernateExists() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+    private Object tryOpenHibernateSessionIfHibernateExists() {
         Object hibernateSessionFactory = logger.getObjectByClassName("org.hibernate.internal.SessionFactoryImpl");
         Object sessionInstance = null;
         if (hibernateSessionFactory != null) {
+            try {
+
+
 //            System.err.println("Hibernate session factory: " + hibernateSessionFactory);
-            Method openSessionMethod = hibernateSessionFactory.getClass().getMethod("openSession");
-            sessionInstance = openSessionMethod.invoke(hibernateSessionFactory);
+                Method openSessionMethod = hibernateSessionFactory.getClass().getMethod("openSession");
+                sessionInstance = openSessionMethod.invoke(hibernateSessionFactory);
 //            System.err.println("Hibernate session opened: " + sessionInstance);
-            Class<?> managedSessionContextClass = Class.forName("org.hibernate.context.internal.ManagedSessionContext");
-            Method bindMethod = managedSessionContextClass.getMethod("bind", Class.forName("org.hibernate.Session"));
-            bindMethod.invoke(null, sessionInstance);
+                Class<?> managedSessionContextClass = Class.forName(
+                        "org.hibernate.context.internal.ManagedSessionContext");
+                Method bindMethod = managedSessionContextClass.getMethod("bind",
+                        Class.forName("org.hibernate.Session"));
+                bindMethod.invoke(null, sessionInstance);
 
 
-            Method beginTransactionMethod = sessionInstance.getClass().getMethod("beginTransaction");
-            beginTransactionMethod.invoke(sessionInstance);
+                Method beginTransactionMethod = sessionInstance.getClass().getMethod("beginTransaction");
+                beginTransactionMethod.invoke(sessionInstance);
+            } catch (Exception e) {
+                // failed to create hibernate session
+                return null;
+            }
+
         }
         return sessionInstance;
     }

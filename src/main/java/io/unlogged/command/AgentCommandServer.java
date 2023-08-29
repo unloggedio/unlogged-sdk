@@ -78,7 +78,7 @@ public class AgentCommandServer extends NanoHTTPD {
             }
             String responseBody = objectMapper.writeValueAsString(commandResponse);
             return newFixedLengthResponse(Response.Status.OK, "application/json", responseBody);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             AgentCommandErrorResponse agentCommandErrorResponse = new AgentCommandErrorResponse(e.getMessage());
             if (e instanceof NoSuchMethodException) {
