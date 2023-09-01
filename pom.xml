@@ -13,11 +13,11 @@
     <version>0.0.27</version>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <jackson.version>2.13.5</jackson.version>
+        <jackson.version>2.14.3</jackson.version>
         <jackson.scope>compile</jackson.scope>
 
     </properties>
@@ -32,14 +32,6 @@
             <id>ossrh</id>
             <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
-        <!--                <repository>-->
-        <!--                    <id>gitlab-maven</id>-->
-        <!--                    <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>-->
-        <!--                </repository>-->
-        <!--                <snapshotRepository>-->
-        <!--                    <id>gitlab-maven</id>-->
-        <!--                    <url>${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven</url>-->
-        <!--                </snapshotRepository>-->
     </distributionManagement>
     <developers>
         <developer>
@@ -83,15 +75,7 @@
                     <exists>${java.home}/../lib/tools.jar</exists>
                 </file>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>jdk.tools</groupId>
-                    <artifactId>jdk.tools</artifactId>
-                    <scope>system</scope>
-                    <version>1.6</version>
-                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
-                </dependency>
-            </dependencies>
+
         </profile>
         <profile>
             <id>osx-jdk</id>
@@ -100,15 +84,7 @@
                     <exists>${java.home}/../Classes/classes.jar</exists>
                 </file>
             </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>jdk.tools</groupId>
-                    <artifactId>jdk.tools</artifactId>
-                    <scope>system</scope>
-                    <version>1.6</version>
-                    <systemPath>${java.home}/../Classes/classes.jar</systemPath>
-                </dependency>
-            </dependencies>
+
         </profile>
 
     </profiles>
@@ -170,7 +146,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
-            <version>3.4.17</version>
+            <version>3.5.4</version>
         </dependency>
 
 
@@ -289,7 +265,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.8.1</version>
                 <configuration>
                     <compilerArgument>-proc:none</compilerArgument>
                     <source>1.8</source>
@@ -325,11 +301,6 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.9.1</version>
                 <configuration>
-                    <!--                    <excludePackageNames>io.unlogged.core.*:io.unlogged.weaver.*:io.unlogged.core.javac.*:com.sun.tools.*</excludePackageNames>-->
-                    <!--                    <debug>true</debug>-->
-                    <!--                    <excludes>-->
-                    <!--                        JavacTreeMaker.java-->
-                    <!--                    </excludes>-->
                     <sourceFileIncludes>
                         <fileInclude>io/unlogged/*.java</fileInclude>
                     </sourceFileIncludes>
