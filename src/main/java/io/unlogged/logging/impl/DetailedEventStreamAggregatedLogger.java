@@ -153,6 +153,60 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
                 public boolean hasIgnoreMarker(AnnotatedMember m) {
+                    String fullName = m.getFullName();
+                    if (m.getDeclaringClass().getCanonicalName().contains("_$$_")) {
+                        return true;
+                    }
+                    String rawTypeCanonicalName = m.getRawType().getCanonicalName();
+                    if (rawTypeCanonicalName.equals("javassist.util.proxy.MethodHandler")) {
+                        return true;
+                    }
+                    if (fullName.contains(".$Proxy")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("java.lang.Thread")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("java.util.function.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("java.lang.reflect.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("jdk.internal.reflect.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("io.mongock.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("sun.reflect.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.equals("sun.nio.ch.Interruptible")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.equals("java.security.AccessControlContext")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.equals("java.lang.ClassLoader")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.equals("java.lang.Runnable")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("reactor.core.")) {
+                        return true;
+                    }
+                    if (fullName.startsWith("reactor.")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("io.netty.resolver")) {
+                        return true;
+                    }
+                    if (rawTypeCanonicalName.startsWith("org.reactivestreams.")) {
+                        return true;
+                    }
+                    System.out.println("hasIgnoreMarker: " + m.getFullName() + " => " + rawTypeCanonicalName);
                     return false;
                 }
 

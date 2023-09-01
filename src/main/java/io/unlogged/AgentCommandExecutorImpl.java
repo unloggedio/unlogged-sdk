@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.util.ClassTypeUtil;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -209,7 +211,28 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     } else if (methodReturnValue instanceof String) {
                         agentCommandResponse.setMethodReturnValue(methodReturnValue);
                     } else {
-                        agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(methodReturnValue));
+                        try {
+                            agentCommandResponse.setMethodReturnValue(
+                                    objectMapper.writeValueAsString(methodReturnValue));
+                        } catch (InvalidDefinitionException ide) {
+                            if (methodReturnValue instanceof Flux) {
+                                Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
+                                agentCommandResponse.setMethodReturnValue(
+                                        objectMapper.writeValueAsString(returnedFlux.collectList().block()));
+                            } else if (methodReturnValue instanceof Mono) {
+                                Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
+                                agentCommandResponse.setMethodReturnValue(
+                                        objectMapper.writeValueAsString(returnedFlux.block()));
+                            } else {
+                                agentCommandResponse.setMethodReturnValue("Failed to serialize response object of " +
+                                        "type: " + (methodReturnValue.getClass() != null ?
+                                        methodReturnValue.getClass().getCanonicalName() : methodReturnValue));
+                            }
+                        }catch (Exception e) {
+                            agentCommandResponse.setMethodReturnValue("Failed to serialize response object of " +
+                                    "type: " + (methodReturnValue.getClass() != null ?
+                                    methodReturnValue.getClass().getCanonicalName() : methodReturnValue));
+                        }
                     }
 
                     agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
