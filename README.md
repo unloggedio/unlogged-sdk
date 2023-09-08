@@ -1,36 +1,67 @@
+# Unlogged Java SDK
 
-Release Versions
+Unlogged Java SDK enabled recording of code execution in a binary format. The recording is highly detailed and can 
+be used to reconstruct the code execution from scratch.
+
+The [binary format descriptions](https://github.com/unloggedio/common/tree/master/src/main/kaitai) are available in Kaitai format here
+
+## Usage
+
+1. Include dependency
+
+### Maven
 ```xml
 <dependencies>
     <dependency>
         <groupId>io.unlogged</groupId>
         <artifactId>unlogged-java-sdk</artifactId>
-        <version>0.0.12</version>
+        <version>0.0.26</version>
     </dependency>
 </dependencies>
 ```
 
-Snapshot Versions
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.unlogged</groupId>
-        <artifactId>unlogged-java-sdk</artifactId>
-        <version>0.0.12</version>
-    </dependency>
-</dependencies>
+### Gradle
 
-<repositories>
-    <repository>
-        <id>ossrh</id>
-        <name>Repository for snapshots</name>
-        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        <snapshots>
-            <enabled>true</enabled>
-        </snapshots>
-    </repository>
-</repositories>
+```groovy
+dependencies
+{
+    implementation 'video.bug:unlogged-sdk:0.0.26'
+    annotationProcessor 'video.bug:unlogged-sdk:0.0.26'
+}
 ```
+
+2. Add `@Unlogged` annotation to your application entry point
+```java
+    @Unlogged
+    public static void main(String[] args) {
+        // 
+    }
+```
+
+## Disabling recording
+
+Adding the unlogged-sdk adds probes to your code which emits events in a binary format. Adding the `@Unlogged` 
+enabled to actual execution of those probes.
+
+### To disable at compile time
+
+```bash
+mvn package -Dunlogged.disable
+```
+
+or 
+
+```bash
+./gradlew build -Dunlogged.disable
+```
+
+### To disable at runtime (if not disabled at compile time)
+
+```java
+@Unlogged(enable = false)
+```
+
+You can find the latest release version here: https://mvnrepository.com/artifact/video.bug/unlogged-sdk
 
 
 Lombok License

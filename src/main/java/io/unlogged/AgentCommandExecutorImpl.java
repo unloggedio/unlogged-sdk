@@ -18,7 +18,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
@@ -92,12 +91,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 targetClassLoader = objectInstanceByClass != null ?
                         objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
-                Method methodToExecute = null;
 
-                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(
-                        agentCommandRequest.getMethodSignature());
+                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(agentCommandRequest.getMethodSignature());
 
-                // do not remove this transformation
+                // DO NOT REMOVE this transformation
                 String methodReturnType = methodSignatureParts.remove(methodSignatureParts.size() - 1);
 
                 List<String> methodParameters = agentCommandRequest.getMethodParameters();
@@ -112,62 +109,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
 
-                List<Method> methodList = new ArrayList<>();
-                while (objectClass != null && !objectClass.equals(Object.class)) {
+                // gets a method or throws exception if no such method
+                Method methodToExecute = getMethodToExecute(objectClass, agentCommandRequest.getMethodName(),
+                        expectedMethodArgumentTypes);
 
-                    try {
-                        methodToExecute = objectClass
-                                .getMethod(agentCommandRequest.getMethodName(), expectedMethodArgumentTypes);
-                    } catch (NoSuchMethodException noSuchMethodException) {
-
-                    }
-
-                    if (methodToExecute == null) {
-                        Method[] methods = objectClass.getDeclaredMethods();
-                        for (Method method : methods) {
-                            methodList.add(method);
-                            if (method.getName().equals(agentCommandRequest.getMethodName())
-                                    && method.getParameterCount() == methodParameters.size()) {
-
-                                Class<?>[] actualParameterTypes = method.getParameterTypes();
-
-                                boolean match = true;
-                                for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
-                                    Class<?> methodParameterType = expectedMethodArgumentTypes[i];
-                                    Class<?> actualParamType = actualParameterTypes[i];
-                                    if (!actualParamType.getCanonicalName()
-                                            .equals(methodParameterType.getCanonicalName())) {
-                                        match = false;
-                                        break;
-                                    }
-                                }
-
-                                if (match) {
-                                    methodToExecute = method;
-                                    break;
-                                }
-
-                            }
-                        }
-                    }
-                    if (methodToExecute != null) {
-                        break;
-                    }
-                    objectClass = objectClass.getSuperclass();
-                }
-
-                if (methodToExecute == null) {
-                    List<String> methodNamesList = methodList.stream()
-                            .map(Method::getName)
-                            .collect(Collectors.toList());
-                    System.err.println("Method not found: " + agentCommandRequest.getMethodName()
-                            + ", methods were: " + methodNamesList);
-                    throw new NoSuchMethodException("method not found [" + agentCommandRequest.getMethodName()
-                            + "] in class [" + agentCommandRequest.getClassName() + "]. Available methods are: "
-                            + methodNamesList);
-                }
-
-
+                // we know more complex ways to do bypassing the security checks this thanks to lombok
+                // but for now this will do
                 methodToExecute.setAccessible(true);
 
 
@@ -196,44 +143,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 try {
                     Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
 
-                    if (methodReturnValue instanceof Double) {
-                        agentCommandResponse.setMethodReturnValue(Double.doubleToLongBits((Double) methodReturnValue));
-                    } else if (methodReturnValue instanceof Float) {
-                        agentCommandResponse.setMethodReturnValue(Float.floatToIntBits((Float) methodReturnValue));
-//                    } else if (methodReturnValue instanceof Flux) {
-//                        Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-//                        agentCommandResponse.setMethodReturnValue(
-//                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
-//                    } else if (methodReturnValue instanceof Mono) {
-//                        Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-//                        agentCommandResponse.setMethodReturnValue(
-//                                objectMapper.writeValueAsString(returnedFlux.block()));
-                    } else if (methodReturnValue instanceof String) {
-                        agentCommandResponse.setMethodReturnValue(methodReturnValue);
-                    } else {
-                        try {
-                            agentCommandResponse.setMethodReturnValue(
-                                    objectMapper.writeValueAsString(methodReturnValue));
-                        } catch (InvalidDefinitionException ide) {
-                            if (methodReturnValue instanceof Flux) {
-                                Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-                                agentCommandResponse.setMethodReturnValue(
-                                        objectMapper.writeValueAsString(returnedFlux.collectList().block()));
-                            } else if (methodReturnValue instanceof Mono) {
-                                Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-                                agentCommandResponse.setMethodReturnValue(
-                                        objectMapper.writeValueAsString(returnedFlux.block()));
-                            } else {
-                                agentCommandResponse.setMethodReturnValue("Failed to serialize response object of " +
-                                        "type: " + (methodReturnValue.getClass() != null ?
-                                        methodReturnValue.getClass().getCanonicalName() : methodReturnValue));
-                            }
-                        }catch (Exception e) {
-                            agentCommandResponse.setMethodReturnValue("Failed to serialize response object of " +
-                                    "type: " + (methodReturnValue.getClass() != null ?
-                                    methodReturnValue.getClass().getCanonicalName() : methodReturnValue));
-                        }
-                    }
+                    Object serializedValue = serializeMethodReturnValue(methodReturnValue);
+                    agentCommandResponse.setMethodReturnValue(serializedValue);
 
                     agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
                     agentCommandResponse.setResponseType(ResponseType.NORMAL);
@@ -266,6 +177,106 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
 
 
+    }
+
+    private Method getMethodToExecute(Class<?> objectClass, String expectedMethodName,
+                                      Class<?>[] expectedMethodArgumentTypes)
+            throws NoSuchMethodException {
+
+        String className = objectClass.getCanonicalName();
+
+        Method methodToExecute = null;
+        List<String> methodNamesList = new ArrayList<>();
+        while (objectClass != null && !objectClass.equals(Object.class)) {
+
+            try {
+                methodToExecute = objectClass
+                        .getMethod(expectedMethodName, expectedMethodArgumentTypes);
+            } catch (NoSuchMethodException ignored) {
+
+            }
+
+            if (methodToExecute == null) {
+                Method[] methods = objectClass.getDeclaredMethods();
+                for (Method method : methods) {
+                    String methodName = method.getName();
+                    methodNamesList.add(methodName);
+                    if (methodName.equals(expectedMethodName)
+                            && method.getParameterCount() == expectedMethodArgumentTypes.length) {
+
+                        Class<?>[] actualParameterTypes = method.getParameterTypes();
+
+                        boolean match = true;
+                        for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
+                            Class<?> methodParameterType = expectedMethodArgumentTypes[i];
+                            Class<?> actualParamType = actualParameterTypes[i];
+                            if (!actualParamType.getCanonicalName()
+                                    .equals(methodParameterType.getCanonicalName())) {
+                                match = false;
+                                break;
+                            }
+                        }
+
+                        if (match) {
+                            methodToExecute = method;
+                            break;
+                        }
+
+                    }
+                }
+            }
+            if (methodToExecute != null) {
+                break;
+            }
+            objectClass = objectClass.getSuperclass();
+        }
+        if (methodToExecute == null) {
+            System.err.println("Method not found: " + expectedMethodName
+                    + ", methods were: " + methodNamesList);
+            throw new NoSuchMethodException("method not found [" + expectedMethodName
+                    + "] in class [" + className + "]. Available methods are: "
+                    + methodNamesList);
+        }
+
+        return methodToExecute;
+    }
+
+    private Object serializeMethodReturnValue(Object methodReturnValue) throws JsonProcessingException {
+        if (methodReturnValue instanceof Double) {
+            return Double.doubleToLongBits((Double) methodReturnValue);
+        } else if (methodReturnValue instanceof Float) {
+            return Float.floatToIntBits((Float) methodReturnValue);
+//                    } else if (methodReturnValue instanceof Flux) {
+//                        Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
+//                        agentCommandResponse.setMethodReturnValue(
+//                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
+//                    } else if (methodReturnValue instanceof Mono) {
+//                        Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
+//                        agentCommandResponse.setMethodReturnValue(
+//                                objectMapper.writeValueAsString(returnedFlux.block()));
+        } else if (methodReturnValue instanceof String) {
+            return methodReturnValue;
+        } else {
+            try {
+                return objectMapper.writeValueAsString(methodReturnValue);
+            } catch (InvalidDefinitionException ide) {
+                if (methodReturnValue instanceof Flux) {
+                    Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
+                    return objectMapper.writeValueAsString(returnedFlux.collectList().block());
+                } else if (methodReturnValue instanceof Mono) {
+                    Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
+                    return objectMapper.writeValueAsString(returnedFlux.block());
+                } else {
+                    return "Failed to serialize response object of " +
+                            "type: " + (methodReturnValue.getClass() != null ?
+                            methodReturnValue.getClass().getCanonicalName() : methodReturnValue);
+                }
+            } catch (Exception e) {
+                return "Failed to serialize response object of " +
+                        "type: " + (methodReturnValue.getClass() != null ?
+                        methodReturnValue.getClass().getCanonicalName() : methodReturnValue);
+            }
+        }
     }
 
     private Object[] buildParametersUsingTargetClass(
