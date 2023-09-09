@@ -227,7 +227,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         Collectors.toList()));
 
 
-        DynamicType.Unloaded<? extends Object> extendedClass = new ByteBuddy()
+        ByteBuddy byteBuddyInstance = new ByteBuddy();
+        DynamicType.Unloaded<? extends Object> extendedClass = byteBuddyInstance
                 .subclass(targetClassType)
                 .make();
 
@@ -247,8 +248,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     field.setAccessible(true);
                     List<DeclaredMock> declaredMocksForField = mocksByFieldName.get(field.getName());
 
+                    Object fieldValue = field.get(objectInstanceByClass);
                     if (declaredMocksForField == null || declaredMocksForField.size() == 0) {
-                        Object fieldValue = field.get(objectInstanceByClass);
                         field.set(extendedClassInstance, fieldValue);
                     } else {
 
@@ -257,21 +258,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                         if (existingMockInstance == null) {
-                            MockHandler mockHandler = new MockHandler(declaredMocksForField);
+                            MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
+                                    byteBuddyInstance, objenesis, fieldValue);
                             Class<?> fieldType = field.getType();
-                            DynamicType.Loaded<?> loadedMockedField = new ByteBuddy()
+                            DynamicType.Loaded<?> loadedMockedField = byteBuddyInstance
                                     .subclass(fieldType)
                                     .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
                                     .make()
                                     .load(targetClassLoader);
 
-//                            Object mockedFieldInstance = loadedMockedField.getLoaded()
-//                                    .getDeclaredConstructor()
-//                                    .newInstance();
-
                             Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-                            System.out.println(
-                                    "Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
+
+//                            System.out.println("Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
 
                             existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
                                     loadedMockedField);
@@ -281,8 +279,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             existingMockInstance.getMockHandler().setDeclaredMocks(declaredMocksForField);
                         }
 
-                        System.out.println(
-                                "Setting mocked field [" + field.getName() + "] => " + existingMockInstance.getMockedFieldInstance());
+//                        System.out.println("Setting mocked field [" + field.getName() + "] => " + existingMockInstance.getMockedFieldInstance());
                         field.set(extendedClassInstance, existingMockInstance.getMockedFieldInstance());
                     }
 

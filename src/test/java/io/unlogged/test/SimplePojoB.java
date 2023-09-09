@@ -13,7 +13,18 @@ public class SimplePojoB {
         return strValue;
     }
 
+    public void setStrValue(String strValue) {
+        this.strValue = strValue;
+    }
+
+    public SimplePojoB() {
+    }
+
     public Integer getIntValue() {
         return intValue;
+    }
+
+    public void setIntValue(Integer intValue) {
+        this.intValue = intValue;
     }
 }

@@ -37,4 +37,17 @@ public class ReturnValue {
     public void addDeclaredMock(DeclaredMock mockDefinition) {
         declaredMocks.add(mockDefinition);
     }
+
+    public List<DeclaredMock> getDeclaredMocks() {
+        return declaredMocks;
+    }
+
+    @Override
+    public String toString() {
+        return "ReturnValue{" +
+                "value='" + value + '\'' +
+                ", returnValueType=" + returnValueType +
+                ", className='" + className + '\'' +
+                '}';
+    }
 }

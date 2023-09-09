@@ -29,7 +29,8 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
                 Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("", SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
+                new ReturnValue("{\"aStringValue\": \"aStringValue\", \"aLongValue\": 9988}",
+                        SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
                 MethodExitType.NORMAL));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
@@ -42,7 +43,8 @@ class AgentCommandExecutorImplTest {
 
 
         SimplePojoA returnedValue = simpleServiceAWithMocks.callToTest("a val", new SimplePojoB("1", 1));
-
         System.out.println("Mocked value: " + objectMapper.writeValueAsString(returnedValue));
+        SimplePojoA originalValueAgain = simpleServiceAWithMocks.callToTest1("a val", new SimplePojoB("1", 1));
+        System.out.println("Original value: " + objectMapper.writeValueAsString(originalValueAgain));
     }
 }
