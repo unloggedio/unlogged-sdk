@@ -7,22 +7,28 @@ import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
+import io.unlogged.mocking.*;
 import io.unlogged.util.ClassTypeUtil;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.implementation.MethodDelegation;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     final private ObjectMapper objectMapper;
     final private IEventLogger logger;
+    Objenesis objenesis = new ObjenesisStd(); // or ObjenesisSerializer
+    private Map<String, MockInstance> mockInstanceMap = new HashMap<>();
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -65,12 +71,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             try {
 
 
-                Class<?> objectClass;
+                Class<?> targetClassType;
                 ClassLoader targetClassLoader;
 
                 Object objectInstanceByClass = null;
 
-                objectInstanceByClass = logger.getObjectByClassName(agentCommandRequest.getClassName());
+                String targetClassName = agentCommandRequest.getClassName();
+                objectInstanceByClass = logger.getObjectByClassName(targetClassName);
                 List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
                 if (objectInstanceByClass == null && alternateClassNames != null && alternateClassNames.size() > 0) {
                     for (String alternateClassName : alternateClassNames) {
@@ -82,17 +89,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
                 ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
                 if (objectInstanceByClass == null) {
-                    objectInstanceByClass = tryObjectConstruct(agentCommandRequest.getClassName(), targetClassLoader1);
+                    objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1);
                 }
 
-                objectClass = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
-                        Class.forName(agentCommandRequest.getClassName(), false, targetClassLoader1);
+                targetClassType = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
+                        Class.forName(targetClassName, false, targetClassLoader1);
 
                 targetClassLoader = objectInstanceByClass != null ?
                         objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
 
-                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(agentCommandRequest.getMethodSignature());
+                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(
+                        agentCommandRequest.getMethodSignature());
 
                 // DO NOT REMOVE this transformation
                 String methodReturnType = methodSignatureParts.remove(methodSignatureParts.size() - 1);
@@ -110,7 +118,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                 // gets a method or throws exception if no such method
-                Method methodToExecute = getMethodToExecute(objectClass, agentCommandRequest.getMethodName(),
+                Method methodToExecute = getMethodToExecute(targetClassType, agentCommandRequest.getMethodName(),
                         expectedMethodArgumentTypes);
 
                 // we know more complex ways to do bypassing the security checks this thanks to lombok
@@ -135,10 +143,39 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                 AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
-                agentCommandResponse.setTargetClassName(agentCommandRequest.getClassName());
+                agentCommandResponse.setTargetClassName(targetClassName);
                 agentCommandResponse.setTargetMethodName(agentCommandRequest.getMethodName());
                 agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
                 agentCommandResponse.setTimestamp(new Date().getTime());
+
+                List<DeclaredMock> declaredMocksList = new ArrayList<>();
+
+                declaredMocksList.add(new DeclaredMock(
+                        "org.springframework.data.redis.core.RedisTemplate",
+                        "redisTemplate2", "delete",
+                        Arrays.asList(new ParameterMatcher("any", "java.util.List")),
+                        new ReturnValue("1237L", "java.lang.Long", ReturnValueType.REAL), MethodExitType.NORMAL
+                ));
+
+                ReturnValue returnParameter = new ReturnValue(null,
+                        "org.springframework.data.redis.core.ListOperations", ReturnValueType.MOCK);
+
+                returnParameter.addDeclaredMock(new DeclaredMock(null, null,
+                        "leftPop", Arrays.asList(
+                        new ParameterMatcher("any", "java.lang.String")
+                ), new ReturnValue("==2q83r8", "]B", ReturnValueType.REAL), MethodExitType.NORMAL));
+
+                declaredMocksList.add(new DeclaredMock(
+                        "org.springframework.data.redis.core.RedisTemplate",
+                        "redisTemplate2", "opsForList",
+                        Arrays.asList(new ParameterMatcher("any", "java.util.List")),
+                        returnParameter, MethodExitType.NORMAL
+                ));
+
+
+                objectInstanceByClass = arrangeMocks(targetClassType, targetClassLoader, objectInstanceByClass,
+                        declaredMocksList);
+
 
                 try {
                     Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
@@ -177,6 +214,88 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
 
 
+    }
+
+    public Object arrangeMocks(Class<?> targetClassType, ClassLoader targetClassLoader, Object objectInstanceByClass,
+                               List<DeclaredMock> declaredMocksList) {
+        if (declaredMocksList == null || declaredMocksList.size() == 0) {
+            return objectInstanceByClass;
+        }
+        String targetClassName = targetClassType.getCanonicalName();
+        Map<String, List<DeclaredMock>> mocksByFieldName = declaredMocksList.stream()
+                .collect(Collectors.groupingBy(DeclaredMock::getFieldName,
+                        Collectors.toList()));
+
+
+        DynamicType.Unloaded<? extends Object> extendedClass = new ByteBuddy()
+                .subclass(targetClassType)
+                .make();
+
+        DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader);
+
+//        Object extendedClassInstance = extendedClassLoaded.getLoaded().getDeclaredConstructor().newInstance();
+        Object extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
+
+
+        Class<?> fieldCopyForClass = targetClassType;
+        while (fieldCopyForClass != null && !fieldCopyForClass.equals(Object.class)) {
+            Field[] declaredFields = fieldCopyForClass.getDeclaredFields();
+
+            for (Field field : declaredFields) {
+                try {
+
+                    field.setAccessible(true);
+                    List<DeclaredMock> declaredMocksForField = mocksByFieldName.get(field.getName());
+
+                    if (declaredMocksForField == null || declaredMocksForField.size() == 0) {
+                        Object fieldValue = field.get(objectInstanceByClass);
+                        field.set(extendedClassInstance, fieldValue);
+                    } else {
+
+                        String key = targetClassName + "#" + field.getName();
+                        MockInstance existingMockInstance = mockInstanceMap.get(key);
+
+
+                        if (existingMockInstance == null) {
+                            MockHandler mockHandler = new MockHandler(declaredMocksForField);
+                            Class<?> fieldType = field.getType();
+                            DynamicType.Loaded<?> loadedMockedField = new ByteBuddy()
+                                    .subclass(fieldType)
+                                    .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
+                                    .make()
+                                    .load(targetClassLoader);
+
+//                            Object mockedFieldInstance = loadedMockedField.getLoaded()
+//                                    .getDeclaredConstructor()
+//                                    .newInstance();
+
+                            Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
+                            System.out.println(
+                                    "Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
+
+                            existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
+                                    loadedMockedField);
+                            mockInstanceMap.put(key, existingMockInstance);
+
+                        } else {
+                            existingMockInstance.getMockHandler().setDeclaredMocks(declaredMocksForField);
+                        }
+
+                        System.out.println(
+                                "Setting mocked field [" + field.getName() + "] => " + existingMockInstance.getMockedFieldInstance());
+                        field.set(extendedClassInstance, existingMockInstance.getMockedFieldInstance());
+                    }
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.err.println("Failed to set value for field [" + field.getName() + "] => " + e.getMessage());
+                }
+            }
+
+            fieldCopyForClass = fieldCopyForClass.getSuperclass();
+        }
+        return extendedClassInstance;
     }
 
     private Method getMethodToExecute(Class<?> objectClass, String expectedMethodName,
