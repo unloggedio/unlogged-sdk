@@ -1,5 +1,8 @@
 package io.unlogged.command;
 
+import io.unlogged.mocking.DeclaredMock;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class AgentCommandRequest {
@@ -11,6 +14,7 @@ public class AgentCommandRequest {
     private List<String> methodParameters;
     private AgentCommandRequestType requestType;
     private List<String> parameterTypes;
+    private List<DeclaredMock> declaredMocks = new ArrayList<>();
 
     public List<String> getParameterTypes() {
         return parameterTypes;
@@ -85,5 +89,13 @@ public class AgentCommandRequest {
                 ", methodSignature='" + methodSignature + '\'' +
                 ", methodParameters=" + methodParameters +
                 '}';
+    }
+
+    public List<DeclaredMock> getDeclaredMocks() {
+        return declaredMocks;
+    }
+
+    public void setDeclaredMocks(List<DeclaredMock> declaredMocks) {
+        this.declaredMocks = declaredMocks;
     }
 }

@@ -148,30 +148,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
                 agentCommandResponse.setTimestamp(new Date().getTime());
 
-                List<DeclaredMock> declaredMocksList = new ArrayList<>();
-
-                declaredMocksList.add(new DeclaredMock(
-                        "org.springframework.data.redis.core.RedisTemplate",
-                        "redisTemplate2", "delete",
-                        Arrays.asList(new ParameterMatcher("any", "java.util.List")),
-                        new ReturnValue("1237L", "java.lang.Long", ReturnValueType.REAL), MethodExitType.NORMAL
-                ));
-
-                ReturnValue returnParameter = new ReturnValue(null,
-                        "org.springframework.data.redis.core.ListOperations", ReturnValueType.MOCK);
-
-                returnParameter.addDeclaredMock(new DeclaredMock(null, null,
-                        "leftPop", Arrays.asList(
-                        new ParameterMatcher("any", "java.lang.String")
-                ), new ReturnValue("==2q83r8", "]B", ReturnValueType.REAL), MethodExitType.NORMAL));
-
-                declaredMocksList.add(new DeclaredMock(
-                        "org.springframework.data.redis.core.RedisTemplate",
-                        "redisTemplate2", "opsForList",
-                        Arrays.asList(new ParameterMatcher("any", "java.util.List")),
-                        returnParameter, MethodExitType.NORMAL
-                ));
-
+                List<DeclaredMock> declaredMocksList = agentCommandRequest.getDeclaredMocks();
 
                 objectInstanceByClass = arrangeMocks(targetClassType, targetClassLoader, objectInstanceByClass,
                         declaredMocksList);
