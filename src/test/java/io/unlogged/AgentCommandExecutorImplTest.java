@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.unlogged.logging.DiscardEventLogger;
 import io.unlogged.mocking.*;
 import io.unlogged.test.*;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -26,12 +27,12 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
                 Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("{\"aStringValue\": \"aStringValue\", \"aLongValue\": 9988}",
+                new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
                         SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
                 MethodExitType.NORMAL));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
-        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
+//        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
 
         SimpleServiceA simpleServiceAWithMocks = (SimpleServiceA) agentCommandExecutor.arrangeMocks(
                 simpleServiceA.getClass(),
@@ -40,10 +41,19 @@ class AgentCommandExecutorImplTest {
 
 
         SimplePojoA returnedValue = simpleServiceAWithMocks.callToTest("a val", new SimplePojoB("1", 1));
-        System.out.println("Mocked value: " + objectMapper.writeValueAsString(returnedValue));
+        String mockedResponseString = objectMapper.writeValueAsString(returnedValue);
+//        System.out.println("Mocked value: " + mockedResponseString);
+        Assertions.assertTrue(mockedResponseString.contains("9988"));
+        Assertions.assertTrue(mockedResponseString.contains("mockedStringResponse"));
+
+
         SimplePojoA originalValueAgain = simpleServiceAWithMocks.callToTest1("a val", new SimplePojoB("1", 1));
-        System.out.println("Original value: " + objectMapper.writeValueAsString(originalValueAgain));
+        String originalResponseString = objectMapper.writeValueAsString(originalValueAgain);
+        Assertions.assertTrue(originalResponseString.contains("a val-991"));
+        Assertions.assertTrue(originalResponseString.contains("7"));
+//        System.out.println("Original value: " + originalResponseString);
     }
+
     @Test
     void arrangeMocks1() throws Exception {
 
@@ -58,12 +68,12 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
                 Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("{\"aStringValue\": \"aStringValue\", \"aLongValue\": 9988}",
+                new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
                         SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
                 MethodExitType.NORMAL));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
-        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
+//        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
 
         SimpleServiceA simpleServiceAWithMocks = (SimpleServiceA) agentCommandExecutor.arrangeMocks(
                 simpleServiceA.getClass(),
@@ -72,8 +82,100 @@ class AgentCommandExecutorImplTest {
 
 
         SimplePojoA returnedValue = simpleServiceAWithMocks.callToTest("a val", new SimplePojoB("1", 1));
-        System.out.println("Mocked value: " + objectMapper.writeValueAsString(returnedValue));
+        String mockedResponseString = objectMapper.writeValueAsString(returnedValue);
+        Assertions.assertTrue(mockedResponseString.contains("9988"));
+        Assertions.assertTrue(mockedResponseString.contains("mockedStringResponse"));
+//        System.out.println("Mocked value: " + mockedResponseString);
         SimplePojoA originalValueAgain = simpleServiceAWithMocks.callToTest1("a val", new SimplePojoB("1", 1));
-        System.out.println("Original value: " + objectMapper.writeValueAsString(originalValueAgain));
+        String originalResponseString = objectMapper.writeValueAsString(originalValueAgain);
+        Assertions.assertTrue(originalResponseString.contains("a val-991"));
+        Assertions.assertTrue(originalResponseString.contains("7"));
+//        System.out.println("Original value: " + originalResponseString);
+    }
+
+    @Test
+    void arrangeMockThrows() throws Exception {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        AgentCommandExecutorImpl agentCommandExecutor = new AgentCommandExecutorImpl(objectMapper,
+                new DiscardEventLogger());
+
+        SimpleServiceA simpleServiceA = new ExtendedSimpleServiceA(new SimpleServiceB());
+
+
+        List<DeclaredMock> declaredMocks = new ArrayList<>();
+        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+                "makeAndReturn",
+                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
+                new ReturnValue("{\"message\": \"exception message\"}",
+                        WhatException.class.getCanonicalName(), ReturnValueType.REAL),
+                MethodExitType.EXCEPTION));
+
+        SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
+//        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
+
+        SimpleServiceA simpleServiceAWithMocks = (SimpleServiceA) agentCommandExecutor.arrangeMocks(
+                simpleServiceA.getClass(),
+                simpleServiceA.getClass().getClassLoader(),
+                simpleServiceA, declaredMocks);
+
+
+        try {
+            SimplePojoA returnedValue = simpleServiceAWithMocks.callToTest("a val", new SimplePojoB("1", 1));
+            Assertions.fail();
+        } catch (Exception e) {
+//            System.out.println("Exception class: " + e.getClass().getCanonicalName());
+            Assertions.assertTrue(e instanceof WhatException);
+            Assertions.assertEquals(null, e.getMessage());
+        }
+//        System.out.println("Mocked value: " + mockedResponseString);
+        SimplePojoA originalValueAgain = simpleServiceAWithMocks.callToTest1("a val", new SimplePojoB("1", 1));
+        String originalResponseString = objectMapper.writeValueAsString(originalValueAgain);
+        Assertions.assertTrue(originalResponseString.contains("a val-991"));
+        Assertions.assertTrue(originalResponseString.contains("7"));
+//        System.out.println("Original value: " + originalResponseString);
+    }
+
+    @Test
+    void arrangeMockThrowsWithMessage() throws Exception {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        AgentCommandExecutorImpl agentCommandExecutor = new AgentCommandExecutorImpl(objectMapper,
+                new DiscardEventLogger());
+
+        SimpleServiceA simpleServiceA = new ExtendedSimpleServiceA(new SimpleServiceB());
+
+
+        List<DeclaredMock> declaredMocks = new ArrayList<>();
+        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+                "makeAndReturn",
+                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
+                new ReturnValue("exception message",
+                        WhatExceptionWithMessage.class.getCanonicalName(), ReturnValueType.REAL),
+                MethodExitType.EXCEPTION));
+
+        SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
+//        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
+
+        SimpleServiceA simpleServiceAWithMocks = (SimpleServiceA) agentCommandExecutor.arrangeMocks(
+                simpleServiceA.getClass(),
+                simpleServiceA.getClass().getClassLoader(),
+                simpleServiceA, declaredMocks);
+
+
+        try {
+            SimplePojoA returnedValue = simpleServiceAWithMocks.callToTest("a val", new SimplePojoB("1", 1));
+            Assertions.fail();
+        } catch (Exception e) {
+//            System.out.println("Exception class: " + e.getClass().getCanonicalName());
+            Assertions.assertTrue(e instanceof WhatExceptionWithMessage);
+            Assertions.assertEquals("exception message", e.getMessage());
+        }
+//        System.out.println("Mocked value: " + mockedResponseString);
+        SimplePojoA originalValueAgain = simpleServiceAWithMocks.callToTest1("a val", new SimplePojoB("1", 1));
+        String originalResponseString = objectMapper.writeValueAsString(originalValueAgain);
+        Assertions.assertTrue(originalResponseString.contains("a val-991"));
+        Assertions.assertTrue(originalResponseString.contains("7"));
+//        System.out.println("Original value: " + originalResponseString);
     }
 }

@@ -9,6 +9,7 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
 import org.objenesis.Objenesis;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -87,10 +88,23 @@ public class MockHandler {
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
                             try {
-                                if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
-                                    returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
-                                            thisInstance.getClass().getClassLoader()
-                                                    .loadClass(returnParameter.getClassName()));
+                                if (declaredMock.getReturnType() == MethodExitType.NORMAL) {
+                                    if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
+                                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
+                                                thisInstance.getClass().getClassLoader()
+                                                        .loadClass(returnParameter.getClassName()));
+                                    }
+                                } else {
+                                    // this is an instance of exception class
+                                    Class<?> exceptionClassType = thisInstance.getClass().getClassLoader()
+                                            .loadClass(returnParameter.getClassName());
+                                    try {
+                                        Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(String.class);
+                                        returnValueInstance =
+                                                constructorWithMessage.newInstance(returnParameter.getValue());
+                                    } catch (Exception e) {
+                                        returnValueInstance = exceptionClassType.getConstructor().newInstance();
+                                    }
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -127,7 +141,8 @@ public class MockHandler {
 //                .getCanonicalName() + "] with args [" + Arrays.asList(methodArguments)
 //                + "] on " + superInstance.getClass().getCanonicalName() + " from " + thisInstance.getClass().getCanonicalName());
 
-        Method realMethod = originalImplementation.getClass().getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
+        Method realMethod = originalImplementation.getClass()
+                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
         return realMethod.invoke(originalImplementation, methodArguments);
     }
 
