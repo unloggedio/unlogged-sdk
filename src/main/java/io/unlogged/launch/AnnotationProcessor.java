@@ -88,7 +88,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     }
 
     public static class AstModificationNotifierData {
-        public volatile static boolean lombokInvoked = false;
+        public static volatile boolean lombokInvoked = false;
     }
 
 }

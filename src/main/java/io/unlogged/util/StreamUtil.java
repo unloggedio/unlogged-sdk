@@ -4,6 +4,9 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class StreamUtil {
+
+    private StreamUtil() {}
+
     public static final int BUFFER_SIZE = 8192;
 
     public static int copy(InputStream inputStream, OutputStream outputStream) throws IOException {

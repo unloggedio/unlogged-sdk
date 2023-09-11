@@ -17,8 +17,8 @@ import java.util.Map;
 
 public class TypeHierarchy {
 
-    final private Map<String, String> parentMap = new HashMap<>();
-    final private Map<String, String[]> interfaceMap = new HashMap<>();
+    private final Map<String, String> parentMap = new HashMap<>();
+    private final Map<String, String[]> interfaceMap = new HashMap<>();
     private final Names names;
     private final Symtab symtab;
     private Method loadClassMethod = null;
