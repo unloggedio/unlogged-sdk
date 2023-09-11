@@ -25,10 +25,10 @@ import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
-    final private ObjectMapper objectMapper;
-    final private IEventLogger logger;
+    private final ObjectMapper objectMapper;
+    private final IEventLogger logger;
     Objenesis objenesis = new ObjenesisStd(); // or ObjenesisSerializer
-    private Map<String, MockInstance> mockInstanceMap = new HashMap<>();
+    private final Map<String, MockInstance> mockInstanceMap = new HashMap<>();
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -430,15 +430,16 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
             // try to get the instance of the class using Singleton.getInstance
             for (Method method : methods) {
-                if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
-                    if (method.getReturnType().equals(loadedClass)) {
-                        try {
-                            return method.invoke(null);
-                        } catch (InvocationTargetException ex) {
-                            // this method for potentially getting instance from static getInstance type method
-                            // did not work
-                        }
+                if (method.getParameterCount() == 0
+                        && Modifier.isStatic(method.getModifiers())
+                        && (method.getReturnType().equals(loadedClass))) {
+                    try {
+                        return method.invoke(null);
+                    } catch (InvocationTargetException ex) {
+                        // this method for potentially getting instance from static getInstance type method
+                        // did not work
                     }
+
                 }
             }
             throw new RuntimeException(e);
