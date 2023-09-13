@@ -24,12 +24,15 @@ class AgentCommandExecutorImplTest {
 
 
         List<DeclaredMock> declaredMocks = new ArrayList<>();
-        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+        declaredMocks.add(new DeclaredMock("mock name",
+                SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
-                        SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
-                MethodExitType.NORMAL));
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        SimplePojoB.class.getCanonicalName())),
+                Arrays.asList(new ThenParameter(
+                        new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
+                                SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
+                        MethodExitType.NORMAL))));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
 //        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
@@ -65,12 +68,15 @@ class AgentCommandExecutorImplTest {
 
 
         List<DeclaredMock> declaredMocks = new ArrayList<>();
-        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+        declaredMocks.add(new DeclaredMock("mock name", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
-                        SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
-                MethodExitType.NORMAL));
+                Arrays.asList(new ParameterMatcher("fieldname", ParameterMatcherType.ANY,
+                        SimplePojoB.class.getCanonicalName())),
+                Arrays.asList(new ThenParameter(
+                        new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
+                                SimplePojoA.class.getCanonicalName(), ReturnValueType.REAL),
+                        MethodExitType.NORMAL)
+                )));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
 //        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
@@ -104,12 +110,13 @@ class AgentCommandExecutorImplTest {
 
 
         List<DeclaredMock> declaredMocks = new ArrayList<>();
-        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+        declaredMocks.add(new DeclaredMock("mockName", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("{\"message\": \"exception message\"}",
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        SimplePojoB.class.getCanonicalName())),
+                Arrays.asList(new ThenParameter(new ReturnValue("{\"message\": \"exception message\"}",
                         WhatException.class.getCanonicalName(), ReturnValueType.REAL),
-                MethodExitType.EXCEPTION));
+                        MethodExitType.EXCEPTION))));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
 //        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));
@@ -147,12 +154,15 @@ class AgentCommandExecutorImplTest {
 
 
         List<DeclaredMock> declaredMocks = new ArrayList<>();
-        declaredMocks.add(new DeclaredMock(SimplePojoB.class.getCanonicalName(), "simpleServiceB",
+        declaredMocks.add(new DeclaredMock("mockName", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("any", SimplePojoB.class.getCanonicalName())),
-                new ReturnValue("exception message",
-                        WhatExceptionWithMessage.class.getCanonicalName(), ReturnValueType.REAL),
-                MethodExitType.EXCEPTION));
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        SimplePojoB.class.getCanonicalName())),
+                Arrays.asList(new ThenParameter(
+                        new ReturnValue("exception message",
+                                WhatExceptionWithMessage.class.getCanonicalName(), ReturnValueType.REAL),
+                        MethodExitType.EXCEPTION)
+                )));
 
         SimplePojoA expectedValue = simpleServiceA.callToTest("a val", new SimplePojoB("1", 1));
 //        System.out.println("Expected value: " + objectMapper.writeValueAsString(expectedValue));

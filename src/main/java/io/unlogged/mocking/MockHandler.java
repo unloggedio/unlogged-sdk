@@ -22,6 +22,7 @@ public class MockHandler {
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
+    private final Map<Integer, Integer> mockMatchCountMap = new HashMap<>();
 
     public MockHandler(
             List<DeclaredMock> declaredMocks,
@@ -84,11 +85,16 @@ public class MockHandler {
 //                System.out.println("Intercepted call to mock: " + thisInstance.getClass().getName() + "." + methodName + "()");
                 if (mockMatched) {
                     Object returnValueInstance = null;
-                    ReturnValue returnParameter = declaredMock.getReturnParameter();
+                    int mockHash = declaredMock.hashCode();
+                    Integer matchCount = mockMatchCountMap.getOrDefault(mockHash, 0);
+                    ThenParameter thenParameter = declaredMock.getThenParameter().get(matchCount);
+                    matchCount += 1;
+                    mockMatchCountMap.put(mockHash, matchCount);
+                    ReturnValue returnParameter = thenParameter.getReturnParameter();
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
                             try {
-                                if (declaredMock.getReturnType() == MethodExitType.NORMAL) {
+                                if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
                                     if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
                                         returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
                                                 thisInstance.getClass().getClassLoader()
@@ -99,7 +105,8 @@ public class MockHandler {
                                     Class<?> exceptionClassType = thisInstance.getClass().getClassLoader()
                                             .loadClass(returnParameter.getClassName());
                                     try {
-                                        Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(String.class);
+                                        Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
+                                                String.class);
                                         returnValueInstance =
                                                 constructorWithMessage.newInstance(returnParameter.getValue());
                                     } catch (Exception e) {
@@ -127,10 +134,15 @@ public class MockHandler {
                         default:
                             throw new RuntimeException("Unknown return parameter type => " + returnParameter);
                     }
-                    switch (declaredMock.getReturnType()) {
+                    switch (thenParameter.getMethodExitType()) {
                         case NORMAL:
                             return returnValueInstance;
                         case EXCEPTION:
+                            if (returnValueInstance == null) {
+                                returnValueInstance =
+                                        new Exception(
+                                                "Object to be thrown from mock is null: " + declaredMock);
+                            }
                             throw (Throwable) returnValueInstance;
                     }
                 }
