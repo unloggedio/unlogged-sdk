@@ -14,7 +14,8 @@ import java.lang.annotation.Target;
 public @interface Unlogged {
     /**
      * Comma separated list of package names which are to be included for recording
-     * @return List of strings, each one being a package name
+     *
+     * @return Array of strings, each one being a package name
      */
     String[] includePackage() default "";
 
