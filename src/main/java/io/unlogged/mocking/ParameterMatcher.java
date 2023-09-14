@@ -50,6 +50,7 @@ public class ParameterMatcher {
     public String toString() {
         return "ParameterMatcher{" +
                 "name='" + name + '\'' +
+                ", type='" + type + '\'' +
                 ", value='" + value + '\'' +
                 '}';
     }

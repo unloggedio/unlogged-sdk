@@ -206,7 +206,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     if (rawTypeCanonicalName.startsWith("org.reactivestreams.")) {
                         return true;
                     }
-                    System.out.println("hasIgnoreMarker: " + m.getFullName() + " => " + rawTypeCanonicalName);
+//                    System.out.println("hasIgnoreMarker: " + m.getFullName() + " => " + rawTypeCanonicalName);
                     return false;
                 }
 
@@ -419,7 +419,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         } else {
             className = "";
         }
-        if (!className.contains("Lambda")) {
+        if (!className.contains("Lambda") && !className.contains("$Unlogged")) {
 //            System.err.println("Object instance: " + className);
             if (className.contains("_$")) {
                 className = className.substring(0, className.indexOf("_$"));

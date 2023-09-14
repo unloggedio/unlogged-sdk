@@ -7,10 +7,14 @@ import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
-import io.unlogged.mocking.*;
+import io.unlogged.mocking.DeclaredMock;
+import io.unlogged.mocking.MockHandler;
+import io.unlogged.mocking.MockInstance;
 import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.NamingStrategy;
 import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
@@ -22,13 +26,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
+import static net.openhft.chronicle.core.util.ObjectUtils.getAllInterfaces;
 
 public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     final private ObjectMapper objectMapper;
     final private IEventLogger logger;
-    Objenesis objenesis = new ObjenesisStd(); // or ObjenesisSerializer
-    private Map<String, MockInstance> mockInstanceMap = new HashMap<>();
+    private final ByteBuddy byteBuddyInstance = new ByteBuddy()
+            .with(new NamingStrategy.SuffixingRandom("Unlogged"));
+    Objenesis objenesis = new ObjenesisStd();
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -193,25 +199,25 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     }
 
-    public Object arrangeMocks(Class<?> targetClassType, ClassLoader targetClassLoader, Object objectInstanceByClass,
-                               List<DeclaredMock> declaredMocksList) {
+    public Object arrangeMocks(Class<?> targetClassType, ClassLoader targetClassLoader,
+                               Object objectInstanceByClass, List<DeclaredMock> declaredMocksList) {
         if (declaredMocksList == null || declaredMocksList.size() == 0) {
             return objectInstanceByClass;
         }
+
+        Map<String, MockInstance> mockInstanceMap = new HashMap<>();
+
         String targetClassName = targetClassType.getCanonicalName();
         Map<String, List<DeclaredMock>> mocksByFieldName = declaredMocksList.stream()
                 .collect(Collectors.groupingBy(DeclaredMock::getFieldName,
                         Collectors.toList()));
 
-
-        ByteBuddy byteBuddyInstance = new ByteBuddy();
         DynamicType.Unloaded<? extends Object> extendedClass = byteBuddyInstance
                 .subclass(targetClassType)
                 .make();
 
         DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader);
 
-//        Object extendedClassInstance = extendedClassLoaded.getLoaded().getDeclaredConstructor().newInstance();
         Object extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
 
 
@@ -227,6 +233,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                     Object fieldValue = field.get(objectInstanceByClass);
                     if (declaredMocksForField == null || declaredMocksForField.size() == 0) {
+                        if (fieldValue == null) {
+                            fieldValue = objenesis.newInstance(field.getType());
+                        }
                         field.set(extendedClassInstance, fieldValue);
                     } else {
 
@@ -238,15 +247,48 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
                                     byteBuddyInstance, objenesis, fieldValue);
                             Class<?> fieldType = field.getType();
-                            DynamicType.Loaded<?> loadedMockedField = byteBuddyInstance
-                                    .subclass(fieldType)
-                                    .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
-                                    .make()
-                                    .load(targetClassLoader);
+
+                            DynamicType.Loaded<?> loadedMockedField;
+                            if (fieldType.isInterface()) {
+                                Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
+                                Set<String> implementedClasses = new HashSet<>();
+                                implementedClasses.add(fieldType.getCanonicalName());
+
+                                List<Class<?>> pendingImplementations = new ArrayList<>();
+                                for (Class<?> implementedInterface : implementedInterfaces) {
+                                    if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
+                                        continue;
+                                    }
+                                    implementedClasses.add(implementedInterface.getCanonicalName());
+                                    pendingImplementations.add(implementedInterface);
+                                }
+
+
+                                for (Class<?> implementedInterface : pendingImplementations) {
+                                    System.err.println(
+                                            "Class[" + fieldType.getCanonicalName() + "] implements interface: " + implementedInterface.getCanonicalName());
+                                }
+
+                                loadedMockedField = byteBuddyInstance
+                                        .subclass(fieldType)
+                                        .implement(pendingImplementations)
+                                        .intercept(MethodDelegation.to(mockHandler))
+                                        .make()
+                                        .load(targetClassLoader, ClassLoadingStrategy.Default.INJECTION);
+
+                            } else {
+                                loadedMockedField = byteBuddyInstance
+                                        .subclass(fieldType)
+                                        .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
+                                        .make()
+                                        .load(targetClassLoader, ClassLoadingStrategy.Default.INJECTION);
+                            }
+
 
                             Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
 
-//                            System.out.println("Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
+//                            System.out.println(
+//                                    "Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
 
                             existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
                                     loadedMockedField);
@@ -413,6 +455,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     private Object tryObjectConstruct(String className, ClassLoader targetClassLoader)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+        Object newInstance = null;
         if (targetClassLoader == null) {
             System.err.println("Failed to construct instance of class [" + className + "]. classLoader is not defined");
         }
@@ -423,26 +466,28 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             try {
                 return noArgsConstructor.newInstance();
             } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
+//                throw new RuntimeException(e);
             }
         } catch (NoSuchMethodException e) {
-            Method[] methods = loadedClass.getMethods();
+            //
+        }
+        Method[] methods = loadedClass.getMethods();
 
-            // try to get the instance of the class using Singleton.getInstance
-            for (Method method : methods) {
-                if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
-                    if (method.getReturnType().equals(loadedClass)) {
-                        try {
-                            return method.invoke(null);
-                        } catch (InvocationTargetException ex) {
-                            // this method for potentially getting instance from static getInstance type method
-                            // did not work
-                        }
+        // try to get the instance of the class using Singleton.getInstance
+        for (Method method : methods) {
+            if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
+                if (method.getReturnType().equals(loadedClass)) {
+                    try {
+                        return method.invoke(null);
+                    } catch (InvocationTargetException ex) {
+                        // this method for potentially getting instance from static getInstance type method
+                        // did not work
                     }
                 }
             }
-            throw new RuntimeException(e);
         }
+        return objenesis.newInstance(loadedClass);
+//        throw new RuntimeException("Failed to create new instance of class " + className);
     }
 
 

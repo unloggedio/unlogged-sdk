@@ -1,8 +1,10 @@
 package io.unlogged.mocking;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.MethodDelegation;
@@ -12,6 +14,7 @@ import org.objenesis.Objenesis;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
@@ -22,7 +25,7 @@ public class MockHandler {
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
-    private final Map<Integer, Integer> mockMatchCountMap = new HashMap<>();
+    private final Map<Integer, AtomicInteger> mockMatchCountMap = new HashMap<>();
 
     public MockHandler(
             List<DeclaredMock> declaredMocks,
@@ -33,6 +36,7 @@ public class MockHandler {
         this.byteBuddy = byteBuddy;
         this.objenesis = objenesis;
         this.originalImplementation = originalImplementation;
+
         addDeclaredMocks(declaredMocks);
     }
 
@@ -48,18 +52,21 @@ public class MockHandler {
         for (DeclaredMock declaredMock : declaredMocks) {
             if (declaredMock.getMethodName().equals(methodName)) {
                 boolean mockMatched = true;
+//                System.out.println("Expected vs actual parameter size: " + declaredMock.getWhenParameter().size() +
+//                        ", " + methodArguments.length);
                 if (declaredMock.getWhenParameter().size() == methodArguments.length) {
                     List<ParameterMatcher> whenParameter = declaredMock.getWhenParameter();
                     for (int i = 0; i < whenParameter.size(); i++) {
                         ParameterMatcher parameterMatcher = whenParameter.get(i);
                         Object argument = methodArguments[i];
-                        switch (parameterMatcher.getName()) {
-                            case "any":
+//                        System.out.println("Parameter matcher: " + parameterMatcher);
+                        switch (parameterMatcher.getType()) {
+                            case ANY:
                                 if (!argument.getClass().getCanonicalName().equals(parameterMatcher.getValue())) {
                                     mockMatched = false;
                                 }
                                 break;
-                            case "is":
+                            case IS:
                                 try {
                                     JsonNode argumentAsJsonNode = objectMapper.readTree(
                                             objectMapper.writeValueAsString(argument));
@@ -75,20 +82,25 @@ public class MockHandler {
                                 }
                                 break;
                             default:
+//                                System.out.println("Invalid parameter matcher: " + parameterMatcher);
                                 throw new RuntimeException("Invalid " + parameterMatcher);
                         }
                         if (!mockMatched) {
+//                            System.out.println("Parameter mismatch: " + parameterMatcher);
                             break;
                         }
                     }
+                } else {
+                    mockMatched = false;
                 }
 //                System.out.println("Intercepted call to mock: " + thisInstance.getClass().getName() + "." + methodName + "()");
                 if (mockMatched) {
                     Object returnValueInstance = null;
                     int mockHash = declaredMock.hashCode();
-                    Integer matchCount = mockMatchCountMap.getOrDefault(mockHash, 0);
-                    ThenParameter thenParameter = declaredMock.getThenParameter().get(matchCount);
-                    matchCount += 1;
+                    AtomicInteger matchCount = mockMatchCountMap.getOrDefault(mockHash, new AtomicInteger(0));
+                    List<ThenParameter> thenParameterList = declaredMock.getThenParameter();
+                    int selectedThenParameter = Math.min(matchCount.getAndIncrement(), thenParameterList.size() - 1);
+                    ThenParameter thenParameter = thenParameterList.get(selectedThenParameter);
                     mockMatchCountMap.put(mockHash, matchCount);
                     ReturnValue returnParameter = thenParameter.getReturnParameter();
                     switch (returnParameter.getReturnValueType()) {
@@ -96,9 +108,24 @@ public class MockHandler {
                             try {
                                 if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
                                     if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
+
+                                        TypeFactory typeFactory = objectMapper.getTypeFactory()
+                                                .withClassLoader(thisInstance.getClass().getClassLoader());
+
+
+                                        JavaType typeReference;
+                                        try {
+                                            typeReference = typeFactory.constructFromCanonical(
+                                                    returnParameter.getClassName());
+                                        } catch (Exception e) {
+                                            // failed to construct from the canonical name,
+                                            // happens when this is a generic type
+                                            // so we try to construct using type from the method param class
+                                            typeReference = typeFactory.constructType(invokedMethod.getReturnType());
+                                        }
+
                                         returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
-                                                thisInstance.getClass().getClassLoader()
-                                                        .loadClass(returnParameter.getClassName()));
+                                                typeReference);
                                     }
                                 } else {
                                     // this is an instance of exception class

@@ -6,18 +6,30 @@ import java.util.stream.Collectors;
 
 public class DeclaredMock {
 
+    private String id;
     private String name;
     private String fieldTypeName;
     private String fieldName;
+
+    public String getSourceClassName() {
+        return sourceClassName;
+    }
+
+    public void setSourceClassName(String sourceClassName) {
+        this.sourceClassName = sourceClassName;
+    }
+
+    private String sourceClassName;
     private String methodName;
     private List<ParameterMatcher> whenParameter;
     private List<ThenParameter> thenParameter;
     public DeclaredMock() {
     }
-
     public DeclaredMock(DeclaredMock declaredMock) {
         this.name = declaredMock.name;
+        this.id = declaredMock.id;
         this.fieldTypeName = declaredMock.fieldTypeName;
+        this.sourceClassName = declaredMock.sourceClassName;
         this.fieldName = declaredMock.fieldName;
         this.methodName = declaredMock.methodName;
         this.whenParameter = declaredMock.whenParameter.stream()
@@ -37,6 +49,14 @@ public class DeclaredMock {
         this.methodName = methodName;
         this.whenParameter = whenParameterLists;
         this.thenParameter = thenParameterList;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {
