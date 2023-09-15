@@ -101,7 +101,9 @@ public class MockHandler {
                     List<ThenParameter> thenParameterList = declaredMock.getThenParameter();
                     int selectedThenParameter = Math.min(matchCount.getAndIncrement(), thenParameterList.size() - 1);
                     ThenParameter thenParameter = thenParameterList.get(selectedThenParameter);
-                    mockMatchCountMap.put(mockHash, matchCount);
+                    if (thenParameter.getMethodExitType() == MethodExitType.NULL) {
+                        return null;
+                    }
                     ReturnValue returnParameter = thenParameter.getReturnParameter();
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
