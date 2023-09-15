@@ -165,7 +165,7 @@ public class MockHandler {
     }
 
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) throws ClassNotFoundException {
-        boolean mockMatched = false;
+        boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:
                 Class<?> expectedClassType = Class.forName(parameterMatcher.getValue());

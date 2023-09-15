@@ -255,7 +255,7 @@ class AgentCommandExecutorImplTest {
         List<DeclaredMock> declaredMocks = new ArrayList<>();
         declaredMocks.add(
                 new DeclaredMock("mockName", AuthorityRepository.class.getCanonicalName(), "authorityRepository",
-                        "findById",
+                        "getReferenceById",
                         Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName())),
                         Arrays.asList(new ThenParameter(

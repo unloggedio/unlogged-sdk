@@ -6,7 +6,7 @@ public class JpaFieldUserService {
     private AuthorityRepository authorityRepository;
 
     public Optional<Authority> callToTest(String a_val, SimplePojoB pojoB) {
-        return authorityRepository.findById(a_val + pojoB.getStrValue());
+        return authorityRepository.getReferenceById(a_val + pojoB.getStrValue());
     }
 }
 
