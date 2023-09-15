@@ -255,6 +255,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 implementedClasses.add(fieldType.getCanonicalName());
 
                                 List<Class<?>> pendingImplementations = new ArrayList<>();
+                                pendingImplementations.add(fieldType);
                                 for (Class<?> implementedInterface : implementedInterfaces) {
                                     if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
                                         continue;
@@ -270,7 +271,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 }
 
                                 loadedMockedField = byteBuddyInstance
-                                        .subclass(fieldType)
+                                        .subclass(Object.class)
                                         .implement(pendingImplementations)
                                         .intercept(MethodDelegation.to(mockHandler))
                                         .make()
