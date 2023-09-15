@@ -27,9 +27,9 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(new DeclaredMock("mock name",
                 SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName()),
-                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName())),
                 Arrays.asList(new ThenParameter(
                         new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
@@ -72,9 +72,9 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(new DeclaredMock("mock name",
                 SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName()),
-                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName())),
                 Arrays.asList(new ThenParameter(
                         new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
@@ -117,9 +117,9 @@ class AgentCommandExecutorImplTest {
         List<DeclaredMock> declaredMocks = new ArrayList<>();
         declaredMocks.add(new DeclaredMock("mock name", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("fieldname", ParameterMatcherType.ANY,
+                Arrays.asList(new ParameterMatcher("fieldname", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName()),
-                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName())),
                 Arrays.asList(new ThenParameter(
                         new ReturnValue("{\"aStringValue\": \"mockedStringResponse\", \"aLongValue\": 9988}",
@@ -161,9 +161,9 @@ class AgentCommandExecutorImplTest {
         List<DeclaredMock> declaredMocks = new ArrayList<>();
         declaredMocks.add(new DeclaredMock("mockName", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName()),
-                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName())),
                 Arrays.asList(new ThenParameter(new ReturnValue("{\"message\": \"exception message\"}",
                         WhatException.class.getCanonicalName(), ReturnValueType.REAL),
@@ -207,9 +207,9 @@ class AgentCommandExecutorImplTest {
         List<DeclaredMock> declaredMocks = new ArrayList<>();
         declaredMocks.add(new DeclaredMock("mockName", SimplePojoB.class.getCanonicalName(), "simpleServiceB",
                 "makeAndReturn",
-                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName()),
-                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 SimplePojoB.class.getCanonicalName())),
                 Arrays.asList(new ThenParameter(
                         new ReturnValue("exception message",
@@ -256,7 +256,7 @@ class AgentCommandExecutorImplTest {
         declaredMocks.add(
                 new DeclaredMock("mockName", AuthorityRepository.class.getCanonicalName(), "authorityRepository",
                         "findById",
-                        Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY,
+                        Arrays.asList(new ParameterMatcher("fieldName", ParameterMatcherType.ANY_OF_TYPE,
                                 String.class.getCanonicalName())),
                         Arrays.asList(new ThenParameter(
                                 new ReturnValue("exception message",

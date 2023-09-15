@@ -15,6 +15,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
@@ -60,31 +61,7 @@ public class MockHandler {
                         ParameterMatcher parameterMatcher = whenParameter.get(i);
                         Object argument = methodArguments[i];
 //                        System.out.println("Parameter matcher: " + parameterMatcher);
-                        switch (parameterMatcher.getType()) {
-                            case ANY:
-                                if (!argument.getClass().getCanonicalName().equals(parameterMatcher.getValue())) {
-                                    mockMatched = false;
-                                }
-                                break;
-                            case IS:
-                                try {
-                                    JsonNode argumentAsJsonNode = objectMapper.readTree(
-                                            objectMapper.writeValueAsString(argument));
-                                    JsonNode expectedJsonNode = objectMapper.readTree(parameterMatcher.getValue());
-                                    if (expectedJsonNode.equals(argumentAsJsonNode)) {
-                                        mockMatched = false;
-                                    }
-                                } catch (JsonProcessingException e) {
-                                    // lets just compare as string
-                                    if (!Objects.equals(argument, parameterMatcher.getValue())) {
-                                        mockMatched = false;
-                                    }
-                                }
-                                break;
-                            default:
-//                                System.out.println("Invalid parameter matcher: " + parameterMatcher);
-                                throw new RuntimeException("Invalid " + parameterMatcher);
-                        }
+                        mockMatched = isParameterMatched(parameterMatcher, argument);
                         if (!mockMatched) {
 //                            System.out.println("Parameter mismatch: " + parameterMatcher);
                             break;
@@ -185,6 +162,94 @@ public class MockHandler {
         Method realMethod = originalImplementation.getClass()
                 .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
         return realMethod.invoke(originalImplementation, methodArguments);
+    }
+
+    private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) throws ClassNotFoundException {
+        boolean mockMatched = false;
+        switch (parameterMatcher.getType()) {
+            case ANY_OF_TYPE:
+                Class<?> expectedClassType = Class.forName(parameterMatcher.getValue());
+                if (!expectedClassType.isAssignableFrom(argument.getClass())) {
+                    mockMatched = false;
+                }
+                break;
+            case EQUAL:
+                try {
+                    JsonNode argumentAsJsonNode = objectMapper.readTree(
+                            objectMapper.writeValueAsString(argument));
+                    JsonNode expectedJsonNode = objectMapper.readTree(parameterMatcher.getValue());
+                    if (expectedJsonNode.equals(argumentAsJsonNode)) {
+                        mockMatched = false;
+                    }
+                } catch (JsonProcessingException e) {
+                    // lets just compare as string
+                    if (!Objects.equals(argument, parameterMatcher.getValue())) {
+                        mockMatched = false;
+                    }
+                }
+                break;
+            case ANY:
+                // always matches
+                break;
+            case NULL:
+                mockMatched = argument == null;
+                break;
+            case TRUE:
+                mockMatched = argument == Boolean.TRUE;
+                break;
+            case FALSE:
+                mockMatched = argument == Boolean.FALSE;
+                break;
+            case NOT_NULL:
+                mockMatched = argument != null;
+                break;
+            case ANY_STRING:
+                mockMatched = argument instanceof String;
+                break;
+            case STARTS_WITH:
+                mockMatched = argument instanceof String &&
+                        ((String) argument).startsWith(parameterMatcher.getValue());
+                break;
+            case ENDS_WITH:
+                mockMatched = argument instanceof String &&
+                        ((String) argument).endsWith(parameterMatcher.getValue());
+                break;
+            case MATCHES_REGEX:
+                mockMatched = argument instanceof String &&
+                        Pattern.compile(parameterMatcher.getValue())
+                                .matcher((String) argument).matches();
+                break;
+            case ANY_SHORT:
+                mockMatched = argument instanceof Short;
+                break;
+            case ANY_CHAR:
+                mockMatched = argument instanceof Character;
+                break;
+            case ANY_FLOAT:
+                mockMatched = argument instanceof Float;
+                break;
+            case ANY_DOUBLE:
+                mockMatched = argument instanceof Double;
+                break;
+            case ANY_BYTE:
+                mockMatched = argument instanceof Byte;
+                break;
+            case ANY_BOOLEAN:
+                mockMatched = argument instanceof Boolean;
+                break;
+            case ANY_MAP:
+                mockMatched = Map.class.isAssignableFrom(argument.getClass());
+                break;
+            case ANY_SET:
+                mockMatched = Set.class.isAssignableFrom(argument.getClass());
+                break;
+            case ANY_LIST:
+                mockMatched = List.class.isAssignableFrom(argument.getClass());
+                break;
+            default:
+                throw new RuntimeException("Invalid " + parameterMatcher);
+        }
+        return mockMatched;
     }
 
     public void addDeclaredMocks(List<DeclaredMock> declaredMocksForField) {

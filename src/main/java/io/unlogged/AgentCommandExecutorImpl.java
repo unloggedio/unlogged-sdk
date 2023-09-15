@@ -264,12 +264,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     pendingImplementations.add(implementedInterface);
                                 }
 
-
-//                                for (Class<?> implementedInterface : pendingImplementations) {
-//                                    System.err.println(
-//                                            "Class[" + fieldType.getCanonicalName() + "] implements interface: " + implementedInterface.getCanonicalName());
-//                                }
-
                                 loadedMockedField = byteBuddyInstance
                                         .subclass(Object.class)
                                         .implement(pendingImplementations)
