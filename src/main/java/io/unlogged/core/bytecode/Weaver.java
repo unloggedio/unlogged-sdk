@@ -42,6 +42,7 @@ public class Weaver {
     private Writer methodIdWriter;
     private boolean dumpOption;
     private MessageDigest digest;
+
     /**
      * Set up the object to manage a weaving process.
      * This constructor creates files to store the information.
@@ -108,6 +109,7 @@ public class Weaver {
         String hash = getClassHash(target);
         LogLevel level = LogLevel.Normal;
         int classId = dataInfoProvider.nextClassId();
+//        System.out.println("Probe class [" + className + "] => " + classId);
         WeaveLog weaveLog = new WeaveLog(classId, dataInfoProvider);
 //        try {
         ClassTransformer classTransformer;

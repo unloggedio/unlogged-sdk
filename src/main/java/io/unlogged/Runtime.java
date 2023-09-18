@@ -1,5 +1,6 @@
 package io.unlogged;
 
+import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
@@ -12,20 +13,23 @@ import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
+import io.unlogged.util.ByteTools;
 import io.unlogged.util.StreamUtil;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -34,7 +38,7 @@ public class Runtime {
 
     public static final int AGENT_SERVER_PORT = 12100;
     private static Runtime instance;
-    private static List<Pair<String, List<Integer>>> pendingClassRegistrations = new ArrayList<>();
+    private static List<Pair<String, String>> pendingClassRegistrations = new ArrayList<>();
     private final ScheduledExecutorService probeReaderExecutor = Executors.newSingleThreadScheduledExecutor();
     private AgentCommandServer httpServer;
     private IErrorLogger errorLogger;
@@ -222,27 +226,52 @@ public class Runtime {
                 return null;
             }
             instance = new Runtime(args);
-//            for (Pair<String, List<Integer>> pendingClassRegistration : pendingClassRegistrations) {
-//                registerClass(pendingClassRegistration.getFirst(), pendingClassRegistration.getSecond());
-//            }
+            for (Pair<String, String> pendingClassRegistration : pendingClassRegistrations) {
+                registerClass(pendingClassRegistration.getFirst(), pendingClassRegistration.getSecond());
+            }
 
         }
         return instance;
     }
 
-    @NotNull
-    private List<Integer> probeFileToIdList(File file) throws IOException {
-        InputStream probesFile = this.getClass().getClassLoader().getResourceAsStream(file.getName());
-        return probeFileStreamToIdList(probesFile);
+    // this method is called by all classes which were probed during compilation time
+    public static void registerClass(String classInfoBytes, String probesToRecordBase64) {
+//        System.out.println(
+//                "New class registration [" + classInfoBytes.getBytes().length + "][" + probesToRecordBase64.getBytes().length + "]");
+        if (instance != null) {
+
+            byte[] decodedClassWeaveInfo = new byte[0];
+            List<Integer> probesToRecord = null;
+            try {
+                decodedClassWeaveInfo =  ByteTools.decompressBase64String(classInfoBytes);
+                byte[] decodedProbesToRecord = ByteTools.decompressBase64String(probesToRecordBase64);
+                probesToRecord = bytesToIntList(decodedProbesToRecord);
+            } catch (IOException e) {
+                // class registration fails
+                // no recoding for this class
+                System.out.println("Registration for class failed: " + e.getMessage());
+                return;
+            }
+            ClassInfo classInfo = new ClassInfo();
+
+            try {
+                ByteArrayInputStream in = new ByteArrayInputStream(decodedClassWeaveInfo);
+                classInfo.readFromDataStream(in);
+            } catch (IOException e) {
+                return;
+            }
+//            System.out.println("Register class [" + classInfo.getClassName() + "] => " + probesToRecord.size() +
+//                    " probes to record");
+            instance.logger.recordWeaveInfo(decodedClassWeaveInfo, classInfo, probesToRecord);
+        } else {
+//            System.out.println("Adding class to pending registrations");
+            pendingClassRegistrations.add(new Pair<>(classInfoBytes, probesToRecordBase64));
+        }
     }
 
-    @NotNull
-    private List<Integer> probeFileStreamToIdList(InputStream probesFile) throws IOException {
+
+    public static List<Integer> bytesToIntList(byte[] probeToRecordBytes) throws IOException {
         List<Integer> probesToRecord = new ArrayList<>();
-        if (probesFile == null) {
-            return probesToRecord;
-        }
-        byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(probeToRecordBytes));
         try {
             while (true) {
@@ -255,28 +284,18 @@ public class Runtime {
         return probesToRecord;
     }
 
-//    // this method is called by all classes which were probed during compilation time
-//    public static boolean registerClass(String classInfoBytes, List<Integer> probeIdsToRecord) {
-//        if (instance != null) {
-//            byte[] decodedBytes = Base64.getDecoder().decode(classInfoBytes);
-//            ClassInfo classInfo = new ClassInfo();
-//
-//            try {
-//                ByteArrayInputStream in = new ByteArrayInputStream(decodedBytes);
-//                classInfo.readFromDataStream(in);
-//            } catch (IOException e) {
-////            throw new RuntimeException(e);
-//                return false;
-//            }
-//
-//            instance.logger.recordWeaveInfo(decodedBytes, classInfo, probeIdsToRecord);
-//
-//        } else {
-//
-//            pendingClassRegistrations.add(new Pair<>(classInfoBytes, probeIdsToRecord));
-//        }
-//        return true;
-//    }
+    private List<Integer> probeFileToIdList(File file) throws IOException {
+        InputStream probesFile = this.getClass().getClassLoader().getResourceAsStream(file.getName());
+        return probeFileStreamToIdList(probesFile);
+    }
+
+    private List<Integer> probeFileStreamToIdList(InputStream probesFile) throws IOException {
+        if (probesFile == null) {
+            return new ArrayList<>();
+        }
+        byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
+        return bytesToIntList(probeToRecordBytes);
+    }
 
     /**
      * Close data streams if necessary

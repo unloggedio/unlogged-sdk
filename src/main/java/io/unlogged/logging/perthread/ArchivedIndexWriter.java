@@ -171,7 +171,8 @@ public class ArchivedIndexWriter implements IndexOutputStream {
                 ZipEntry classWeaveEntry = new ZipEntry(WEAVE_DAT_FILE);
                 archivedIndexOutputStream.putNextEntry(classWeaveEntry);
 
-                InputStream weaveInputStream = this.getClass().getClassLoader().getResourceAsStream(classWeavePath);
+//                InputStream weaveInputStream = this.getClass().getClassLoader().getResourceAsStream(classWeavePath);
+                FileInputStream weaveInputStream = new FileInputStream(classWeavePath);
                 copy(weaveInputStream, archivedIndexOutputStream);
                 weaveInputStream.close();
                 archivedIndexOutputStream.closeEntry();

@@ -36,6 +36,7 @@ public class DataInfoProvider {
                         eventType.equals(EventType.METHOD_NORMAL_EXIT) ||
                         eventType.equals(EventType.METHOD_EXCEPTIONAL_EXIT)
         ) {
+//            System.out.println("Probe to record: " + nextProbeId);
             byte[] buffer = new byte[4];
             buffer[0] = (byte) (nextProbeId >>> 24);
             buffer[1] = (byte) (nextProbeId >>> 16);
