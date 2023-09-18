@@ -168,7 +168,36 @@ public class MockHandler {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:
-                Class<?> expectedClassType = Class.forName(parameterMatcher.getValue());
+                Class<?> expectedClassType;
+                switch (parameterMatcher.getValue()) {
+                    case "int":
+                        expectedClassType = Integer.class;
+                        break;
+                    case "short":
+                        expectedClassType = Short.class;
+                        break;
+                    case "float":
+                        expectedClassType = Float.class;
+                        break;
+                    case "long":
+                        expectedClassType = Long.class;
+                        break;
+                    case "byte":
+                        expectedClassType = Byte.class;
+                        break;
+                    case "double":
+                        expectedClassType = Double.class;
+                        break;
+                    case "boolean":
+                        expectedClassType = Boolean.class;
+                        break;
+                    case "char":
+                        expectedClassType = Character.class;
+                        break;
+                    default:
+                        expectedClassType = Class.forName(parameterMatcher.getValue());
+                        break;
+                }
                 if (!expectedClassType.isAssignableFrom(argument.getClass())) {
                     mockMatched = false;
                 }
