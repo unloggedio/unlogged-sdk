@@ -98,9 +98,12 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
 
         byte[] probesToRecordBytes = probesToRecordOutputStream.toByteArray();
         byte[] classWeaveInfo = instrumentedClassBytes.getClassWeaveInfo();
+        if (classWeaveInfo.length < 5) {
+            return original;
+        }
 
-        ClassInfo classInfo = new ClassInfo();
-        classInfo.readFromDataStream(new ByteArrayInputStream(classWeaveInfo));
+//        ClassInfo classInfo = new ClassInfo();
+//        classInfo.readFromDataStream(new ByteArrayInputStream(classWeaveInfo));
 
         final String probeDataCompressedBase64 = ByteTools.compressBase64String(probesToRecordBytes);
         final String compressedClassWeaveInfo = ByteTools.compressBase64String(classWeaveInfo);

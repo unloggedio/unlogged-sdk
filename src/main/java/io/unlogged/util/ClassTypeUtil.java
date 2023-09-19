@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
 
 public class ClassTypeUtil {
 
-    private ClassTypeUtil() {}
+    private ClassTypeUtil() {
+    }
 
     public static List<String> splitMethodDesc(String desc) {
         int beginIndex = desc.indexOf('(');
@@ -64,6 +65,10 @@ public class ClassTypeUtil {
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }
+            case '[':
+                return java.lang.reflect.Array.newInstance(
+                                ClassTypeUtil.getClassNameFromDescriptor(
+                                        descriptor.substring(1), targetClassLoader), 0).getClass();
         }
         if (descriptor.startsWith("byte")) {
             return byte.class;

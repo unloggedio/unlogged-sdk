@@ -540,6 +540,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
             try {
                 methodToExecute = objectClass
+                        .getDeclaredMethod(expectedMethodName, expectedMethodArgumentTypes);
+            } catch (NoSuchMethodException ignored) {
+
+            }
+
+            try {
+                methodToExecute = objectClass
                         .getMethod(expectedMethodName, expectedMethodArgumentTypes);
             } catch (NoSuchMethodException ignored) {
 
@@ -610,20 +617,15 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             return methodReturnValue;
         } else {
             try {
-                return objectMapper.writeValueAsString(methodReturnValue);
-            } catch (InvalidDefinitionException ide) {
                 if (methodReturnValue instanceof Flux) {
                     Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
                     return objectMapper.writeValueAsString(returnedFlux.collectList().block());
                 } else if (methodReturnValue instanceof Mono) {
                     Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
                     return objectMapper.writeValueAsString(returnedFlux.block());
-                } else {
-                    return "Failed to serialize response object of " +
-                            "type: " + (methodReturnValue.getClass() != null ?
-                            methodReturnValue.getClass().getCanonicalName() : methodReturnValue);
                 }
-            } catch (Exception e) {
+                return objectMapper.writeValueAsString(methodReturnValue);
+            } catch (Exception ide) {
                 return "Failed to serialize response object of " +
                         "type: " + (methodReturnValue.getClass() != null ?
                         methodReturnValue.getClass().getCanonicalName() : methodReturnValue);
