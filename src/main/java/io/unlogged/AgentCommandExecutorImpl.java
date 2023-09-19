@@ -591,6 +591,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     private Object serializeMethodReturnValue(Object methodReturnValue) throws JsonProcessingException {
+        if (methodReturnValue == null) {
+            return null;
+        }
         if (methodReturnValue instanceof Double) {
             return Double.doubleToLongBits((Double) methodReturnValue);
         } else if (methodReturnValue instanceof Float) {
