@@ -68,7 +68,6 @@ public class Weaver {
 //            logger.println("[unlogged] using System.out instead.");
 //        }
 
-        String agentVersion = "1.0.1";
 
 //        logger.printf("Java version: %s%n", System.getProperty("java.version"));
 //        logger.printf("Agent version: %s%n", agentVersion);
