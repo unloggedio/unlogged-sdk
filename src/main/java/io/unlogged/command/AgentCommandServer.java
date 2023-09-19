@@ -3,6 +3,7 @@ package io.unlogged.command;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fi.iki.elonen.NanoHTTPD;
+import io.unlogged.Runtime;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -69,6 +70,14 @@ public class AgentCommandServer extends NanoHTTPD {
                     break;
                 case INJECT_MOCKS:
                     commandResponse = this.agentCommandExecutor.injectMocks(agentCommandRequest);
+                    break;
+                case REGISTER_CLASS:
+//                    System.out.println("RegisterClass over wire");
+                    String classWeaveInfoData = agentCommandRequest.getMethodParameters().get(0);
+                    String probesToRecord = agentCommandRequest.getMethodParameters().get(1);
+                    Runtime.registerClass(classWeaveInfoData, probesToRecord);
+                    commandResponse = new AgentCommandResponse();
+                    commandResponse.setResponseType(ResponseType.NORMAL);
                     break;
                 case REMOVE_MOCKS:
                     commandResponse = this.agentCommandExecutor.removeMocks(agentCommandRequest);

@@ -260,7 +260,7 @@ public class Runtime {
             } catch (IOException e) {
                 return;
             }
-//            System.out.println("Register class [" + classInfo.getClassName() + "] => " + probesToRecord.size() +
+//            System.out.println("Register class ["+ classInfo.getClassId() +"][" + classInfo.getClassName() + "] => " + probesToRecord.size() +
 //                    " probes to record");
             instance.logger.recordWeaveInfo(decodedClassWeaveInfo, classInfo, probesToRecord);
         } else {
