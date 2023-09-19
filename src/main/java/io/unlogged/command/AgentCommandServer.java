@@ -67,6 +67,12 @@ public class AgentCommandServer extends NanoHTTPD {
                 case EXECUTE:
                     commandResponse = this.agentCommandExecutor.executeCommand(agentCommandRequest);
                     break;
+                case INJECT_MOCKS:
+                    commandResponse = this.agentCommandExecutor.injectMocks(agentCommandRequest);
+                    break;
+                case REMOVE_MOCKS:
+                    commandResponse = this.agentCommandExecutor.removeMocks(agentCommandRequest);
+                    break;
                 default:
                     System.err.println(
                             "Unknown request [" + requestMethod + "] " + requestPath + " - " + agentCommandRequest);

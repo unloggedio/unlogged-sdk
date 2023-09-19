@@ -14,6 +14,7 @@ import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
 import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import org.objenesis.Objenesis;
@@ -34,6 +35,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     final private IEventLogger logger;
     private final ByteBuddy byteBuddyInstance = new ByteBuddy()
             .with(new NamingStrategy.SuffixingRandom("Unlogged"));
+    private final Map<String, MockInstance> globalFieldMockMap = new HashMap<>();
     Objenesis objenesis = new ObjenesisStd();
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
@@ -199,6 +201,182 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     }
 
+    @Override
+    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) {
+
+        int fieldCount = 0;
+        int classCount = 0;
+        Map<String, List<DeclaredMock>> mocksBySourceClass = agentCommandRequest
+                .getDeclaredMocks().stream().collect(Collectors.groupingBy(DeclaredMock::getSourceClassName));
+
+
+        for (String sourceClassName : mocksBySourceClass.keySet()) {
+            Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
+            if (sourceClassInstance == null) {
+                // no instance found for this class
+                // nothing to inject mocks to
+                continue;
+            }
+            List<DeclaredMock> declaredMocks = mocksBySourceClass.get(sourceClassName);
+
+            Map<String, List<DeclaredMock>> mocksByField = declaredMocks.stream()
+                    .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
+
+            Class<? extends Object> classObject = sourceClassInstance.getClass();
+            ClassLoader targetClassLoader = classObject.getClassLoader();
+            String targetClassName = classObject.getCanonicalName();
+
+            ClassLoadingStrategy<ClassLoader> strategy;
+
+
+            while (classObject != Object.class) {
+                classCount++;
+                Field[] availableFields = classObject.getDeclaredFields();
+
+                for (Field field : availableFields) {
+                    if (!mocksByField.containsKey(field.getName())) {
+                        continue;
+                    }
+                    List<DeclaredMock> declaredMocksForField = mocksByField.get(field.getName());
+
+                    String key = targetClassName + "#" + field.getName();
+                    MockInstance existingMockInstance = globalFieldMockMap.get(key);
+
+                    field.setAccessible(true);
+                    Object originalFieldValue = null;
+                    try {
+                        originalFieldValue = field.get(sourceClassInstance);
+                    } catch (IllegalAccessException e) {
+                        // if it does happen, skip mocking of this field for now
+                        System.err.println("Failed to access field [" + targetClassName + "#" + field.getName() + "] " +
+                                "=> " + e.getMessage());
+                        continue;
+                    }
+
+//                    if (ClassInjector.UsingLookup.isAvailable()) {
+//                        Class<?> methodHandles = null;
+//                        try {
+//                            methodHandles = Class.forName("java.lang.invoke.MethodHandles");
+//                            Object lookup = methodHandles.getMethod("lookup").invoke(null);
+//                            Method privateLookupIn = methodHandles.getMethod("privateLookupIn", Class.class,
+//                                    Class.forName("java.lang.invoke.MethodHandles$Lookup"));
+//                            Object privateLookup = privateLookupIn.invoke(null, field.getType(), lookup);
+//                            strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
+//                        } catch (Exception e) {
+//                             should never happen
+//                            System.err.println("No code generation strategy available for [" + field.getType() + "]");
+//                            continue;
+//                        }
+//                    } else if (ClassInjector.UsingReflection.isAvailable()) {
+                    strategy = ClassLoadingStrategy.Default.INJECTION;
+//                    } else {
+//                        System.err.println("No code generation strategy available for [" + field.getType() + "]");
+//                        continue;
+//                    }
+
+
+                    if (existingMockInstance == null) {
+                        MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
+                                byteBuddyInstance, objenesis, originalFieldValue, sourceClassInstance,
+                                targetClassLoader, field);
+                        Class<?> fieldType = field.getType();
+
+                        DynamicType.Loaded<?> loadedMockedField;
+                        if (fieldType.isInterface()) {
+                            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
+                            Set<String> implementedClasses = new HashSet<>();
+                            implementedClasses.add(fieldType.getCanonicalName());
+
+                            List<Class<?>> pendingImplementations = new ArrayList<>();
+                            pendingImplementations.add(fieldType);
+                            for (Class<?> implementedInterface : implementedInterfaces) {
+                                if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
+                                    continue;
+                                }
+                                implementedClasses.add(implementedInterface.getCanonicalName());
+                                pendingImplementations.add(implementedInterface);
+                            }
+
+                            loadedMockedField = byteBuddyInstance
+                                    .subclass(Object.class)
+                                    .implement(pendingImplementations)
+                                    .intercept(MethodDelegation.to(mockHandler))
+                                    .make()
+                                    .load(targetClassLoader, strategy);
+
+                        } else {
+                            loadedMockedField = byteBuddyInstance
+                                    .subclass(fieldType)
+                                    .method(isDeclaredBy(fieldType))
+                                    .intercept(MethodDelegation.to(mockHandler))
+                                    .make()
+                                    .load(targetClassLoader, strategy);
+                        }
+
+
+                        Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
+
+                        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
+                        globalFieldMockMap.put(key, existingMockInstance);
+
+                    } else {
+                        existingMockInstance.getMockHandler().setDeclaredMocks(declaredMocksForField);
+                    }
+
+                    try {
+                        field.set(sourceClassInstance, existingMockInstance.getMockedFieldInstance());
+                    } catch (IllegalAccessException e) {
+                        System.err.println("Failed to mock field [" + sourceClassName + "#" + field.getName() + "] =>" +
+                                e.getMessage());
+                    }
+                    fieldCount++;
+
+                }
+
+
+                classObject = classObject.getSuperclass();
+            }
+
+
+        }
+
+        AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
+        agentCommandResponse.setResponseType(ResponseType.NORMAL);
+        agentCommandResponse.setMessage("Mocks injected for [" +
+                fieldCount + "] fields in [" + classCount + "] classes");
+        return agentCommandResponse;
+    }
+
+    @Override
+    public AgentCommandResponse removeMocks(AgentCommandRequest agentCommandRequest) throws Exception {
+
+        int fieldCount = 0;
+        int classCount = 0;
+        Set<String> strings = new HashSet<>(globalFieldMockMap.keySet());
+        Set<String> classNames = new HashSet<>();
+        for (String key : strings) {
+            fieldCount++;
+            MockInstance mockInstance = globalFieldMockMap.get(key);
+            MockHandler mockHandler = mockInstance.getMockHandler();
+            Object parentInstance = mockHandler.getOriginalFieldParent();
+            if (!classNames.contains(parentInstance.getClass().getCanonicalName())) {
+                classNames.add(parentInstance.getClass().getCanonicalName());
+                classCount++;
+            }
+            Object originalFieldInstance = mockHandler.getOriginalImplementation();
+            Field field = mockHandler.getField();
+            field.set(parentInstance, originalFieldInstance);
+            globalFieldMockMap.remove(key);
+        }
+
+        AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
+        agentCommandResponse.setResponseType(ResponseType.NORMAL);
+        agentCommandResponse.setMessage("Mocks removed for [" +
+                fieldCount + "] fields in [" + classCount + "] classes");
+        return agentCommandResponse;
+
+    }
+
     public Object arrangeMocks(Class<?> targetClassType, ClassLoader targetClassLoader,
                                Object objectInstanceByClass, List<DeclaredMock> declaredMocksList) {
         if (declaredMocksList == null || declaredMocksList.size() == 0) {
@@ -216,7 +394,28 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 .subclass(targetClassType)
                 .make();
 
-        DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader);
+        ClassLoadingStrategy<ClassLoader> strategy;
+        if (ClassInjector.UsingLookup.isAvailable()) {
+            Class<?> methodHandles = null;
+            try {
+                methodHandles = targetClassLoader.loadClass("java.lang.invoke.MethodHandles");
+                Object lookup = methodHandles.getMethod("lookup").invoke(null);
+                Method privateLookupIn = methodHandles.getMethod("privateLookupIn",
+                        Class.class,
+                        targetClassLoader.loadClass("java.lang.invoke.MethodHandles$Lookup"));
+                Object privateLookup = privateLookupIn.invoke(null, targetClassType, lookup);
+                strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
+            } catch (Exception e) {
+                // should never happen
+                throw new RuntimeException(e);
+            }
+        } else if (ClassInjector.UsingReflection.isAvailable()) {
+            strategy = ClassLoadingStrategy.Default.INJECTION;
+        } else {
+            throw new IllegalStateException("No code generation strategy available");
+        }
+
+        DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader, strategy);
 
         Object extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
 
@@ -244,8 +443,31 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                         if (existingMockInstance == null) {
+
+//                            if (ClassInjector.UsingLookup.isAvailable()) {
+//                                Class<?> methodHandles = null;
+//                                try {
+//                                    methodHandles = targetClassLoader.loadClass("java.lang.invoke.MethodHandles");
+//                                    Object lookup = methodHandles.getMethod("lookup").invoke(null);
+//                                    Method privateLookupIn = methodHandles.getMethod("privateLookupIn",
+//                                            Class.class,
+//                                            targetClassLoader.loadClass("java.lang.invoke.MethodHandles$Lookup"));
+//                                    Object privateLookup = privateLookupIn.invoke(null, field.getType(), lookup);
+//                                    strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
+//                                } catch (Exception e) {
+//                                    // should never happen
+//                                    throw new RuntimeException(e);
+//                                }
+//                            } else if (ClassInjector.UsingReflection.isAvailable()) {
+                            strategy = ClassLoadingStrategy.Default.INJECTION;
+//                            } else {
+//                                throw new IllegalStateException("No code generation strategy available");
+//                            }
+
+
                             MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
-                                    byteBuddyInstance, objenesis, fieldValue);
+                                    byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader,
+                                    field);
                             Class<?> fieldType = field.getType();
 
                             DynamicType.Loaded<?> loadedMockedField;
@@ -269,21 +491,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                         .implement(pendingImplementations)
                                         .intercept(MethodDelegation.to(mockHandler))
                                         .make()
-                                        .load(targetClassLoader, ClassLoadingStrategy.Default.INJECTION);
+                                        .load(targetClassLoader, strategy);
 
                             } else {
                                 loadedMockedField = byteBuddyInstance
                                         .subclass(fieldType)
                                         .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
                                         .make()
-                                        .load(targetClassLoader, ClassLoadingStrategy.Default.INJECTION);
+                                        .load(targetClassLoader, strategy);
                             }
 
 
                             Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-
-//                            System.out.println(
-//                                    "Created mocked field [" + field.getName() + "] => " + mockedFieldInstance);
 
                             existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
                                     loadedMockedField);

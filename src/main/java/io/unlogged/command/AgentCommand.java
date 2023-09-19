@@ -1,5 +1,5 @@
 package io.unlogged.command;
 
 public enum AgentCommand {
-    EXECUTE;
+    EXECUTE, INJECT_MOCKS, REMOVE_MOCKS;
 }

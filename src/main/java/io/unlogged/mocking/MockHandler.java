@@ -12,6 +12,7 @@ import net.bytebuddy.implementation.bind.annotation.*;
 import org.objenesis.Objenesis;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,17 +27,28 @@ public class MockHandler {
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
+    private final Object originalFieldParent;
     private final Map<Integer, AtomicInteger> mockMatchCountMap = new HashMap<>();
+    private final ClassLoader targetClassLoader;
+    private final Field field;
+
+    public Field getField() {
+        return field;
+    }
 
     public MockHandler(
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
             ByteBuddy byteBuddy,
-            Objenesis objenesis, Object originalImplementation) {
+            Objenesis objenesis, Object originalImplementation,
+            Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
         this.objectMapper = objectMapper;
         this.byteBuddy = byteBuddy;
         this.objenesis = objenesis;
         this.originalImplementation = originalImplementation;
+        this.originalFieldParent = originalFieldParent;
+        this.targetClassLoader = targetClassLoader;
+        this.field = field;
 
         addDeclaredMocks(declaredMocks);
     }
@@ -127,7 +139,8 @@ public class MockHandler {
                             break;
                         case MOCK:
                             MockHandler mockHandler = new MockHandler(returnParameter.getDeclaredMocks(), objectMapper,
-                                    byteBuddy, objenesis, originalImplementation);
+                                    byteBuddy, objenesis, originalImplementation, originalFieldParent, targetClassLoader,
+                                    field);
                             Class<?> fieldType = invokedMethod.getReturnType();
                             DynamicType.Loaded<?> loadedMockedField = byteBuddy
                                     .subclass(fieldType)
@@ -195,7 +208,8 @@ public class MockHandler {
                         expectedClassType = Character.class;
                         break;
                     default:
-                        expectedClassType = Class.forName(parameterMatcher.getValue());
+                        expectedClassType = targetClassLoader.loadClass(parameterMatcher.getValue());
+
                         break;
                 }
                 if (!expectedClassType.isAssignableFrom(argument.getClass())) {
@@ -289,5 +303,13 @@ public class MockHandler {
         declaredMocks.clear();
         declaredMocksMap.clear();
         addDeclaredMocks(declaredMocksForField);
+    }
+
+    public Object getOriginalImplementation() {
+        return originalImplementation;
+    }
+
+    public Object getOriginalFieldParent() {
+        return originalFieldParent;
     }
 }
