@@ -234,12 +234,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 Field[] availableFields = classObject.getDeclaredFields();
 
                 for (Field field : availableFields) {
-                    if (!mocksByField.containsKey(field.getName())) {
+                    String fieldName = field.getName();
+                    if (!mocksByField.containsKey(fieldName)) {
                         continue;
                     }
-                    List<DeclaredMock> declaredMocksForField = mocksByField.get(field.getName());
+                    List<DeclaredMock> declaredMocksForField = mocksByField.get(fieldName);
 
-                    String key = targetClassName + "#" + field.getName();
+                    String key = sourceClassName + "#" + fieldName;
                     MockInstance existingMockInstance = globalFieldMockMap.get(key);
 
                     field.setAccessible(true);
@@ -248,31 +249,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         originalFieldValue = field.get(sourceClassInstance);
                     } catch (IllegalAccessException e) {
                         // if it does happen, skip mocking of this field for now
-                        System.err.println("Failed to access field [" + targetClassName + "#" + field.getName() + "] " +
+                        System.err.println("Failed to access field [" + targetClassName + "#" + fieldName + "] " +
                                 "=> " + e.getMessage());
                         continue;
                     }
 
-//                    if (ClassInjector.UsingLookup.isAvailable()) {
-//                        Class<?> methodHandles = null;
-//                        try {
-//                            methodHandles = Class.forName("java.lang.invoke.MethodHandles");
-//                            Object lookup = methodHandles.getMethod("lookup").invoke(null);
-//                            Method privateLookupIn = methodHandles.getMethod("privateLookupIn", Class.class,
-//                                    Class.forName("java.lang.invoke.MethodHandles$Lookup"));
-//                            Object privateLookup = privateLookupIn.invoke(null, field.getType(), lookup);
-//                            strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
-//                        } catch (Exception e) {
-//                             should never happen
-//                            System.err.println("No code generation strategy available for [" + field.getType() + "]");
-//                            continue;
-//                        }
-//                    } else if (ClassInjector.UsingReflection.isAvailable()) {
                     strategy = ClassLoadingStrategy.Default.INJECTION;
-//                    } else {
-//                        System.err.println("No code generation strategy available for [" + field.getType() + "]");
-//                        continue;
-//                    }
 
 
                     if (existingMockInstance == null) {
@@ -326,7 +308,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     try {
                         field.set(sourceClassInstance, existingMockInstance.getMockedFieldInstance());
                     } catch (IllegalAccessException e) {
-                        System.err.println("Failed to mock field [" + sourceClassName + "#" + field.getName() + "] =>" +
+                        System.err.println("Failed to mock field [" + sourceClassName + "#" + fieldName + "] =>" +
                                 e.getMessage());
                     }
                     fieldCount++;
@@ -354,19 +336,50 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         int classCount = 0;
         Set<String> strings = new HashSet<>(globalFieldMockMap.keySet());
         Set<String> classNames = new HashSet<>();
-        for (String key : strings) {
-            fieldCount++;
-            MockInstance mockInstance = globalFieldMockMap.get(key);
-            MockHandler mockHandler = mockInstance.getMockHandler();
-            Object parentInstance = mockHandler.getOriginalFieldParent();
-            if (!classNames.contains(parentInstance.getClass().getCanonicalName())) {
-                classNames.add(parentInstance.getClass().getCanonicalName());
-                classCount++;
+        List<DeclaredMock> mocksToDelete = agentCommandRequest.getDeclaredMocks();
+        Map<String, List<DeclaredMock>> mocksByClassName = mocksToDelete == null ? new HashMap<>() :
+                mocksToDelete.stream().collect(Collectors.groupingBy(DeclaredMock::getSourceClassName));
+        if (mocksByClassName.size() > 0) {
+            // remove some mocks
+            for (String sourceClassName : mocksByClassName.keySet()) {
+                Map<String, List<DeclaredMock>> classMocksByFieldName = mocksByClassName
+                        .get(sourceClassName).stream()
+                        .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
+                for (String fieldName : classMocksByFieldName.keySet()) {
+                    String key = sourceClassName + "#" + fieldName;
+                    MockInstance mockInstance = globalFieldMockMap.get(key);
+                    if (mockInstance == null) {
+                        continue;
+                    }
+                    if (!classNames.contains(sourceClassName)) {
+                        classNames.add(sourceClassName);
+                        classCount++;
+                    }
+                    fieldCount++;
+                    MockHandler mockHandler = mockInstance.getMockHandler();
+                    mockHandler.removeDeclaredMock(classMocksByFieldName.get(fieldName));
+                }
+
             }
-            Object originalFieldInstance = mockHandler.getOriginalImplementation();
-            Field field = mockHandler.getField();
-            field.set(parentInstance, originalFieldInstance);
-            globalFieldMockMap.remove(key);
+
+        } else {
+            // remove all mocks
+            for (String key : strings) {
+                fieldCount++;
+                MockInstance mockInstance = globalFieldMockMap.get(key);
+                MockHandler mockHandler = mockInstance.getMockHandler();
+                Object parentInstance = mockHandler.getOriginalFieldParent();
+                String sourceObjectTypeName = parentInstance.getClass().getCanonicalName();
+                if (!classNames.contains(sourceObjectTypeName)) {
+                    classNames.add(sourceObjectTypeName);
+                    classCount++;
+                }
+                Object originalFieldInstance = mockHandler.getOriginalImplementation();
+                Field field = mockHandler.getField();
+                field.set(parentInstance, originalFieldInstance);
+                globalFieldMockMap.remove(key);
+            }
+
         }
 
         AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
@@ -434,6 +447,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     if (declaredMocksForField == null || declaredMocksForField.size() == 0) {
                         if (fieldValue == null) {
                             fieldValue = objenesis.newInstance(field.getType());
+                        }
+                        if (Modifier.isFinal(field.getModifiers())) {
+                            continue;
                         }
                         field.set(extendedClassInstance, fieldValue);
                     } else {
@@ -518,8 +534,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    System.err.println("Failed to set value for field [" + field.getName() + "] => " + e.getMessage());
+                    if (e.getMessage().startsWith("Can not set static final")) {
+                        // not printing this
+                    } else {
+                        e.printStackTrace();
+                        System.err.println(
+                                "Failed to set value for field [" + field.getName() + "] => " + e.getMessage());
+                    }
                 }
             }
 

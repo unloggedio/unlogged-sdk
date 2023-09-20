@@ -22,7 +22,6 @@ import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class MockHandler {
     private final List<DeclaredMock> declaredMocks = new ArrayList<>();
-    private final Map<String, DeclaredMock> declaredMocksMap = new HashMap<>();
     private final ObjectMapper objectMapper;
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
@@ -31,10 +30,6 @@ public class MockHandler {
     private final Map<Integer, AtomicInteger> mockMatchCountMap = new HashMap<>();
     private final ClassLoader targetClassLoader;
     private final Field field;
-
-    public Field getField() {
-        return field;
-    }
 
     public MockHandler(
             List<DeclaredMock> declaredMocks,
@@ -53,6 +48,9 @@ public class MockHandler {
         addDeclaredMocks(declaredMocks);
     }
 
+    public Field getField() {
+        return field;
+    }
 
     @RuntimeType
     public Object intercept(@AllArguments Object[] methodArguments,
@@ -139,7 +137,8 @@ public class MockHandler {
                             break;
                         case MOCK:
                             MockHandler mockHandler = new MockHandler(returnParameter.getDeclaredMocks(), objectMapper,
-                                    byteBuddy, objenesis, originalImplementation, originalFieldParent, targetClassLoader,
+                                    byteBuddy, objenesis, originalImplementation, originalFieldParent,
+                                    targetClassLoader,
                                     field);
                             Class<?> fieldType = invokedMethod.getReturnType();
                             DynamicType.Loaded<?> loadedMockedField = byteBuddy
@@ -301,7 +300,6 @@ public class MockHandler {
 
     public void setDeclaredMocks(List<DeclaredMock> declaredMocksForField) {
         declaredMocks.clear();
-        declaredMocksMap.clear();
         addDeclaredMocks(declaredMocksForField);
     }
 
@@ -311,5 +309,9 @@ public class MockHandler {
 
     public Object getOriginalFieldParent() {
         return originalFieldParent;
+    }
+
+    public void removeDeclaredMock(List<DeclaredMock> mocksToRemove) {
+        this.declaredMocks.removeAll(mocksToRemove);
     }
 }
