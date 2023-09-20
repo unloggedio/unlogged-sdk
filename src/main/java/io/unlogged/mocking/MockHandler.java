@@ -53,6 +53,7 @@ public class MockHandler {
     }
 
     @RuntimeType
+    @BindingPriority(value = 1000)
     public Object intercept(@AllArguments Object[] methodArguments,
                             @This Object thisInstance,
                             @Origin Method invokedMethod,
@@ -180,6 +181,7 @@ public class MockHandler {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:
+
                 TypeFactory typeFactory = objectMapper.getTypeFactory();
                 JavaType expectedClassType;
                 switch (parameterMatcher.getValue()) {
@@ -212,6 +214,11 @@ public class MockHandler {
 
                         break;
                 }
+                if (argument == null) {
+                    // null gonna match
+                    break;
+                }
+
                 JavaType actualJavaType = typeFactory.constructType(argument.getClass());
                 if (!expectedClassType.getRawClass().isAssignableFrom(actualJavaType.getRawClass())) {
                     mockMatched = false;
