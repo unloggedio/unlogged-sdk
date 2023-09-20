@@ -80,7 +80,7 @@ public class RawFileCollector implements Runnable {
         archiveSwapLock.lock();
         ArchivedIndexWriter archivedIndexWriterOld = archivedIndexWriter;
         archivedIndexWriter = new ArchivedIndexWriter(indexFileNameGenerator.getNextFile(),
-                "class.weave.dat", errorLogger);
+                outputDir + "/class.weave.dat", errorLogger);
         archiveSwapLock.unlock();
 
         fileCount = 0;

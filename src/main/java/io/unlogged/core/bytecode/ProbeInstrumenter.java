@@ -21,24 +21,58 @@
  */
 package io.unlogged.core.bytecode;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.insidious.common.weaver.ClassInfo;
+import io.unlogged.command.AgentCommand;
+import io.unlogged.command.AgentCommandRequest;
+import io.unlogged.command.AgentCommandResponse;
+import io.unlogged.command.ResponseType;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
+import io.unlogged.util.ByteTools;
 import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
+import okhttp3.*;
+import org.objectweb.asm.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class ProbeInstrumenter implements PostCompilerTransformation {
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private final Weaver weaver;
-    private DataInfoProvider dataInfoProvider;
+    private final TypeHierarchy typeHierarchy;
+    private final String agentUrl = "http://localhost:12100";
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final OkHttpClient client = new OkHttpClient.Builder()
+            .callTimeout(Duration.of(5, ChronoUnit.SECONDS))
+            .readTimeout(Duration.of(5, ChronoUnit.SECONDS))
+            .connectTimeout(Duration.of(200, ChronoUnit.MILLIS)).build();
 
     public ProbeInstrumenter(TypeHierarchy typeHierarchy) throws IOException {
+        this.typeHierarchy = typeHierarchy;
         weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
     }
 
+    private static List<String> splitString(String text, int maxLength) {
+        List<String> results = new ArrayList<>();
+        int length = text.length();
+
+        for (int i = 0; i < length; i += maxLength) {
+            results.add(text.substring(i, Math.min(length, i + maxLength)));
+        }
+
+        return results;
+    }
 
     @Override
     public byte[] applyTransformations(byte[] original, String fileName,
@@ -48,69 +82,170 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
         InstrumentedClass instrumentedClassBytes;
+        final String className = classFileMetadata.getClassName();
+
+        ByteArrayOutputStream probesToRecordOutputStream = new ByteArrayOutputStream();
         try {
 
+            dataInfoProvider.setProbeOutputStream(probesToRecordOutputStream);
             weaver.setDataInfoProvider(dataInfoProvider);
-            instrumentedClassBytes = weaver.weave(fileName, classFileMetadata.getClassName(), original);
+            instrumentedClassBytes = weaver.weave(fileName, className, original);
             dataInfoProvider.flushIdInformation();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
+        byte[] probesToRecordBytes = probesToRecordOutputStream.toByteArray();
         byte[] classWeaveInfo = instrumentedClassBytes.getClassWeaveInfo();
-        classWeaveOutputStream.write(classWeaveInfo);
-        classWeaveOutputStream.flush();
+        if (classWeaveInfo.length < 5) {
+            return original;
+        }
+
+//        ClassInfo classInfo = new ClassInfo();
+//        classInfo.readFromDataStream(new ByteArrayInputStream(classWeaveInfo));
+
+        final String probeDataCompressedBase64 = ByteTools.compressBase64String(probesToRecordBytes);
+        final String compressedClassWeaveInfo = ByteTools.compressBase64String(classWeaveInfo);
+
+//        List<Integer> probeIdsAgain = Runtime.bytesToIntList(
+//                ByteTools.decompressBase64String(probeDataCompressedBase64));
+//        System.out.println("Probes to record: " + probeDataCompressedBase64 + " === " + compressedClassWeaveInfo);
 
 
 //        if (instrumentedClassBytes.classWeaveInfo.length == 0) {
-        return instrumentedClassBytes.getBytes();
+//        return instrumentedClassBytes.getBytes();
 //        }
 
-//        ClassReader reader = new ClassReader(instrumentedClassBytes.getBytes());
-//        ClassWriter writer = new ClassWriter(reader, 0);
-//
+
 //        final AtomicBoolean changesMade = new AtomicBoolean();
 //        if (fileName.contains("$")) {
 //            classWeaveBytesToBeWritten.write(classWeaveInfo);
 //            return instrumentedClassBytes.getBytes();
 //        }
-//
-//
-//        reader.accept(new ClassVisitor(Opcodes.ASM9, writer) {
-//            private boolean foundClassInit = false;
-//
-//            @Override
-//            public void visitEnd() {
-////                changesMade.set(true);
-////                FieldVisitor fieldVisitor =
-////                        super.visitField(
-////                                Opcodes.ACC_FINAL + Opcodes.ACC_STATIC, "classWeaveBytes", "[B", null,
-////                                classWeaveInfo);
-////                if (fieldVisitor != null) {
-////                    fieldVisitor.visitEnd();
-////                }
-//            }
-//
-//            @Override
-//            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-//                MethodVisitor methodVisitor = super.visitMethod(access, name, descriptor, signature, exceptions);
-//                if (name.equals("<clinit>")) {
-//                    foundClassInit = true;
-//                    MethodVisitor staticFieldInitializerAdapter = new MethodVisitor(Opcodes.ASM6, methodVisitor) {
-//                        @Override
-//                        public void visitCode() {
-//                            super.visitCode();
-//
-////                            super.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/logging/Runtime", "registerClass",
-////                                    "([B)V", false);
-//                        }
-//                    };
-//                }
-//                return methodVisitor;
-//            }
-//        }, 0);
-//        return changesMade.get() ? writer.toByteArray() : instrumentedClassBytes.getBytes();
+
+        AgentCommandRequest agentCommandRequest = new AgentCommandRequest();
+        List<String> parameters = Arrays.asList(compressedClassWeaveInfo, probeDataCompressedBase64);
+        agentCommandRequest.setMethodParameters(parameters);
+        agentCommandRequest.setCommand(AgentCommand.REGISTER_CLASS);
+        RequestBody body = RequestBody.create(objectMapper.writeValueAsString(agentCommandRequest), JSON);
+        Request request = new Request.Builder()
+                .url(agentUrl + "/command")
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            String responseBody = response.body().string();
+            AgentCommandResponse agentCommandResponse = objectMapper.readValue(responseBody,
+                    AgentCommandResponse.class);
+            // successfully posted to the running server
+            // hmm
+            if (agentCommandResponse.getResponseType() == ResponseType.NORMAL) {
+//                System.err.println("Posted class weave info to running process directly yay");
+//                diagnostics.addError("Posted class weave info to running process directly yay");
+//                return instrumentedClassBytes.getBytes();
+            }
+        } catch (Throwable e) {
+            // server isnt up
+            // process isnt running
+        }
+
+
+        // Create a ClassReader to read the original class bytes
+        ClassReader reader = new ClassReader(instrumentedClassBytes.getBytes());
+
+        // Create a ClassWriter to write the modified class bytes
+        ClassWriter writer = new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES,
+                typeHierarchy);
+
+        // Create a ClassVisitor to visit and modify the class
+        ClassVisitor cv = new ClassVisitor(Opcodes.ASM9, writer) {
+            private boolean hasStaticInitializer = false;
+
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                // Check if this is the static initializer (clinit)
+                if (name.equals("<clinit>")) {
+                    hasStaticInitializer = true;
+//                    System.out.println("Modify existing static method in [" + className + "]");
+                    // Create a method visitor to add code to the static initializer
+                    MethodVisitor methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
+
+                    // Create a MethodVisitor to visit and modify the method
+                    return new MethodVisitor(Opcodes.ASM9, methodVisitor) {
+                        @Override
+                        public void visitCode() {
+                            addClassWeaveInfo(mv, compressedClassWeaveInfo, probeDataCompressedBase64);
+                            mv.visitMaxs(3, 0);
+                            super.visitCode();
+                        }
+
+                    };
+
+                }
+
+                return super.visitMethod(access, name, desc, signature, exceptions);
+            }
+
+            @Override
+            public void visitEnd() {
+                // If the class doesn't have a static initializer, create one
+                if (!hasStaticInitializer) {
+//                    System.out.println("Adding new static method in [" + className + "]");
+
+                    MethodVisitor methodVisitor = writer.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
+                    methodVisitor.visitCode();
+                    addClassWeaveInfo(methodVisitor, compressedClassWeaveInfo, probeDataCompressedBase64);
+                    methodVisitor.visitMaxs(3, 0);
+                    methodVisitor.visitInsn(Opcodes.RETURN);
+                    methodVisitor.visitEnd();
+
+                }
+
+                super.visitEnd();
+            }
+        };
+
+        // Start the class modification process
+        reader.accept(cv, ClassReader.EXPAND_FRAMES);
+        return writer.toByteArray();
 ////        return original;
+    }
+
+    private void addClassWeaveInfo(MethodVisitor mv, String base64Bytes, String probesToRecordBase64) {
+
+        // new string on the stack
+        mv.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+        mv.visitInsn(Opcodes.DUP);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
+
+        List<String> stringParts = splitString(base64Bytes, 40000);
+        for (String stringPart : stringParts) {
+            mv.visitLdcInsn(stringPart);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+
+        }
+
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
+
+        // new string on the stack
+        mv.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+        mv.visitInsn(Opcodes.DUP);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
+
+        List<String> probesToRecordParts = splitString(probesToRecordBase64, 40000);
+        for (String stringPart : probesToRecordParts) {
+            mv.visitLdcInsn(stringPart);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+
+        }
+
+        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
+
+
+        mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "registerClass",
+                "(Ljava/lang/String;Ljava/lang/String;)V", false);
     }
 }

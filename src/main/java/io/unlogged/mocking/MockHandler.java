@@ -12,6 +12,7 @@ import net.bytebuddy.implementation.bind.annotation.*;
 import org.objenesis.Objenesis;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,26 +22,35 @@ import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class MockHandler {
     private final List<DeclaredMock> declaredMocks = new ArrayList<>();
-    private final Map<String, DeclaredMock> declaredMocksMap = new HashMap<>();
     private final ObjectMapper objectMapper;
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
+    private final Object originalFieldParent;
     private final Map<Integer, AtomicInteger> mockMatchCountMap = new HashMap<>();
+    private final ClassLoader targetClassLoader;
+    private final Field field;
 
     public MockHandler(
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
             ByteBuddy byteBuddy,
-            Objenesis objenesis, Object originalImplementation) {
+            Objenesis objenesis, Object originalImplementation,
+            Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
         this.objectMapper = objectMapper;
         this.byteBuddy = byteBuddy;
         this.objenesis = objenesis;
         this.originalImplementation = originalImplementation;
+        this.originalFieldParent = originalFieldParent;
+        this.targetClassLoader = targetClassLoader;
+        this.field = field;
 
         addDeclaredMocks(declaredMocks);
     }
 
+    public Field getField() {
+        return field;
+    }
 
     @RuntimeType
     public Object intercept(@AllArguments Object[] methodArguments,
@@ -127,7 +137,9 @@ public class MockHandler {
                             break;
                         case MOCK:
                             MockHandler mockHandler = new MockHandler(returnParameter.getDeclaredMocks(), objectMapper,
-                                    byteBuddy, objenesis, originalImplementation);
+                                    byteBuddy, objenesis, originalImplementation, originalFieldParent,
+                                    targetClassLoader,
+                                    field);
                             Class<?> fieldType = invokedMethod.getReturnType();
                             DynamicType.Loaded<?> loadedMockedField = byteBuddy
                                     .subclass(fieldType)
@@ -168,7 +180,37 @@ public class MockHandler {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:
-                Class<?> expectedClassType = Class.forName(parameterMatcher.getValue());
+                Class<?> expectedClassType;
+                switch (parameterMatcher.getValue()) {
+                    case "int":
+                        expectedClassType = Integer.class;
+                        break;
+                    case "short":
+                        expectedClassType = Short.class;
+                        break;
+                    case "float":
+                        expectedClassType = Float.class;
+                        break;
+                    case "long":
+                        expectedClassType = Long.class;
+                        break;
+                    case "byte":
+                        expectedClassType = Byte.class;
+                        break;
+                    case "double":
+                        expectedClassType = Double.class;
+                        break;
+                    case "boolean":
+                        expectedClassType = Boolean.class;
+                        break;
+                    case "char":
+                        expectedClassType = Character.class;
+                        break;
+                    default:
+                        expectedClassType = targetClassLoader.loadClass(parameterMatcher.getValue());
+
+                        break;
+                }
                 if (!expectedClassType.isAssignableFrom(argument.getClass())) {
                     mockMatched = false;
                 }
@@ -258,7 +300,18 @@ public class MockHandler {
 
     public void setDeclaredMocks(List<DeclaredMock> declaredMocksForField) {
         declaredMocks.clear();
-        declaredMocksMap.clear();
         addDeclaredMocks(declaredMocksForField);
+    }
+
+    public Object getOriginalImplementation() {
+        return originalImplementation;
+    }
+
+    public Object getOriginalFieldParent() {
+        return originalFieldParent;
+    }
+
+    public void removeDeclaredMock(List<DeclaredMock> mocksToRemove) {
+        this.declaredMocks.removeAll(mocksToRemove);
     }
 }

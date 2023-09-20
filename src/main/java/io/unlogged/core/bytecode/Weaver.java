@@ -42,6 +42,7 @@ public class Weaver {
     private Writer methodIdWriter;
     private boolean dumpOption;
     private MessageDigest digest;
+
     /**
      * Set up the object to manage a weaving process.
      * This constructor creates files to store the information.
@@ -67,7 +68,6 @@ public class Weaver {
 //            logger.println("[unlogged] using System.out instead.");
 //        }
 
-        String agentVersion = "1.0.1";
 
 //        logger.printf("Java version: %s%n", System.getProperty("java.version"));
 //        logger.printf("Agent version: %s%n", agentVersion);
@@ -108,13 +108,14 @@ public class Weaver {
         String hash = getClassHash(target);
         LogLevel level = LogLevel.Normal;
         int classId = dataInfoProvider.nextClassId();
+//        System.out.println("Probe class [" + className + "] => " + classId);
         WeaveLog weaveLog = new WeaveLog(classId, dataInfoProvider);
 //        try {
         ClassTransformer classTransformer;
         try {
             classTransformer = new ClassTransformer(weaveLog, config, target, typeHierarchy);
         } catch (RuntimeException e) {
-            if ("Method code too large!".equals(e.getMessage())) {
+            if (e.getMessage() != null && e.getMessage().startsWith("Method too large")) {
                 // Retry to generate a smaller bytecode by ignoring a large array init block
                 try {
                     weaveLog = new WeaveLog(classId, dataInfoProvider);
@@ -123,7 +124,7 @@ public class Weaver {
                     classTransformer = new ClassTransformer(weaveLog, smallerConfig, target, typeHierarchy);
 //                    log("LogLevel.IgnoreArrayInitializer: " + container + "/" + className);
                 } catch (RuntimeException e2) {
-                    if ("Method code too large!".equals(e.getMessage())) {
+                    if (e.getMessage() != null && e.getMessage().startsWith("Method too large")) {
                         weaveLog = new WeaveLog(classId, dataInfoProvider);
                         // Retry to generate further smaller bytecode by ignoring except for entry and exit events
                         level = LogLevel.OnlyEntryExit;

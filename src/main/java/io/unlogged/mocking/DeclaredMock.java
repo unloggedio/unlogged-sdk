@@ -10,15 +10,6 @@ public class DeclaredMock {
     private String name;
     private String fieldTypeName;
     private String fieldName;
-
-    public String getSourceClassName() {
-        return sourceClassName;
-    }
-
-    public void setSourceClassName(String sourceClassName) {
-        this.sourceClassName = sourceClassName;
-    }
-
     private String sourceClassName;
     private String methodName;
     private List<ParameterMatcher> whenParameter;
@@ -49,6 +40,14 @@ public class DeclaredMock {
         this.methodName = methodName;
         this.whenParameter = whenParameterLists;
         this.thenParameter = thenParameterList;
+    }
+
+    public String getSourceClassName() {
+        return sourceClassName;
+    }
+
+    public void setSourceClassName(String sourceClassName) {
+        this.sourceClassName = sourceClassName;
     }
 
     public String getId() {
@@ -120,5 +119,14 @@ public class DeclaredMock {
     @Override
     public int hashCode() {
         return Objects.hash(name, fieldTypeName, fieldName, methodName, whenParameter);
+    }
+
+    @Override
+    public String toString() {
+        return "DeclaredMock{" +
+                "name='" + name + '\'' +
+                ", fieldName='" + fieldName + '\'' +
+                ", sourceClassName='" + sourceClassName + '\'' +
+                '}';
     }
 }
