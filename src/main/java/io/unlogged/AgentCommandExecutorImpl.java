@@ -444,7 +444,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     List<DeclaredMock> declaredMocksForField = mocksByFieldName.get(field.getName());
 
                     Object fieldValue = field.get(objectInstanceByClass);
-                    if (declaredMocksForField == null || declaredMocksForField.size() == 0) {
+                    boolean fieldTypeIsFinal = Modifier.isFinal(field.getType().getModifiers());
+                    if (declaredMocksForField == null || declaredMocksForField.size() == 0 || fieldTypeIsFinal) {
                         if (fieldValue == null) {
                             fieldValue = objenesis.newInstance(field.getType());
                         }

@@ -180,38 +180,40 @@ public class MockHandler {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:
-                Class<?> expectedClassType;
+                TypeFactory typeFactory = objectMapper.getTypeFactory();
+                JavaType expectedClassType;
                 switch (parameterMatcher.getValue()) {
                     case "int":
-                        expectedClassType = Integer.class;
+                        expectedClassType = typeFactory.constructType(Integer.class);
                         break;
                     case "short":
-                        expectedClassType = Short.class;
+                        expectedClassType = typeFactory.constructType(Short.class);
                         break;
                     case "float":
-                        expectedClassType = Float.class;
+                        expectedClassType = typeFactory.constructType(Float.class);
                         break;
                     case "long":
-                        expectedClassType = Long.class;
+                        expectedClassType = typeFactory.constructType(Long.class);
                         break;
                     case "byte":
-                        expectedClassType = Byte.class;
+                        expectedClassType = typeFactory.constructType(Byte.class);
                         break;
                     case "double":
-                        expectedClassType = Double.class;
+                        expectedClassType = typeFactory.constructType(Double.class);
                         break;
                     case "boolean":
-                        expectedClassType = Boolean.class;
+                        expectedClassType = typeFactory.constructType(Boolean.class);
                         break;
                     case "char":
-                        expectedClassType = Character.class;
+                        expectedClassType = typeFactory.constructType(Character.class);
                         break;
                     default:
-                        expectedClassType = targetClassLoader.loadClass(parameterMatcher.getValue());
+                        expectedClassType = typeFactory.constructFromCanonical(parameterMatcher.getValue());
 
                         break;
                 }
-                if (!expectedClassType.isAssignableFrom(argument.getClass())) {
+                JavaType actualJavaType = typeFactory.constructType(argument.getClass());
+                if (!expectedClassType.getRawClass().isAssignableFrom(actualJavaType.getRawClass())) {
                     mockMatched = false;
                 }
                 break;
