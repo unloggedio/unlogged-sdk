@@ -3,6 +3,7 @@ package io.unlogged.core;
 import io.unlogged.core.processor.Permit;
 
 import javax.annotation.processing.*;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
@@ -22,6 +23,7 @@ import java.util.Set;
 import static io.unlogged.core.Augments.ClassLoader_lombokAlreadyAddedTo;
 
 @SupportedAnnotationTypes("*")
+@SupportedSourceVersion(value = SourceVersion.RELEASE_19)
 public class AnnotationProcessor extends AbstractProcessor {
 
     private final List<ProcessorDescriptor> registered = Arrays.asList(new JavacDescriptor());
