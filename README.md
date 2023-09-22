@@ -15,7 +15,7 @@ The [binary format descriptions](https://github.com/unloggedio/common/tree/maste
     <dependency>
         <groupId>io.unlogged</groupId>
         <artifactId>unlogged-java-sdk</artifactId>
-        <version>0.0.26</version>
+        <version>0.1.9</version>
     </dependency>
 </dependencies>
 ```
@@ -25,8 +25,8 @@ The [binary format descriptions](https://github.com/unloggedio/common/tree/maste
 ```groovy
 dependencies
 {
-    implementation 'video.bug:unlogged-sdk:0.0.26'
-    annotationProcessor 'video.bug:unlogged-sdk:0.0.26'
+    implementation 'video.bug:unlogged-sdk:0.1.9'
+    annotationProcessor 'video.bug:unlogged-sdk:0.1.9'
 }
 ```
 
