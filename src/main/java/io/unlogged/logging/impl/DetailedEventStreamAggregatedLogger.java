@@ -110,7 +110,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
                     "com.fasterxml.jackson.module.mrbean.MrBeanModule",
 //                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
-                    "com.fasterxml.jackson.module.paranamer.ParanamerModule"
+                    "com.fasterxml.jackson.module.paranamer.ParanamerModule",
+                    "software.fitz.jackson.module.force.ForceDeserializerModule"
             );
             for (String jacksonModule : jacksonModules) {
                 try {
@@ -310,7 +311,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
                     "com.fasterxml.jackson.module.mrbean.MrBeanModule",
 //                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
-                    "com.fasterxml.jackson.module.paranamer.ParanamerModule"
+                    "com.fasterxml.jackson.module.paranamer.ParanamerModule",
+                    "software.fitz.jackson.module.force.ForceDeserializerModule"
             );
             for (String jacksonModule : jacksonModules) {
                 try {

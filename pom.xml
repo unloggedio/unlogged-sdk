@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.9</version>
+    <version>0.1.10</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -114,6 +114,11 @@
     </profiles>
 
     <dependencies>
+        <dependency>
+            <groupId>software.fitz</groupId>
+            <artifactId>jackson-module-force-deserializer</artifactId>
+            <version>0.2.0-RELEASE</version>
+        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
@@ -312,7 +317,7 @@
                 <configuration>
                     <compilerArgument>-proc:none</compilerArgument>
                     <source>1.8</source>
-                    <target>17</target>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>

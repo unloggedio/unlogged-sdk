@@ -23,7 +23,6 @@ import java.util.Set;
 import static io.unlogged.core.Augments.ClassLoader_lombokAlreadyAddedTo;
 
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(value = SourceVersion.RELEASE_19)
 public class AnnotationProcessor extends AbstractProcessor {
 
     private final List<ProcessorDescriptor> registered = Arrays.asList(new JavacDescriptor());
@@ -154,6 +153,14 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 "Your processor is: %s\nLombok supports: %s", procEnv.getClass().getName(), supported));
             }
         }
+    }
+
+    /**
+     * We just return the latest version of whatever JDK we run on. Stupid? Yeah, but it's either that or warnings on all versions but 1. Blame Joe.
+     */
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latest();
     }
 
     static abstract class ProcessorDescriptor {
