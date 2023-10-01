@@ -58,7 +58,7 @@ public class WeaveParameters {
      * If true, automatic filtering for security manager classes is disabled
      */
     private boolean weaveSecurityManagerClass = false;
-    private Runtime.Mode mode = Runtime.Mode.Testing;
+    private Runtime.Mode mode = Runtime.Mode.TESTING;
     private int filesPerIndex = 100;
     private String agentServerPort = "12100";
 
@@ -130,21 +130,21 @@ public class WeaveParameters {
             } else if (arg.startsWith("format=")) {
                 String opt = arg.substring("format=".length()).toLowerCase();
                 if (opt.startsWith("freq")) {
-                    mode = Runtime.Mode.Frequency;
+                    mode = Runtime.Mode.FREQUENCY;
                 } else if (opt.startsWith("discard")) {
-                    mode = Runtime.Mode.Discard;
+                    mode = Runtime.Mode.DISCARD;
                 } else if (opt.startsWith("omni") || opt.startsWith("stream")) {
-                    mode = Runtime.Mode.Stream;
+                    mode = Runtime.Mode.STREAM;
 //                } else if (opt.startsWith("single")) {
 //                    mode = Mode.Single;
                 } else if (opt.startsWith("replay")) {
-                    mode = Runtime.Mode.PerThread;
+                    mode = Runtime.Mode.PER_THREAD;
                 } else if (opt.startsWith("testing")) {
-                    mode = Runtime.Mode.Testing;
+                    mode = Runtime.Mode.TESTING;
                 } else if (opt.startsWith("network")) {
-                    mode = Runtime.Mode.Network;
+                    mode = Runtime.Mode.NETWORK;
                 } else if (opt.startsWith("latest") || opt.startsWith("nearomni") || opt.startsWith("near-omni")) {
-                    mode = Runtime.Mode.FixedSize;
+                    mode = Runtime.Mode.FIXED_SIZE;
                 }
             }
         }
