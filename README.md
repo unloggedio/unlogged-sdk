@@ -1,9 +1,63 @@
+<p style="background: black; border-radius: 10px; padding-top: 10px; padding-left: 10px; padding-right: 
+10px; padding-bottom: 5px; alignment: center">
+  <a href="https://www.unlogged.io/">
+    <img src="https://uploads-ssl.webflow.com/637386e7d86a129c88844184/6373b1b500cebc4cba1d88b0_unlogged%20logo.svg" height="96">
+    <h3 align="center">Unlogged</h3>
+  </a>
+</p>
+
+<p align="center">
+  Record. Replay. Test.
+</p>
+
+<p align="center">
+  <a href="https://unloggedio.github.io/documentation/"><strong>Documentation</strong></a> ·
+  <a href="https://www.unlogged.io/bug-bounty-program"><strong>Bug Bounty</strong></a> ·
+  <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk/"><strong>Maven</strong></a> ·
+  <a href="https://plugins.jetbrains.com/plugin/18529-unlogged"><strong>IntelliJ Plugin</strong></a>
+</p>
+<br/>
+
+
 # Unlogged Java SDK
 
-Unlogged Java SDK enabled recording of code execution in a binary format. The recording is highly detailed and can 
-be used to reconstruct the code execution from scratch.
+Unlogged Java SDK enabled recording of code execution in a binary format. 
 
+Replay these records using the [Unlogged IntelliJ Plugin](https://plugins.jetbrains.com/plugin/18529-unlogged) and generate junit test cases.
+
+The recording is highly detailed and can be used to reconstruct the code execution from scratch.
 The [binary format descriptions](https://github.com/unloggedio/common/tree/master/src/main/kaitai) are available in Kaitai format here
+
+- 🎬 Execute Java methods in your process right from your IDE
+- 🖥️ Replay one or all recorded executions and see the differences in response in real time
+- 🎯 Setup assertions on individual keys in response objects 
+- 🎭 Mock downstream calls as easily as setting up a breakpoint
+- 🩺 Identify bottlenecks in your code with perf numbers right above the method declaration
+- 🦠 Create JUnit test cases from recorded executions
+
+### Additional Screenshots
+
+<details>
+  <summary><b>🎬 Direct Invoke</b></summary>
+  <img alt="Dashboard" src="./static/direct-invoke.png">
+</details>
+<details>
+  <summary><b>🖥️ Replay</b></summary>
+  <img alt="Event Pattern Clustering" src="./static/replay.png">
+</details>
+<details>
+  <summary><b>🎭 Mocking</b></summary>
+  <img alt="Event Pattern Clustering" src="./static/mocking.png">
+</details>
+<details>
+  <summary><b>🎯 Assertions</b></summary>
+  <img alt="Event Pattern Clustering" src="./static/assertions.png">
+</details>
+<details>
+  <summary><b>🦠 JUnit Test case</b></summary>
+  <img alt="Event Pattern Clustering" src="./static/junit-test-case.png">
+</details>
+
 
 ## Usage
 
@@ -32,10 +86,12 @@ dependencies
 
 2. Add `@Unlogged` annotation to your application entry point
 ```java
+public class Main {
     @Unlogged
     public static void main(String[] args) {
         // 
     }
+}
 ```
 
 ## Disabling recording
@@ -63,6 +119,17 @@ or
 
 You can find the latest release version here: https://mvnrepository.com/artifact/video.bug/unlogged-sdk
 
+
+## Contributing
+
+We welcome all contributions! There's many ways to contribute to the project,
+including but not limited to:
+
+- Opening a PR
+- [Submitting feature requests or bugs](https://github.com/unlogged/unlogged-sdk/issues/new)
+- Improving our product or contribution documentation
+- Voting on [open issues](https://github.com/unlogged/unlogged-sdk/issues) or
+  contributing use cases to a feature request
 
 Lombok License
 
