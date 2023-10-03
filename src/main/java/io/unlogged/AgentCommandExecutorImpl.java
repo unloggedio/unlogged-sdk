@@ -65,8 +65,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     @Override
-    public AgentCommandResponse executeCommand(AgentCommandRequest agentCommandRequest) throws Exception {
+    public AgentCommandResponse executeCommand(AgentCommandRequest agentCommandRequest) {
 
+        AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
         AgentCommandRequestType requestType = agentCommandRequest.getRequestType();
         if (requestType == null) {
             requestType = AgentCommandRequestType.REPEAT_INVOKE;
@@ -150,7 +151,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
 
-                AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
                 agentCommandResponse.setTargetClassName(targetClassName);
                 agentCommandResponse.setTargetMethodName(agentCommandRequest.getMethodName());
                 agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
@@ -162,42 +162,54 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         declaredMocksList);
 
 
-                try {
-                    Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+                Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
 
-                    Object serializedValue = serializeMethodReturnValue(methodReturnValue);
-                    agentCommandResponse.setMethodReturnValue(serializedValue);
+                Object serializedValue = serializeMethodReturnValue(methodReturnValue);
+                agentCommandResponse.setMethodReturnValue(serializedValue);
 
-                    agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
-                    agentCommandResponse.setResponseType(ResponseType.NORMAL);
-                } catch (Throwable exception) {
-                    if (exception instanceof InvocationTargetException) {
-                        exception.getCause().printStackTrace();
-                    } else {
-                        exception.printStackTrace();
-                    }
-                    Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
-                    agentCommandResponse.setMessage(exceptionCause.getMessage());
-                    try {
-                        agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
-                    } catch (Throwable e) {
-                        agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
-                        agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
-                        // failed to serialize thrown exception
-                    }
-                    agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
-                    agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
-                }
+                agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
+                agentCommandResponse.setResponseType(ResponseType.NORMAL);
                 return agentCommandResponse;
+            } catch (Throwable exception) {
+                if (exception instanceof InvocationTargetException) {
+                    agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
+                    exception.getCause().printStackTrace();
+                } else {
+                    agentCommandResponse.setResponseType(ResponseType.FAILED);
+                    exception.printStackTrace();
+                }
+                Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
+                agentCommandResponse.setMessage(exceptionCause.getMessage());
+                try {
+                    agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+                } catch (Throwable e) {
+                    agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
+                    agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
+                    // failed to serialize thrown exception
+                }
+                agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
             } finally {
                 closeHibernateSessionIfPossible(sessionInstance);
             }
+        } catch (Throwable exception) {
+            exception.printStackTrace();
+            Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
+            agentCommandResponse.setMessage(exceptionCause.getMessage());
+            try {
+                agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+            } catch (Throwable e) {
+                agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
+                agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
+                // failed to serialize thrown exception
+            }
+            agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
+            agentCommandResponse.setResponseType(ResponseType.FAILED);
         } finally {
             if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
                 logger.setRecording(false);
             }
         }
-
+        return agentCommandResponse;
 
     }
 

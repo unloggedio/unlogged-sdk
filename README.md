@@ -37,23 +37,23 @@ The [binary format descriptions](https://github.com/unloggedio/common/tree/maste
 
 <details>
   <summary><b>🎬 Direct Invoke</b></summary>
-  <img alt="Dashboard" src="./static/direct-invoke.png">
+  <img alt="Direct Invoke Java methods" src="./static/direct-invoke.png">
 </details>
 <details>
   <summary><b>🖥️ Replay</b></summary>
-  <img alt="Event Pattern Clustering" src="./static/replay.png">
+  <img alt="Replay history of code execution" src="./static/replay.png">
 </details>
 <details>
   <summary><b>🎭 Mocking</b></summary>
-  <img alt="Event Pattern Clustering" src="./static/mocking.png">
+  <img alt="Mock downstream calls" src="./static/mocking.png">
 </details>
 <details>
   <summary><b>🎯 Assertions</b></summary>
-  <img alt="Event Pattern Clustering" src="./static/assertions.png">
+  <img alt="Assertions in regression tests" src="./static/assertions.png">
 </details>
 <details>
   <summary><b>🦠 JUnit Test case</b></summary>
-  <img alt="Event Pattern Clustering" src="./static/junit-test-case.png">
+  <img alt="Generate junit test cases" src="./static/junit-test-case.png">
 </details>
 
 

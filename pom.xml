@@ -407,7 +407,7 @@
                 <configuration>
                     <source>(.+).class</source>
                     <target>$1.SCL.unlogged</target>
-                    <workingDirectory>**/${build.directory}/classes/io/unlogged/core</workingDirectory>
+                    <workingDirectory>**/${project.build.directory}/classes/io/unlogged/core</workingDirectory>
                 </configuration>
             </plugin>
 
