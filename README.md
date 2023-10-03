@@ -1,8 +1,6 @@
-<p style="background: black; border-radius: 10px; padding-top: 10px; padding-left: 10px; padding-right: 
-10px; padding-bottom: 5px; alignment: center">
+<p align="center">
   <a href="https://www.unlogged.io/">
-    <img src="https://uploads-ssl.webflow.com/637386e7d86a129c88844184/6373b1b500cebc4cba1d88b0_unlogged%20logo.svg" height="96">
-    <h3 align="center">Unlogged</h3>
+    <img src="static/background.svg" height="96">
   </a>
 </p>
 
