@@ -92,7 +92,10 @@ public class Main {
 }
 ```
 
-## Disabling recording
+## Disabling unlogged-sdk
+
+It is highly recommended that you disable the unlogged-sdk when deploying for usage. unlogged-sdk is only targetted 
+for local usage only.
 
 Adding the unlogged-sdk adds probes to your code which emits events in a binary format. Adding the `@Unlogged` 
 enabled to actual execution of those probes.
