@@ -127,9 +127,9 @@ We welcome all contributions! There's many ways to contribute to the project,
 including but not limited to:
 
 - Opening a PR
-- [Submitting feature requests or bugs](https://github.com/unlogged/unlogged-sdk/issues/new)
+- [Submitting feature requests or bugs](https://github.com/unloggedio/unlogged-sdk/issues/new)
 - Improving our product or contribution documentation
-- Voting on [open issues](https://github.com/unlogged/unlogged-sdk/issues) or
+- Voting on [open issues](https://github.com/unloggedio/unlogged-sdk/issues) or
   contributing use cases to a feature request
 
 Lombok License
