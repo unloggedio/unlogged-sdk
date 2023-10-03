@@ -110,10 +110,10 @@ public class Runtime {
             switch (weaveParameters.getMode()) {
 
 
-                case Discard:
+                case DISCARD:
                     logger = Logging.initialiseDiscardLogger();
 
-                case PerThread:
+                case PER_THREAD:
 
                     NetworkClient networkClient = new NetworkClient(weaveParameters.getServerAddress(),
                             config.getSessionId(), weaveParameters.getAuthToken(), errorLogger);
@@ -130,7 +130,7 @@ public class Runtime {
                     logger = Logging.initialiseAggregatedLogger(perThreadBinaryFileAggregatedLogger, outputDir);
                     break;
 
-                case Testing:
+                case TESTING:
 
                     NetworkClient networkClient1 =
                             new NetworkClient(weaveParameters.getServerAddress(),
@@ -315,6 +315,6 @@ public class Runtime {
 
     }
 
-    public enum Mode {Stream, Frequency, FixedSize, Discard, Network, PerThread, Testing}
+    public enum Mode {STREAM, FREQUENCY, FIXED_SIZE, DISCARD, NETWORK, PER_THREAD, TESTING}
 
 }
