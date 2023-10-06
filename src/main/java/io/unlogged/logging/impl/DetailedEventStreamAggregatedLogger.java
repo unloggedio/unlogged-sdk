@@ -471,6 +471,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         || className.startsWith("redis")
                         || className.startsWith("co.elastic")
                         || className.startsWith("io.unlogged")
+                        || className.startsWith("com.insidious")
+                        || className.startsWith("com.intellij")
                         || className.startsWith("java.lang.Class")
                         || className.startsWith("reactor.core")
                         || className.startsWith("io.undertow")

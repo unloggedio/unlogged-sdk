@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.10</version>
+    <version>0.1.11</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -159,7 +159,7 @@
         <dependency>
             <groupId>video.bug</groupId>
             <artifactId>common</artifactId>
-            <version>1.4.3</version>
+            <version>1.4.4</version>
             <exclusions>
                 <exclusion>
                     <groupId>redis.clients</groupId>
@@ -282,10 +282,10 @@
                             <pattern>org.slf4j</pattern>
                             <shadedPattern>selogger.org.slf4j</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>com.googlecode.cqengine</pattern>
-                            <shadedPattern>selogger.com.googlecode.cqengine</shadedPattern>
-                        </relocation>
+<!--                        <relocation>-->
+<!--                            <pattern>com.googlecode.cqengine</pattern>-->
+<!--                            <shadedPattern>selogger.com.googlecode.cqengine</shadedPattern>-->
+<!--                        </relocation>-->
                         <relocation>
                             <pattern>ch.qos.logback</pattern>
                             <shadedPattern>selogger.ch.qos.logback</shadedPattern>
@@ -293,6 +293,10 @@
                         <relocation>
                             <pattern>net.bytebuddy</pattern>
                             <shadedPattern>selogger.net.bytebuddy</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>net.openhft</pattern>
+                            <shadedPattern>selogger.net.openhft</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

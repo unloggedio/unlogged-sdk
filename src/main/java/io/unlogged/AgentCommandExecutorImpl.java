@@ -24,10 +24,10 @@ import reactor.core.publisher.Mono;
 
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
-import static net.openhft.chronicle.core.util.ObjectUtils.getAllInterfaces;
 
 public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
@@ -340,6 +340,46 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 fieldCount + "] fields in [" + classCount + "] classes");
         return agentCommandResponse;
     }
+
+    public static Class<?>[] getAllInterfaces(Object o) {
+        try {
+            Set<Class<?>> results = new HashSet<>();
+            getAllInterfaces(o, results::add);
+            return results.toArray(new Class<?>[results.size()]);
+        } catch (IllegalArgumentException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    public static void getAllInterfaces(Object o, Function<Class<?>, Boolean> accumulator) throws IllegalArgumentException {
+        if (null == o)
+            return;
+
+        if (null == accumulator)
+            throw new IllegalArgumentException("Accumulator cannot be null");
+
+        if (o instanceof Class) {
+            Class clazz = (Class) o;
+
+            if (clazz.isInterface()) {
+                if (accumulator.apply((Class) o)) {
+                    for (Class aClass : clazz.getInterfaces()) {
+                        getAllInterfaces(aClass, accumulator);
+                    }
+                }
+            } else {
+                if (null != clazz.getSuperclass())
+                    getAllInterfaces(clazz.getSuperclass(), accumulator);
+
+                for (Class aClass : clazz.getInterfaces()) {
+                    getAllInterfaces(aClass, accumulator);
+                }
+            }
+        } else {
+            getAllInterfaces(o.getClass(), accumulator);
+        }
+    }
+
 
     @Override
     public AgentCommandResponse removeMocks(AgentCommandRequest agentCommandRequest) throws Exception {
