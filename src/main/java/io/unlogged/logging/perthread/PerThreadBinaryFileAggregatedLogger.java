@@ -137,7 +137,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     private synchronized void prepareNextFile(int currentThreadId) throws IOException {
 
-//        errorLogger.log("prepare next file [" + currentThreadId + "] " + Arrays.toString(new Exception().getStackTrace()));
+//        errorLogger.log("prepare next file [" + currentThreadId + "]");
 
         if (count.containsKey(currentThreadId) && threadFileMap.get(currentThreadId) != null) {
             int eventCount = count.get(currentThreadId).get();
@@ -169,7 +169,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //            BloomFilter<Long> valueIdBloomFilter = valueIdFilterSet.get(currentThreadId);
 //            BloomFilter<Integer> probeIdBloomFilter = probeIdFilterSet.get(currentThreadId);
 
-            count.put(currentThreadId, new AtomicInteger(0));
+//            count.put(currentThreadId, new AtomicInteger(0));
 //            valueIdFilterSet.put(currentThreadId,
 //                    BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
 //            probeIdFilterSet.put(currentThreadId,
@@ -371,10 +371,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(buffer);
 
-            fileCollector.addValueId(valueId);
+//            fileCollector.addValueId(valueId);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
-            fileCollector.addProbeId(probeId);
+//            fileCollector.addProbeId(probeId);
             if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }

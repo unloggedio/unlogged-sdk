@@ -990,7 +990,7 @@ public class MethodTransformer extends LocalVariablesSorter {
             return;
         }
 
-        String label = "Type=" + desc;
+        String label = "Owner=" + owner + ",FieldName=" + name + ",Type=" + desc;
 
         if (opcode == Opcodes.GETSTATIC) {
             // Record a resultant value
