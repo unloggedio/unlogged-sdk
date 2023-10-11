@@ -697,15 +697,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     @Override
     public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
-
-//        classMap.put(classIdEntry.getClassName(), log);
-//        System.err.println("Record weave info for [" + classIdEntry.getClassName() + "]");
-        if (!classIdEntry.getClassName().contains("mongo") &&
-                !classIdEntry.getClassName().contains("spring") &&
-                !classIdEntry.getClassName().contains("redis")
-        ) {
-            probesToRecord.addAll(probeIdsToRecord);
-        }
+        probesToRecord.addAll(probeIdsToRecord);
         aggregatedLogger.writeWeaveInfo(byteArray);
     }
 
