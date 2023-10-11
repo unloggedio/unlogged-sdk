@@ -64,6 +64,45 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
     }
 
+    public static Class<?>[] getAllInterfaces(Object o) {
+        try {
+            Set<Class<?>> results = new HashSet<>();
+            getAllInterfaces(o, results::add);
+            return results.toArray(new Class<?>[results.size()]);
+        } catch (IllegalArgumentException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    public static void getAllInterfaces(Object o, Function<Class<?>, Boolean> accumulator) throws IllegalArgumentException {
+        if (null == o)
+            return;
+
+        if (null == accumulator)
+            throw new IllegalArgumentException("Accumulator cannot be null");
+
+        if (o instanceof Class) {
+            Class clazz = (Class) o;
+
+            if (clazz.isInterface()) {
+                if (accumulator.apply((Class) o)) {
+                    for (Class aClass : clazz.getInterfaces()) {
+                        getAllInterfaces(aClass, accumulator);
+                    }
+                }
+            } else {
+                if (null != clazz.getSuperclass())
+                    getAllInterfaces(clazz.getSuperclass(), accumulator);
+
+                for (Class aClass : clazz.getInterfaces()) {
+                    getAllInterfaces(aClass, accumulator);
+                }
+            }
+        } else {
+            getAllInterfaces(o.getClass(), accumulator);
+        }
+    }
+
     @Override
     public AgentCommandResponse executeCommand(AgentCommandRequest agentCommandRequest) {
 
@@ -341,46 +380,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return agentCommandResponse;
     }
 
-    public static Class<?>[] getAllInterfaces(Object o) {
-        try {
-            Set<Class<?>> results = new HashSet<>();
-            getAllInterfaces(o, results::add);
-            return results.toArray(new Class<?>[results.size()]);
-        } catch (IllegalArgumentException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public static void getAllInterfaces(Object o, Function<Class<?>, Boolean> accumulator) throws IllegalArgumentException {
-        if (null == o)
-            return;
-
-        if (null == accumulator)
-            throw new IllegalArgumentException("Accumulator cannot be null");
-
-        if (o instanceof Class) {
-            Class clazz = (Class) o;
-
-            if (clazz.isInterface()) {
-                if (accumulator.apply((Class) o)) {
-                    for (Class aClass : clazz.getInterfaces()) {
-                        getAllInterfaces(aClass, accumulator);
-                    }
-                }
-            } else {
-                if (null != clazz.getSuperclass())
-                    getAllInterfaces(clazz.getSuperclass(), accumulator);
-
-                for (Class aClass : clazz.getInterfaces()) {
-                    getAllInterfaces(aClass, accumulator);
-                }
-            }
-        } else {
-            getAllInterfaces(o.getClass(), accumulator);
-        }
-    }
-
-
     @Override
     public AgentCommandResponse removeMocks(AgentCommandRequest agentCommandRequest) throws Exception {
 
@@ -499,7 +498,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     boolean fieldTypeIsFinal = Modifier.isFinal(field.getType().getModifiers());
                     if (declaredMocksForField == null || declaredMocksForField.size() == 0 || fieldTypeIsFinal) {
                         if (fieldValue == null) {
-                            fieldValue = objenesis.newInstance(field.getType());
+                            try {
+                                fieldValue = objenesis.newInstance(field.getType());
+                            } catch (Throwable e) {
+                                continue;
+                            }
                         }
                         if (Modifier.isFinal(field.getModifiers())) {
                             continue;

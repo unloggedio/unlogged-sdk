@@ -423,12 +423,15 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         }
         if (!className.contains("Lambda") && !className.contains("$Unlogged")) {
 //            System.err.println("Object instance: " + className);
+            String originalClassName = className;
             if (className.contains("_$")) {
                 className = className.substring(0, className.indexOf("_$"));
             } else if (className.contains("$")) {
                 className = className.substring(0, className.indexOf('$'));
             }
-            objectMap.put(className, new WeakReference<>(value));
+            if (!(originalClassName.contains("$EnhancerBySpringCGLIB") && objectMap.containsKey(className))) {
+                objectMap.put(className, new WeakReference<>(value));
+            }
             if (targetClassLoader == null && value != null) {
                 targetClassLoader = value.getClass().getClassLoader();
             }

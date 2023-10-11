@@ -105,8 +105,8 @@ public class MockHandler {
 
                                         JavaType typeReference;
                                         try {
-                                            typeReference = typeFactory.constructFromCanonical(
-                                                    returnParameter.getClassName());
+                                            String classNameToBeConstructed = returnParameter.getClassName();
+                                            typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
                                         } catch (Exception e) {
                                             // failed to construct from the canonical name,
                                             // happens when this is a generic type
@@ -177,6 +177,15 @@ public class MockHandler {
         return realMethod.invoke(originalImplementation, methodArguments);
     }
 
+    private JavaType getTypeReference(TypeFactory typeFactory, String classNameToBeConstructed) {
+        if (classNameToBeConstructed.endsWith("[]")) {
+            JavaType subType = getTypeReference(typeFactory, classNameToBeConstructed.substring(0,
+                    classNameToBeConstructed.length() - 2));
+            return typeFactory.constructArrayType(subType);
+        }
+        return typeFactory.constructFromCanonical(classNameToBeConstructed);
+    }
+
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) throws ClassNotFoundException {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
@@ -210,7 +219,7 @@ public class MockHandler {
                         expectedClassType = typeFactory.constructType(Character.class);
                         break;
                     default:
-                        expectedClassType = typeFactory.constructFromCanonical(parameterMatcher.getValue());
+                        expectedClassType = getTypeReference(typeFactory, parameterMatcher.getValue());
 
                         break;
                 }
