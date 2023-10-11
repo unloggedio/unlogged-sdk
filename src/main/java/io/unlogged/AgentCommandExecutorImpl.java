@@ -2,14 +2,13 @@ package io.unlogged;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
-import io.unlogged.mocking.DeclaredMock;
-import io.unlogged.mocking.MockHandler;
-import io.unlogged.mocking.MockInstance;
+import io.unlogged.mocking.*;
 import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
@@ -17,6 +16,8 @@ import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
@@ -516,68 +517,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                         if (existingMockInstance == null) {
 
-//                            if (ClassInjector.UsingLookup.isAvailable()) {
-//                                Class<?> methodHandles = null;
-//                                try {
-//                                    methodHandles = targetClassLoader.loadClass("java.lang.invoke.MethodHandles");
-//                                    Object lookup = methodHandles.getMethod("lookup").invoke(null);
-//                                    Method privateLookupIn = methodHandles.getMethod("privateLookupIn",
-//                                            Class.class,
-//                                            targetClassLoader.loadClass("java.lang.invoke.MethodHandles$Lookup"));
-//                                    Object privateLookup = privateLookupIn.invoke(null, field.getType(), lookup);
-//                                    strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
-//                                } catch (Exception e) {
-//                                    // should never happen
-//                                    throw new RuntimeException(e);
-//                                }
-//                            } else if (ClassInjector.UsingReflection.isAvailable()) {
-                            strategy = ClassLoadingStrategy.Default.INJECTION;
-//                            } else {
-//                                throw new IllegalStateException("No code generation strategy available");
-//                            }
 
-
-                            MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
-                                    byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader,
-                                    field);
-                            Class<?> fieldType = field.getType();
-
-                            DynamicType.Loaded<?> loadedMockedField;
-                            if (fieldType.isInterface()) {
-                                Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
-                                Set<String> implementedClasses = new HashSet<>();
-                                implementedClasses.add(fieldType.getCanonicalName());
-
-                                List<Class<?>> pendingImplementations = new ArrayList<>();
-                                pendingImplementations.add(fieldType);
-                                for (Class<?> implementedInterface : implementedInterfaces) {
-                                    if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
-                                        continue;
-                                    }
-                                    implementedClasses.add(implementedInterface.getCanonicalName());
-                                    pendingImplementations.add(implementedInterface);
-                                }
-
-                                loadedMockedField = byteBuddyInstance
-                                        .subclass(Object.class)
-                                        .implement(pendingImplementations)
-                                        .intercept(MethodDelegation.to(mockHandler))
-                                        .make()
-                                        .load(targetClassLoader, strategy);
-
-                            } else {
-                                loadedMockedField = byteBuddyInstance
-                                        .subclass(fieldType)
-                                        .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
-                                        .make()
-                                        .load(targetClassLoader, strategy);
-                            }
-
-
-                            Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-
-                            existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
-                                    loadedMockedField);
+                            existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
+                                    field, declaredMocksForField, fieldValue, field.getType());
                             mockInstanceMap.put(key, existingMockInstance);
 
                         } else {
@@ -603,6 +545,55 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             fieldCopyForClass = fieldCopyForClass.getSuperclass();
         }
         return extendedClassInstance;
+    }
+
+    @NotNull
+    private MockInstance createMockedInstance(
+            ClassLoader targetClassLoader,
+            Object objectInstanceByClass, Field field,
+            List<DeclaredMock> declaredMocksForField,
+            Object fieldValue, Class<?> fieldType) {
+        ClassLoadingStrategy<ClassLoader> strategy = ClassLoadingStrategy.Default.INJECTION;
+        MockInstance existingMockInstance;
+        MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
+                byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader, field);
+
+        DynamicType.Loaded<?> loadedMockedField;
+        if (fieldType.isInterface()) {
+            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
+            Set<String> implementedClasses = new HashSet<>();
+            implementedClasses.add(fieldType.getCanonicalName());
+
+            List<Class<?>> pendingImplementations = new ArrayList<>();
+            pendingImplementations.add(fieldType);
+            for (Class<?> implementedInterface : implementedInterfaces) {
+                if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
+                    continue;
+                }
+                implementedClasses.add(implementedInterface.getCanonicalName());
+                pendingImplementations.add(implementedInterface);
+            }
+
+            loadedMockedField = byteBuddyInstance
+                    .subclass(Object.class)
+                    .implement(pendingImplementations)
+                    .intercept(MethodDelegation.to(mockHandler))
+                    .make()
+                    .load(targetClassLoader, strategy);
+
+        } else {
+            loadedMockedField = byteBuddyInstance
+                    .subclass(fieldType)
+                    .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
+                    .make()
+                    .load(targetClassLoader, strategy);
+        }
+
+
+        Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
+
+        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
+        return existingMockInstance;
     }
 
     private Method getMethodToExecute(Class<?> objectClass, String expectedMethodName,
@@ -719,33 +710,153 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         Object[] parameters = new Object[methodParameters.size()];
 
         for (int i = 0; i < methodParameters.size(); i++) {
-            String methodParameter = methodParameters.get(i);
+            String methodParameterStringValue = methodParameters.get(i);
             Class<?> parameterType = parameterTypesClass[i];
-            Object parameterObject = null;
-            if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
-                try {
-                    parameterObject = objectMapper.readValue(methodParameter,
-                            Class.forName("org.springframework.util.LinkedMultiValueMap"));
-                } catch (ClassNotFoundException e) {
-                    // this should never happen
-                }
-            } else {
-
-                JavaType typeReference;
-                try {
-                    typeReference = typeFactory.constructFromCanonical(parameterTypes.get(i));
-                } catch (Exception e) {
-                    // failed to construct from the canonical name,
-                    // happens when this is a generic type
-                    // so we try to construct using type from the method param class
-                    typeReference = typeFactory.constructType(parameterType);
-                }
-                parameterObject = objectMapper.readValue(methodParameter, typeReference);
-            }
+            String stringParameterType = parameterTypes.get(i);
+            Object parameterObject = createObjectInstanceFromStringAndTypeInformation(stringParameterType, typeFactory,
+                    methodParameterStringValue, parameterType);
 
             parameters[i] = parameterObject;
         }
         return parameters;
+    }
+
+    @Nullable
+    private Object createObjectInstanceFromStringAndTypeInformation
+            (String stringParameterType, TypeFactory typeFactory, String methodParameter, Class<?> parameterType) throws JsonProcessingException {
+        Object parameterObject = null;
+        if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
+            try {
+                parameterObject = objectMapper.readValue(methodParameter,
+                        Class.forName("org.springframework.util.LinkedMultiValueMap"));
+            } catch (ClassNotFoundException e) {
+                // this should never happen
+            }
+        } else {
+
+            JavaType typeReference = null;
+            try {
+                if (stringParameterType != null) {
+                    typeReference = MockHandler.getTypeReference(typeFactory, stringParameterType);
+                }
+            } catch (Throwable e) {
+                // failed to construct from the canonical name,
+                // happens when this is a generic type
+                // so we try to construct using type from the method param class
+
+            }
+            if (typeReference == null) {
+                typeReference = typeFactory.constructType(parameterType);
+            }
+            try {
+                parameterObject = objectMapper.readValue(methodParameter, typeReference);
+            } catch (Throwable e) {
+                // a complicated type (no default args constructor), or interface which jackson cannot create ?
+                try {
+                    // can we try using objenesis ?
+                    parameterObject = createParameterUsingObjenesis(typeReference, methodParameter, typeFactory);
+                    // we might want to now construct the whole object tree deep down
+                } catch (Throwable e1) {
+                    // constructing using objenesis also failed
+                    // lets try extending or implementing the class ?
+                    parameterObject = createParameterUsingMocking(methodParameter, parameterType);
+                }
+            }
+        }
+        return parameterObject;
+    }
+
+    private Object createParameterUsingObjenesis(JavaType typeReference, String methodParameter, TypeFactory typeFactory)
+            throws JsonProcessingException, IllegalAccessException {
+        Class<?> rawClass = typeReference.getRawClass();
+        Object parameterObject = objenesis.newInstance(rawClass);
+        Class<?> currentClass = rawClass;
+        JsonNode providedValues = objectMapper.readTree(methodParameter);
+        while (!currentClass.equals(Object.class)) {
+            Field[] declaredFields = rawClass.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                JsonNode fieldValueInNodeByName = providedValues.get(declaredField.getName());
+                Object valueToSet = getValueToSet(typeFactory, fieldValueInNodeByName, declaredField.getType());
+                declaredField.set(parameterObject, valueToSet);
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        return parameterObject;
+    }
+
+    @NotNull
+    private Object createParameterUsingMocking(String methodParameter, Class<?> parameterType) throws JsonProcessingException {
+        Class<?> currentClass;
+        List<DeclaredMock> mockList = new ArrayList<>();
+
+        JsonNode providedValues = objectMapper.readTree(methodParameter);
+        currentClass = parameterType;
+        while (currentClass != null && !currentClass.equals(Object.class)) {
+            Method[] definedMethods = currentClass.getDeclaredMethods();
+            for (Method definedMethod : definedMethods) {
+                String methodName = definedMethod.getName();
+                String potentialFieldName = null;
+                Class<?> valueType = null;
+                if (methodName.startsWith("get") && definedMethod.getParameterTypes().length == 0) {
+                    potentialFieldName = methodName.substring(3);
+                    valueType = definedMethod.getReturnType();
+//                            } else if (methodName.startsWith("set") && definedMethod.getParameterTypes().length == 1) {
+//                                valueType = definedMethod.getParameterTypes()[0];
+//                                potentialFieldName = methodName.substring(3);
+                } else if (methodName.startsWith("is") && definedMethod.getParameterTypes().length == 0) {
+                    valueType = definedMethod.getReturnType();
+                    potentialFieldName = methodName.substring(2);
+                }
+
+                if (potentialFieldName != null && providedValues.has(potentialFieldName)) {
+                    JsonNode providedValue = providedValues.get(potentialFieldName);
+//                                Object valueToReturn = getValueToSet(typeFactory, providedValue, valueType);
+
+                    if (methodName.startsWith("get") || methodName.startsWith("is")) {
+                        ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
+                        ReturnValue returnParameter = new ReturnValue(providedValue.asText(),
+                                valueType.getCanonicalName(), ReturnValueType.REAL);
+                        thenParameterList.add(new ThenParameter(returnParameter, MethodExitType.NORMAL));
+                        DeclaredMock dummyMockDefinition = new DeclaredMock(
+                                "generated mock for " + methodName, valueType.getCanonicalName(),
+                                potentialFieldName, methodName, new ArrayList<>(), thenParameterList
+                        );
+                        mockList.add(dummyMockDefinition);
+                    }
+                }
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+
+        MockInstance parameterObject = createMockedInstance(parameterType.getClassLoader(), null,
+                null, mockList, null, parameterType);
+        return parameterObject.getMockedFieldInstance();
+    }
+
+    @Nullable
+    private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
+        Object valueToSet = null;
+        if (int.class.equals(type) || Integer.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.intValue();
+        } else if (long.class.equals(type) || Long.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.longValue();
+        } else if (double.class.equals(type) || Double.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.doubleValue();
+        } else if (float.class.equals(type) || Float.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.floatValue();
+        } else if (boolean.class.equals(type) || Boolean.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.booleanValue();
+        } else if (short.class.equals(type) || Short.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.shortValue();
+        } else if (String.class.equals(type)) {
+            valueToSet = fieldValueInNodeByName.textValue();
+        } else if (StringBuilder.class.equals(type)) {
+            valueToSet = new StringBuilder(fieldValueInNodeByName.textValue());
+        } else {
+            valueToSet = createObjectInstanceFromStringAndTypeInformation(
+                    null, typeFactory, fieldValueInNodeByName.asText(), type);
+        }
+        return valueToSet;
     }
 
 
@@ -807,6 +918,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 Method beginTransactionMethod = sessionInstance.getClass().getMethod("beginTransaction");
                 beginTransactionMethod.invoke(sessionInstance);
+
             } catch (Exception e) {
                 // failed to create hibernate session
                 return null;

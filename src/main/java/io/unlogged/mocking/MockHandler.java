@@ -48,6 +48,18 @@ public class MockHandler {
         addDeclaredMocks(declaredMocks);
     }
 
+    public static JavaType getTypeReference(TypeFactory typeFactory, String classNameToBeConstructed) {
+        if (classNameToBeConstructed == null) {
+            return null;
+        }
+        if (classNameToBeConstructed.endsWith("[]")) {
+            JavaType subType = getTypeReference(typeFactory, classNameToBeConstructed.substring(0,
+                    classNameToBeConstructed.length() - 2));
+            return typeFactory.constructArrayType(subType);
+        }
+        return typeFactory.constructFromCanonical(classNameToBeConstructed);
+    }
+
     public Field getField() {
         return field;
     }
@@ -139,8 +151,7 @@ public class MockHandler {
                         case MOCK:
                             MockHandler mockHandler = new MockHandler(returnParameter.getDeclaredMocks(), objectMapper,
                                     byteBuddy, objenesis, originalImplementation, originalFieldParent,
-                                    targetClassLoader,
-                                    field);
+                                    targetClassLoader, field);
                             Class<?> fieldType = invokedMethod.getReturnType();
                             DynamicType.Loaded<?> loadedMockedField = byteBuddy
                                     .subclass(fieldType)
@@ -175,15 +186,6 @@ public class MockHandler {
         Method realMethod = originalImplementation.getClass()
                 .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
         return realMethod.invoke(originalImplementation, methodArguments);
-    }
-
-    private JavaType getTypeReference(TypeFactory typeFactory, String classNameToBeConstructed) {
-        if (classNameToBeConstructed.endsWith("[]")) {
-            JavaType subType = getTypeReference(typeFactory, classNameToBeConstructed.substring(0,
-                    classNameToBeConstructed.length() - 2));
-            return typeFactory.constructArrayType(subType);
-        }
-        return typeFactory.constructFromCanonical(classNameToBeConstructed);
     }
 
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) throws ClassNotFoundException {

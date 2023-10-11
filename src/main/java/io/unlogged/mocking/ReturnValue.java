@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 public class ReturnValue {
     private String value;
     private ReturnValueType returnValueType;
-    private List<DeclaredMock> declaredMocks = new ArrayList<>();
+    private final List<DeclaredMock> declaredMocks = new ArrayList<>();
     private String className;
 
     public ReturnValue(String value, String returnValueClassName, ReturnValueType returnValueType) {
