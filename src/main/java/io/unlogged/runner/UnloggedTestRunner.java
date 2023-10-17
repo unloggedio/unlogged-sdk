@@ -6,14 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.AgentCommandRawResponse;
-import io.unlogged.atomic.AssertionEngine;
-import io.unlogged.atomic.AssertionResult;
-import io.unlogged.atomic.MethodUnderTest;
-import io.unlogged.atomic.StoredCandidate;
+import io.unlogged.atomic.*;
 import io.unlogged.command.AgentCommandRequest;
 import io.unlogged.command.AgentCommandResponse;
 import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
+import io.unlogged.mocking.DeclaredMock;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
@@ -21,9 +19,12 @@ import org.junit.runner.notification.RunNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class UnloggedTestRunner extends Runner {
 
@@ -51,9 +52,14 @@ public class UnloggedTestRunner extends Runner {
         System.err.println("UTR.run invoked");
 
         try {
-
-
             Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
+            Map<String, DeclaredMock> mocksById = recordsMap.values()
+                    .stream()
+                    .map(AtomicRecord::getDeclaredMockMap)
+                    .map(Map::values)
+                    .flatMap(Collection::stream)
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toMap(DeclaredMock::getId, e -> e));
 
             for (String classFileResource : recordsMap.keySet()) {
                 AtomicRecord classRecords = recordsMap.get(classFileResource);
@@ -72,14 +78,25 @@ public class UnloggedTestRunner extends Runner {
 
                     for (StoredCandidate candidate : candidates) {
                         int testCounterIndex = testCounter.incrementAndGet();
-//                    System.err.println("running the tests from unlogged: " + testCounterIndex);
+
                         Description testDescription = Description.createTestDescription(
-                                candidate.getMethod().getClassName(), candidate.getName() == null ?
-                                        candidate.getCandidateId() : candidate.getName(), candidate.getCandidateId()
+                                Class.forName(candidate.getMethod().getClassName()), candidate.getName() == null ?
+                                        candidate.getCandidateId() : candidate.getName()
                         );
                         notifier.fireTestStarted(testDescription);
 
-                        AssertionResultWithRawObject verificationResultRaw = executeAndVerify(candidate);
+                        List<DeclaredMock> mockList = new ArrayList<>();
+                        List<String> mocksToUse = candidate.getMockIds();
+                        if (mocksToUse != null) {
+                            for (String mockId : mocksToUse) {
+                                DeclaredMock mockDefinition = mocksById.get(mockId);
+                                mockList.add(mockDefinition);
+                            }
+                        }
+
+
+                        AtomicAssertion assertions = candidate.getTestAssertions();
+                        AssertionResultWithRawObject verificationResultRaw = executeAndVerify(candidate, mockList);
                         AgentCommandResponse agentCommandResponse = verificationResultRaw.getResponseObject()
                                 .getAgentCommandResponse();
                         AssertionResult verificationResult = verificationResultRaw.getAssertionResult();
@@ -95,29 +112,61 @@ public class UnloggedTestRunner extends Runner {
                                 notifier.fireTestFinished(testDescription);
                             } else {
                                 if (agentCommandResponse != null) {
-                                    if (agentCommandResponse.getResponseType() == ResponseType.EXCEPTION) {
-                                        Failure testFailure = new Failure(testDescription,
+                                    if (verificationResultRaw.getResponseObject()
+                                            .getResponseObject() instanceof Throwable) {
+                                        notifier.fireTestFailure(new Failure(testDescription,
                                                 (Throwable) verificationResultRaw.getResponseObject()
-                                                        .getResponseObject());
-                                        notifier.fireTestFailure(testFailure);
-                                    } else if (agentCommandResponse.getResponseType() == ResponseType.FAILED) {
-                                        notifier.fireTestFailure(new Failure(testDescription,
-                                                new RuntimeException(agentCommandResponse.getMessage())));
-                                    } else {
-                                        notifier.fireTestFailure(new Failure(testDescription,
-                                                new RuntimeException(String.valueOf(
-                                                        verificationResultRaw.getResponseObject()
-                                                                .getResponseObject()))));
-                                    }
+                                                        .getResponseObject()));
 
+                                    } else {
+
+                                        List<AtomicAssertion> assertionList = AtomicAssertionUtils.flattenAssertionMap(
+                                                assertions);
+                                        AssertionResult assertionResultMap = verificationResultRaw.getAssertionResult();
+                                        if (verificationResultRaw.getResponseObject() != null) {
+                                            AgentCommandRawResponse rawResponse = verificationResultRaw.getResponseObject();
+                                            AgentCommandResponse acr = rawResponse.getAgentCommandResponse();
+                                            Object responseObject = rawResponse.getResponseObject();
+
+                                            for (AtomicAssertion atomicAssertion : assertionList) {
+                                                Boolean status = assertionResultMap.getResults()
+                                                        .get(atomicAssertion.getId());
+                                                if (status) {
+
+                                                } else {
+                                                    JsonNode objectNode;
+                                                    String methodReturnValue = (String) acr.getMethodReturnValue();
+                                                    try {
+                                                        objectNode = objectMapper.readTree(methodReturnValue);
+                                                    } catch (Exception e) {
+                                                        objectNode = JsonNodeFactory.instance.textNode(
+                                                                methodReturnValue);
+                                                    }
+                                                    Object valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(
+                                                            objectNode, atomicAssertion.getKey());
+                                                    RuntimeException thrownException = new RuntimeException("Expected" +
+                                                            " [" + atomicAssertion.getExpectedValue() + "] instead of" +
+                                                            " actual" +
+                                                            " [" + valueFromJsonNode + "]");
+                                                    Failure failure = new Failure(testDescription, thrownException);
+                                                    notifier.fireTestFailure(failure);
+
+                                                }
+                                            }
+
+
+                                        } else {
+                                            notifier.fireTestFailure(new Failure(testDescription,
+                                                    new RuntimeException(String.valueOf(verificationResultRaw))));
+
+                                        }
+                                    }
                                 } else {
                                     notifier.fireTestFailure(
                                             new Failure(testDescription, new RuntimeException("Response is null")));
 
                                 }
                             }
-                            notifier.fireTestFinished(testDescription);
-//                        notifier.fire(result);
                         } catch (Exception e) {
                             notifier.fireTestFailure(new Failure(testDescription, e));
                             throw new RuntimeException(e);
@@ -126,14 +175,14 @@ public class UnloggedTestRunner extends Runner {
                     notifier.fireTestSuiteFinished(suiteDescription);
                 }
             }
-        }catch (Throwable throwable) {
+        } catch (Throwable throwable) {
             throwable.printStackTrace();
-            throw throwable;
+            throw new RuntimeException(throwable);
         }
     }
 
-    private AssertionResultWithRawObject executeAndVerify(StoredCandidate candidate) {
-        AgentCommandRawResponse executionResult = executeCandidate(candidate);
+    private AssertionResultWithRawObject executeAndVerify(StoredCandidate candidate, List<DeclaredMock> mockList) {
+        AgentCommandRawResponse executionResult = executeCandidate(candidate, mockList);
         if (executionResult == null) {
             AssertionResult assertionResult = new AssertionResult();
             assertionResult.setPassing(false);
@@ -159,13 +208,18 @@ public class UnloggedTestRunner extends Runner {
         ));
     }
 
-    private AgentCommandRawResponse executeCandidate(StoredCandidate candidate) {
+    private AgentCommandRawResponse executeCandidate(StoredCandidate candidate, List<DeclaredMock> mockList) {
         try {
             MethodUnderTest methodUnderTest = candidate.getMethod();
 
             ClassUnderTest classUnderTest = new ClassUnderTest(methodUnderTest.getClassName());
             AgentCommandRequest agentCommandRequest = MethodUtils.createExecuteRequestWithParameters(methodUnderTest,
                     classUnderTest, candidate.getMethodArguments(), true);
+            if (agentCommandRequest == null) {
+                return new AgentCommandRawResponse(new AgentCommandResponse(), new Exception("Failed to create " +
+                        "request for candidate [" + candidate + "]"));
+            }
+            agentCommandRequest.setDeclaredMocks(mockList);
 
             logger.info("Execute candidate: " + agentCommandRequest);
             return commandExecutor.executeCommandRaw(agentCommandRequest);

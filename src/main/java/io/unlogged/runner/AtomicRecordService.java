@@ -58,55 +58,6 @@ public class AtomicRecordService {
     }
 
 
-    public String getMessageForOperationType(FileUpdateType type, String path, boolean positive) {
-        switch (type) {
-            case ADD_CANDIDATE:
-                if (positive) {
-                    return "Added test candidate" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to add test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            case UPDATE_CANDIDATE:
-                if (positive) {
-                    return "Updated test candidate" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to update test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            case DELETE_CANDIDATE:
-                if (positive) {
-                    return "Deleted test candidate" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to delete test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            case ADD_MOCK:
-                if (positive) {
-                    return "Saved mock" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to add test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            case UPDATE_MOCK:
-                if (positive) {
-                    return "Updated mock" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to update test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            case DELETE_MOCK:
-                if (positive) {
-                    return "Deleted mock" + (path == null ? "" : " at: " + path);
-                } else {
-                    return "Failed to delete test candidate" +
-                            "\n Need help ? \n<a href=\"https://discord.gg/274F2jCrxp\">Reach out to us</a>.";
-                }
-            default:
-                throw new RuntimeException("Unknown operation: " + type);
-        }
-    }
-
     private List<File> getFilesInUnloggedFolder() {
         ArrayList<File> returnFileList = new ArrayList<>();
 
@@ -138,21 +89,6 @@ public class AtomicRecordService {
         return recordsMap;
     }
 
-    public Boolean hasStoredCandidateForMethod(MethodUnderTest methodUnderTest) {
-        try {
-            AtomicRecord record = classAtomicRecordMap.get(methodUnderTest.getClassName());
-            if (record == null) {
-                return false;
-            }
-            String methodKey = methodUnderTest.getMethodHashKey();
-            Map<String, List<StoredCandidate>> storedCandidateMap = record.getStoredCandidateMap();
-            return storedCandidateMap.containsKey(methodKey) &&
-                    storedCandidateMap.get(methodKey).size() > 0;
-        } catch (Exception e) {
-            logger.warn("Exception checking if method has stored candidates", e);
-            return false;
-        }
-    }
 
     private AtomicRecord getAtomicRecordFromFile(File file) {
         try {

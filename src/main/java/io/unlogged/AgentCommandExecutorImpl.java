@@ -144,7 +144,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
                 ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
                 if (objectInstanceByClass == null) {
-                    objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1);
+                    objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1, new HashMap<>());
                 }
 
                 targetClassType = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
@@ -297,7 +297,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
                 ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
                 if (objectInstanceByClass == null) {
-                    objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1);
+                    objectInstanceByClass = createObjectInstanceFromStringAndTypeInformation(
+                            targetClassName, objectMapper.getTypeFactory(), "{}", Class.forName(targetClassName));
                 }
 
                 targetClassType = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
@@ -676,6 +677,17 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                         if (existingMockInstance == null) {
 
+                            if (objectInstanceByClass == null) {
+                                System.err.println("original instance is null [" + field.getType()
+                                        .getCanonicalName() + " " + field.getName());
+                            }
+
+                            if (fieldValue == null) {
+                                fieldValue = createObjectInstanceFromStringAndTypeInformation(
+                                        field.getType().getCanonicalName(), objectMapper.getTypeFactory(), "{}",
+                                        field.getType()
+                                );
+                            }
 
                             existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
                                     field, declaredMocksForField, fieldValue, field.getType());
@@ -714,6 +726,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             Object fieldValue, Class<?> fieldType) {
         ClassLoadingStrategy<ClassLoader> strategy = ClassLoadingStrategy.Default.INJECTION;
         MockInstance existingMockInstance;
+        if (objectInstanceByClass == null) {
+            System.out.println(
+                    "objectInstanceByClass is null: " + field.getType().getCanonicalName() + " " + field.getName());
+        }
         MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
                 byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader, field);
 
@@ -871,8 +887,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         for (int i = 0; i < methodParameters.size(); i++) {
             String methodParameterStringValue = methodParameters.get(i);
             Class<?> parameterType = parameterTypesClass[i];
-            String stringParameterType = parameterTypes.get(i);
-            Object parameterObject = createObjectInstanceFromStringAndTypeInformation(stringParameterType, typeFactory,
+            String parameterTypeName = parameterTypes.get(i);
+            Object parameterObject = createObjectInstanceFromStringAndTypeInformation(parameterTypeName, typeFactory,
                     methodParameterStringValue, parameterType);
 
             parameters[i] = parameterObject;
@@ -1019,7 +1035,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    private Object tryObjectConstruct(String className, ClassLoader targetClassLoader)
+    private Object tryObjectConstruct(String className, ClassLoader targetClassLoader,
+                                      Map<String, Object> buildMap)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
         Object newInstance = null;
         if (targetClassLoader == null) {
@@ -1030,7 +1047,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         try {
             noArgsConstructor = loadedClass.getConstructor();
             try {
-                return noArgsConstructor.newInstance();
+                newInstance = noArgsConstructor.newInstance();
             } catch (InvocationTargetException e) {
 //                throw new RuntimeException(e);
             }
@@ -1052,8 +1069,49 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
             }
         }
-        return objenesis.newInstance(loadedClass);
-//        throw new RuntimeException("Failed to create new instance of class " + className);
+        if (newInstance == null) {
+            newInstance = objenesis.newInstance(loadedClass);
+        }
+
+        buildMap.put(className, newInstance);
+
+        // field injections
+        Class<?> fieldsForClass = loadedClass;
+
+        while (fieldsForClass != null && fieldsForClass.equals(Object.class)) {
+            Field[] fields = fieldsForClass.getDeclaredFields();
+
+
+            for (Field field : fields) {
+
+                int modifiers = field.getModifiers();
+                if (Modifier.isStatic(modifiers)) {
+                    continue;
+                }
+
+                String fieldTypeName = field.getType().getCanonicalName();
+                Object value;
+                if (buildMap.containsKey(fieldTypeName)) {
+                    value = buildMap.get(fieldTypeName);
+                } else {
+                    value = tryObjectConstruct(fieldTypeName, targetClassLoader, buildMap);
+                    buildMap.put(className, value);
+                }
+                try {
+                    field.set(newInstance, value);
+                } catch (Throwable th) {
+                    th.printStackTrace();
+                    System.out.println("Failed to set field value: " + th.getMessage());
+                }
+
+            }
+
+
+            fieldsForClass = fieldsForClass.getSuperclass();
+        }
+
+        return newInstance;
+
     }
 
 

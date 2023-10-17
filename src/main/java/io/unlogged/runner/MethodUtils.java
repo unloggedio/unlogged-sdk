@@ -26,8 +26,8 @@ public class MethodUtils {
         agentCommandRequest.setClassName(classUnderTest.getQualifiedClassName());
         agentCommandRequest.setMethodName(methodUnderTest.getName());
 
-//        System.err.println("Method descriptor: " + methodUnderTest.getSignature());
         if (methodUnderTest.getSignature() == null) {
+            System.err.println("Method signature is null: " + methodUnderTest);
             return null;
         }
         List<String> methodSignatureTypes = splitMethodDescriptor(methodUnderTest.getSignature());

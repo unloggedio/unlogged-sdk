@@ -183,12 +183,15 @@ public class MockHandler {
 //                .getCanonicalName() + "] with args [" + Arrays.asList(methodArguments)
 //                + "] on " + superInstance.getClass().getCanonicalName() + " from " + thisInstance.getClass().getCanonicalName());
 
+        if (originalImplementation == null) {
+            System.err.println("originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
+        }
         Method realMethod = originalImplementation.getClass()
                 .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
         return realMethod.invoke(originalImplementation, methodArguments);
     }
 
-    private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) throws ClassNotFoundException {
+    private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) {
         boolean mockMatched = true;
         switch (parameterMatcher.getType()) {
             case ANY_OF_TYPE:

@@ -14,6 +14,7 @@ public class StoredCandidate implements Comparable<StoredCandidate> {
     private String candidateId;
     private String name;
     private String description;
+    private List<String> mockIds;
     private List<String> methodArguments;
     private String returnValue;
     private boolean isException;
@@ -22,10 +23,16 @@ public class StoredCandidate implements Comparable<StoredCandidate> {
     private long sessionIdentifier;
     private byte[] probSerializedValue;
     private MethodUnderTest methodUnderTest;
-
     private StoredCandidate() {
     }
 
+    public List<String> getMockIds() {
+        return mockIds;
+    }
+
+    public void setMockIds(List<String> mockIds) {
+        this.mockIds = mockIds;
+    }
 
     public long getEntryProbeIndex() {
         return entryProbeIndex;
