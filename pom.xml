@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.14</version>
+    <version>0.1.15</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -114,6 +114,13 @@
     </profiles>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <version>2.7.8</version>
+<!--            <scope>test</scope>-->
+        </dependency>
+
         <dependency>
             <groupId>software.fitz</groupId>
             <artifactId>jackson-module-force-deserializer</artifactId>

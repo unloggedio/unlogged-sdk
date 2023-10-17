@@ -105,6 +105,165 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     @Override
+    public AgentCommandRawResponse executeCommandRaw(AgentCommandRequest agentCommandRequest) {
+        if (agentCommandRequest == null) {
+            AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
+            agentCommandResponse.setMessage("request is null");
+            agentCommandResponse.setResponseType(ResponseType.FAILED);
+            return new AgentCommandRawResponse(agentCommandResponse, new Exception("request is null"));
+        }
+        AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
+        AgentCommandRawResponse agentCommandRawResponse = new AgentCommandRawResponse(agentCommandResponse);
+        AgentCommandRequestType requestType = agentCommandRequest.getRequestType();
+        if (requestType == null) {
+            requestType = AgentCommandRequestType.REPEAT_INVOKE;
+        }
+        try {
+            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
+                logger.setRecording(true);
+            }
+            Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
+            try {
+
+
+                Class<?> targetClassType;
+                ClassLoader targetClassLoader;
+
+                Object objectInstanceByClass = null;
+
+                String targetClassName = agentCommandRequest.getClassName();
+                objectInstanceByClass = logger.getObjectByClassName(targetClassName);
+                List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
+                if (objectInstanceByClass == null && alternateClassNames != null && alternateClassNames.size() > 0) {
+                    for (String alternateClassName : alternateClassNames) {
+                        objectInstanceByClass = logger.getObjectByClassName(alternateClassName);
+                        if (objectInstanceByClass != null) {
+                            break;
+                        }
+                    }
+                }
+                ClassLoader targetClassLoader1 = logger.getTargetClassLoader();
+                if (objectInstanceByClass == null) {
+                    objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1);
+                }
+
+                targetClassType = objectInstanceByClass != null ? objectInstanceByClass.getClass() :
+                        Class.forName(targetClassName, false, targetClassLoader1);
+
+                targetClassLoader = objectInstanceByClass != null ?
+                        objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
+
+
+                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(
+                        agentCommandRequest.getMethodSignature());
+
+                // DO NOT REMOVE this transformation
+                String methodReturnType = methodSignatureParts.remove(methodSignatureParts.size() - 1);
+
+                List<String> methodParameters = agentCommandRequest.getMethodParameters();
+
+                Class<?>[] expectedMethodArgumentTypes = new Class[methodSignatureParts.size()];
+
+                for (int i = 0; i < methodSignatureParts.size(); i++) {
+                    String methodSignaturePart = methodSignatureParts.get(i);
+//                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
+                    expectedMethodArgumentTypes[i] =
+                            ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
+                }
+
+
+                // gets a method or throws exception if no such method
+                Method methodToExecute = getMethodToExecute(targetClassType, agentCommandRequest.getMethodName(),
+                        expectedMethodArgumentTypes);
+
+                // we know more complex ways to do bypassing the security checks this thanks to lombok
+                // but for now this will do
+                methodToExecute.setAccessible(true);
+
+
+                Class<?>[] parameterTypesClass = methodToExecute.getParameterTypes();
+
+                Object[] parameters;
+                try {
+                    parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
+                            parameterTypesClass, agentCommandRequest.getParameterTypes());
+                } catch (InvalidDefinitionException ide1) {
+                    if (!targetClassLoader.equals(targetClassLoader1)) {
+                        parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
+                                parameterTypesClass, agentCommandRequest.getParameterTypes());
+                    } else {
+                        throw ide1;
+                    }
+                }
+
+
+                agentCommandResponse.setTargetClassName(targetClassName);
+                agentCommandResponse.setTargetMethodName(agentCommandRequest.getMethodName());
+                agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
+                agentCommandResponse.setTimestamp(new Date().getTime());
+
+                List<DeclaredMock> declaredMocksList = agentCommandRequest.getDeclaredMocks();
+
+                objectInstanceByClass = arrangeMocks(targetClassType, targetClassLoader, objectInstanceByClass,
+                        declaredMocksList);
+
+
+                Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+
+                Object serializedValue = serializeMethodReturnValue(methodReturnValue);
+                agentCommandResponse.setMethodReturnValue(serializedValue);
+
+                agentCommandResponse.setResponseClassName(methodToExecute.getReturnType().getCanonicalName());
+                agentCommandResponse.setResponseType(ResponseType.NORMAL);
+                agentCommandRawResponse.setResponseObject(methodReturnValue);
+
+                return agentCommandRawResponse;
+            } catch (Throwable exception) {
+                if (exception instanceof InvocationTargetException) {
+                    agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
+//                    exception.getCause().printStackTrace();
+                } else {
+                    agentCommandResponse.setResponseType(ResponseType.FAILED);
+//                    exception.printStackTrace();
+                }
+                Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
+                agentCommandResponse.setMessage(exceptionCause.getMessage());
+                agentCommandRawResponse.setResponseObject(exceptionCause);
+                try {
+                    agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+                } catch (Throwable e) {
+                    agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
+                    agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
+                    // failed to serialize thrown exception
+                }
+                agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
+            } finally {
+                closeHibernateSessionIfPossible(sessionInstance);
+            }
+        } catch (Throwable exception) {
+            exception.printStackTrace();
+            Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
+            agentCommandResponse.setMessage(exceptionCause.getMessage());
+            try {
+                agentCommandRawResponse.setResponseObject(exceptionCause);
+                agentCommandResponse.setMethodReturnValue(objectMapper.writeValueAsString(exceptionCause));
+            } catch (Throwable e) {
+                agentCommandResponse.setMethodReturnValue("Exception: " + exceptionCause.getMessage());
+                agentCommandResponse.setMessage("Exception: " + exceptionCause.getMessage());
+                // failed to serialize thrown exception
+            }
+            agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
+            agentCommandResponse.setResponseType(ResponseType.FAILED);
+        } finally {
+            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
+                logger.setRecording(false);
+            }
+        }
+        return agentCommandRawResponse;
+
+    }
+
+    @Override
     public AgentCommandResponse executeCommand(AgentCommandRequest agentCommandRequest) {
 
         AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
@@ -213,10 +372,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             } catch (Throwable exception) {
                 if (exception instanceof InvocationTargetException) {
                     agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
-                    exception.getCause().printStackTrace();
+//                    exception.getCause().printStackTrace();
                 } else {
                     agentCommandResponse.setResponseType(ResponseType.FAILED);
-                    exception.printStackTrace();
+//                    exception.printStackTrace();
                 }
                 Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
                 agentCommandResponse.setMessage(exceptionCause.getMessage());
