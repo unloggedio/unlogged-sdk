@@ -466,8 +466,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         continue;
                     }
 
-                    strategy = ClassLoadingStrategy.Default.INJECTION;
-
 
                     if (existingMockInstance == null) {
                         MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
@@ -476,36 +474,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         Class<?> fieldType = field.getType();
 
                         DynamicType.Loaded<?> loadedMockedField;
-                        if (fieldType.isInterface()) {
-                            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
-                            Set<String> implementedClasses = new HashSet<>();
-                            implementedClasses.add(fieldType.getCanonicalName());
-
-                            List<Class<?>> pendingImplementations = new ArrayList<>();
-                            pendingImplementations.add(fieldType);
-                            for (Class<?> implementedInterface : implementedInterfaces) {
-                                if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
-                                    continue;
-                                }
-                                implementedClasses.add(implementedInterface.getCanonicalName());
-                                pendingImplementations.add(implementedInterface);
-                            }
-
-                            loadedMockedField = byteBuddyInstance
-                                    .subclass(Object.class)
-                                    .implement(pendingImplementations)
-                                    .intercept(MethodDelegation.to(mockHandler))
-                                    .make()
-                                    .load(targetClassLoader, strategy);
-
-                        } else {
-                            loadedMockedField = byteBuddyInstance
-                                    .subclass(fieldType)
-                                    .method(isDeclaredBy(fieldType))
-                                    .intercept(MethodDelegation.to(mockHandler))
-                                    .make()
-                                    .load(targetClassLoader, strategy);
-                        }
+                        loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
 
 
                         Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
@@ -539,6 +508,43 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         agentCommandResponse.setMessage("Mocks injected for [" +
                 fieldCount + "] fields in [" + classCount + "] classes");
         return agentCommandResponse;
+    }
+
+    @NotNull
+    private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> fieldType) {
+        ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
+        DynamicType.Loaded<?> loadedMockedField;
+        if (fieldType.isInterface()) {
+            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
+            Set<String> implementedClasses = new HashSet<>();
+            implementedClasses.add(fieldType.getCanonicalName());
+
+            List<Class<?>> pendingImplementations = new ArrayList<>();
+            pendingImplementations.add(fieldType);
+            for (Class<?> implementedInterface : implementedInterfaces) {
+                if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
+                    continue;
+                }
+                implementedClasses.add(implementedInterface.getCanonicalName());
+                pendingImplementations.add(implementedInterface);
+            }
+
+            loadedMockedField = byteBuddyInstance
+                    .subclass(Object.class)
+                    .implement(pendingImplementations)
+                    .intercept(MethodDelegation.to(mockHandler))
+                    .make()
+                    .load(targetClassLoader, strategy);
+
+        } else {
+            loadedMockedField = byteBuddyInstance
+                    .subclass(fieldType)
+                    .method(isDeclaredBy(fieldType))
+                    .intercept(MethodDelegation.to(mockHandler))
+                    .make()
+                    .load(targetClassLoader, strategy);
+        }
+        return loadedMockedField;
     }
 
     @Override
@@ -588,6 +594,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
                 Object originalFieldInstance = mockHandler.getOriginalImplementation();
                 Field field = mockHandler.getField();
+                field.setAccessible(true);
                 field.set(parentInstance, originalFieldInstance);
                 globalFieldMockMap.remove(key);
             }
@@ -952,6 +959,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             for (Field declaredField : declaredFields) {
                 JsonNode fieldValueInNodeByName = providedValues.get(declaredField.getName());
                 Object valueToSet = getValueToSet(typeFactory, fieldValueInNodeByName, declaredField.getType());
+                declaredField.setAccessible(true);
                 declaredField.set(parameterObject, valueToSet);
             }
             currentClass = currentClass.getSuperclass();
@@ -1042,7 +1050,30 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (targetClassLoader == null) {
             System.err.println("Failed to construct instance of class [" + className + "]. classLoader is not defined");
         }
-        Class<?> loadedClass = targetClassLoader.loadClass(className);
+        Class<?> loadedClass;
+        try {
+            loadedClass = targetClassLoader.loadClass(className);
+        } catch (ClassNotFoundException classNotFoundException) {
+            // class not found
+            // or this is an internal class ? try to check one level up class ?
+            if (className.lastIndexOf(".") == -1) {
+                // todo: if it was an array of an internal class
+                // com.something.package.ParentClass$ChildClass[][]
+                return null;
+            }
+            String parentName = className.substring(0, className.lastIndexOf("."));
+            try {
+                Class<?> parentClassType = targetClassLoader.loadClass(parentName);
+                // if we found this, then
+                loadedClass =
+                        targetClassLoader.loadClass(
+                                parentName + "$" + className.substring(className.lastIndexOf(".") + 1));
+
+            } catch (ClassNotFoundException cne) {
+                // try another level ? just to be sure ?better way to identify internal classes ?
+                return null;
+            }
+        }
         Constructor<?> noArgsConstructor = null;
         try {
             noArgsConstructor = loadedClass.getConstructor();
@@ -1054,31 +1085,53 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         } catch (NoSuchMethodException e) {
             //
         }
-        Method[] methods = loadedClass.getMethods();
-
-        // try to get the instance of the class using Singleton.getInstance
-        for (Method method : methods) {
-            if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
-                if (method.getReturnType().equals(loadedClass)) {
-                    try {
-                        return method.invoke(null);
-                    } catch (InvocationTargetException ex) {
-                        // this method for potentially getting instance from static getInstance type method
-                        // did not work
+        if (newInstance == null) {
+            Method[] methods = loadedClass.getMethods();
+            // try to get the instance of the class using Singleton.getInstance
+            for (Method method : methods) {
+                if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
+                    if (method.getReturnType().equals(loadedClass)) {
+                        try {
+                            return method.invoke(null);
+                        } catch (InvocationTargetException ex) {
+                            // this method for potentially getting instance from static getInstance type method
+                            // did not work
+                        }
                     }
                 }
             }
         }
         if (newInstance == null) {
-            newInstance = objenesis.newInstance(loadedClass);
+            try {
+                newInstance = objenesis.newInstance(loadedClass);
+            } catch (java.lang.InstantiationError e) {
+                // failed to create using objenesis
+            }
+        }
+
+        if (newInstance == null) {
+            try {
+                MockHandler mockHandler = new MockHandler(new ArrayList<>(), objectMapper, byteBuddyInstance,
+                        objenesis, null, null, targetClassLoader, null);
+                DynamicType.Loaded<?> newInstanceLoader = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
+                        loadedClass);
+                newInstance = objenesis.newInstance(newInstanceLoader.getLoaded());
+
+            } catch (Exception exception) {
+                // failed to create using bytebuddy also
+                //
+            }
         }
 
         buildMap.put(className, newInstance);
+        if (newInstance == null) {
+            return newInstance;
+        }
 
         // field injections
         Class<?> fieldsForClass = loadedClass;
 
-        while (fieldsForClass != null && fieldsForClass.equals(Object.class)) {
+        while (fieldsForClass != null && !fieldsForClass.equals(Object.class)) {
             Field[] fields = fieldsForClass.getDeclaredFields();
 
 
@@ -1095,9 +1148,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     value = buildMap.get(fieldTypeName);
                 } else {
                     value = tryObjectConstruct(fieldTypeName, targetClassLoader, buildMap);
+                    if (value == null) {
+                        continue;
+                    }
                     buildMap.put(className, value);
                 }
                 try {
+                    field.setAccessible(true);
                     field.set(newInstance, value);
                 } catch (Throwable th) {
                     th.printStackTrace();
