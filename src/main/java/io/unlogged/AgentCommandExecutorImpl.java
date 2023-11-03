@@ -1146,7 +1146,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 if (Modifier.isStatic(modifiers)) {
                     continue;
                 }
-                field.setAccessible(true);
+                try {
+                    field.setAccessible(true);
+                } catch (Exception e) {
+                    continue;
+                }
 
                 String fieldTypeName = field.getType().getCanonicalName();
                 Object value = field.get(newInstance);
