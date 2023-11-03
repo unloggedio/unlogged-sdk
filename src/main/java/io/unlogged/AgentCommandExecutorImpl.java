@@ -1043,9 +1043,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    private Object tryObjectConstruct(String className, ClassLoader targetClassLoader,
-                                      Map<String, Object> buildMap)
-            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    private Object tryObjectConstruct(String className, ClassLoader targetClassLoader, Map<String, Object> buildMap)
+            throws InstantiationException, IllegalAccessException {
+        if (className.equals("java.util.List")) {
+            return new ArrayList<>();
+        }
+        if (className.equals("java.util.Map")) {
+            return new HashMap<>();
+        }
         Object newInstance = null;
         if (targetClassLoader == null) {
             System.err.println("Failed to construct instance of class [" + className + "]. classLoader is not defined");
@@ -1141,9 +1146,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 if (Modifier.isStatic(modifiers)) {
                     continue;
                 }
+                field.setAccessible(true);
 
                 String fieldTypeName = field.getType().getCanonicalName();
-                Object value;
+                Object value = field.get(newInstance);
+                if (value != null) {
+                    continue;
+                }
                 if (buildMap.containsKey(fieldTypeName)) {
                     value = buildMap.get(fieldTypeName);
                 } else {
@@ -1154,7 +1163,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     buildMap.put(className, value);
                 }
                 try {
-                    field.setAccessible(true);
                     field.set(newInstance, value);
                 } catch (Throwable th) {
                     th.printStackTrace();

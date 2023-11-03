@@ -18,10 +18,9 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.*;
-import org.springframework.test.context.support.DefaultTestContextBootstrapper;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,64 +36,100 @@ public class UnloggedTestRunner extends Runner {
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
-    private final TestContextManager springTestContextManager;
+    private Method getBeanMethod;
+    private Object applicationContext;
     private final DiscardEventLogger eventLogger = new DiscardEventLogger() {
         @Override
         public Object getObjectByClassName(String className) {
-            ApplicationContext applicationContext =
-                    springTestContextManager.getTestContext().getApplicationContext();
-//            springTestContextManager.getTestContext()
-//                    .getApplicationContext().getAutowireCapableBeanFactory()
-//            springTestContextManager.getTestContext()
+            if (applicationContext == null) {
+                return null;
+            }
             try {
-                return applicationContext.getBean(Class.forName(className));
+                return getBeanMethod.invoke(applicationContext, Class.forName(className));
             } catch (Throwable e) {
                 // throws exception when spring cannot create the bean
                 return null;
             }
         }
     };
+    private Object springTestContextManager;
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
         this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
         this.testClass = testClass;
 
-//        TestContextBootstrapper bootstrap = BootstrapUtils.resolveTestContextBootstrapper(testClass);
-//        TestContextBootstrapper bootstrap = BootstrapUtils.resolveTestContextBootstrapper(testClass);
 
-//        BootstrapContext bootstrapContext = bootstrap.getBootstrapContext();
-//        bootstrap.setBootstrapContext(new BootstrapContext() {
-//            @Override
-//            public Class<?> getTestClass() {
-//                return bootstrapContext.getTestClass();
-//            }
-//
-//            @Override
-//            public CacheAwareContextLoaderDelegate getCacheAwareContextLoaderDelegate() {
-//                return bootstrapContext.getCacheAwareContextLoaderDelegate();
-//            }
-//        });
+        trySpringIntegration(testClass);
 
-//        this.springTestContextManager = new TestContextManager(testClass);
-//        this.springTestContextManager.registerTestExecutionListeners(new TestExecutionListener() {
-//            @Override
-//            public void prepareTestInstance(TestContext testContext) throws Exception {
-//                TestExecutionListener.super.prepareTestInstance(testContext);
-//            }
-//            @Override
-//            public void beforeTestClass(TestContext testContext) throws Exception {
-//                TestExecutionListener.super.beforeTestClass(testContext);
-//            }
-//        });
-        this.springTestContextManager = new TestContextManager(testClass);
+    }
 
-        this.springTestContextManager.registerTestExecutionListeners(new TestExecutionListener() {
-            @Override
-            public void beforeTestClass(TestContext testContext) throws Exception {
-                TestExecutionListener.super.beforeTestClass(testContext);
+    private void trySpringIntegration(Class<?> testClass) {
+        // spring loader
+        // if spring exists
+        try {
+
+            Class<?> testContextManagerClass = Class.forName("org.springframework.test.context.TestContextManager");
+
+            this.springTestContextManager = testContextManagerClass.getConstructor(Class.class).newInstance(testClass);
+            Method getTestContextMethod = testContextManagerClass.getMethod("getTestContext");
+            Class<?> testContextClass = Class.forName("org.springframework.test.context.TestContext");
+
+            Method getApplicationContextMethod = testContextClass.getMethod("getApplicationContext");
+
+            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
+                    "getAutowireCapableBeanFactory");
+
+            Class<?> pspcClass = Class.forName(
+                    "org.springframework.context.support.PropertySourcesPlaceholderConfigurer");
+
+            Object propertySourcesPlaceholderConfigurer = pspcClass.getConstructor().newInstance();
+
+            Method pspcProcessBeanFactoryMethod = pspcClass.getMethod("postProcessBeanFactory",
+                    Class.forName("org.springframework.beans.factory.config.ConfigurableListableBeanFactory"));
+
+            Class<?> propertiesClass = Class.forName("java.util.Properties");
+            Method pspcClassSetPropertiesMethod = pspcClass.getMethod("setProperties", propertiesClass);
+
+//            PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer = new PropertySourcesPlaceholderConfigurer();
+            Class<?> yamlPropertiesFactoryBeanClass = Class.forName(
+                    "org.springframework.beans.factory.config.YamlPropertiesFactoryBean");
+            Object yaml = yamlPropertiesFactoryBeanClass.getConstructor().newInstance();
+            Method yamlGetObjectMethod = yamlPropertiesFactoryBeanClass.getMethod("getObject");
+            Class<?> classPathResourceClass = Class.forName("org.springframework.core.io.ClassPathResource");
+            Object classPathResource = classPathResourceClass.getConstructor(String.class)
+                    .newInstance("config/application.yml");
+//            ClassPathResource classPathResource = new ClassPathResource("config/application.yml");
+            Method setResourceMethod = yamlPropertiesFactoryBeanClass.getMethod("setResources",
+                    Class.forName("[Lorg.springframework.core.io.Resource;"));
+            Method resourceExistsMethod = classPathResourceClass.getMethod("exists");
+            if ((boolean) resourceExistsMethod.invoke(classPathResource)) {
+//                yaml.setResources(classPathResource);
+                setResourceMethod.invoke(yaml, classPathResource);
+//                propertySourcesPlaceholderConfigurer.setProperties(yaml.getObject());
+                Object yamlObject = yamlGetObjectMethod.invoke(yaml);
+                pspcClassSetPropertiesMethod.invoke(propertySourcesPlaceholderConfigurer, yamlObject);
             }
-        });
+
+
+            Object testContext = getTestContextMethod.invoke(this.springTestContextManager);
+            Object applicationContext = getApplicationContextMethod.invoke(testContext);
+            this.applicationContext = applicationContext;
+
+            Object factory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
+                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+
+            pspcProcessBeanFactoryMethod.invoke(propertySourcesPlaceholderConfigurer, factory);
+
+//            propertySourcesPlaceholderConfigurer.postProcessBeanFactory(
+//                    (DefaultListableBeanFactory) this.springTestContextManager.getTestContext().getApplicationContext()
+//                            .getAutowireCapableBeanFactory());
+        } catch (Throwable e) {
+            // failed to start spring application context
+            logger.warn("Failed to start spring application test context", e);
+        }
     }
 
     @Override
@@ -134,9 +169,11 @@ public class UnloggedTestRunner extends Runner {
                     for (StoredCandidate candidate : candidates) {
                         int testCounterIndex = testCounter.incrementAndGet();
 
+                        Class<?> targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
+                        String name = candidate.getName() == null ?
+                                candidate.getCandidateId() : candidate.getName();
                         Description testDescription = Description.createTestDescription(
-                                Class.forName(candidate.getMethod().getClassName()), candidate.getName() == null ?
-                                        candidate.getCandidateId() : candidate.getName()
+                                targetClassTypeInstance, name
                         );
                         notifier.fireTestStarted(testDescription);
 
@@ -219,9 +256,13 @@ public class UnloggedTestRunner extends Runner {
             }
 
             Object valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(objectNode, atomicAssertion.getKey());
-            RuntimeException thrownException = new RuntimeException("Expected" +
-                    " [" + atomicAssertion.getExpectedValue() + "] instead of" +
-                    " actual" + " [" + valueFromJsonNode + "]");
+            RuntimeException thrownException = new RuntimeException(
+                    "Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
+                            "[" + valueFromJsonNode + "] for assertion id " +
+                            "[" + atomicAssertion.getId() + "] on key " +
+                            "[" + atomicAssertion.getKey() + "] for candidate " +
+                            "[" + candidate.getCandidateId() + "]" +
+                            "[" + candidate.getName() + "]");
             Failure failure = new Failure(testDescription, thrownException);
             notifier.fireTestFailure(failure);
 

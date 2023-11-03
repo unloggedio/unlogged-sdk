@@ -120,12 +120,12 @@
             <version>4.0.0</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.boot</groupId>-->
-<!--            <artifactId>spring-boot-starter-test</artifactId>-->
-<!--            <version>2.7.8</version>-->
-<!--&lt;!&ndash;            <scope>test</scope>&ndash;&gt;-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.boot</groupId>-->
+        <!--            <artifactId>spring-boot-starter-test</artifactId>-->
+        <!--            <version>2.7.8</version>-->
+        <!--&lt;!&ndash;            <scope>test</scope>&ndash;&gt;-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>software.fitz</groupId>
@@ -285,18 +285,6 @@
             <artifactId>junit</artifactId>
             <version>4.13.2</version>
         </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <version>5.3.18</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>5.3.18</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
 
@@ -312,10 +300,10 @@
                             <pattern>org.slf4j</pattern>
                             <shadedPattern>selogger.org.slf4j</shadedPattern>
                         </relocation>
-<!--                        <relocation>-->
-<!--                            <pattern>com.googlecode.cqengine</pattern>-->
-<!--                            <shadedPattern>selogger.com.googlecode.cqengine</shadedPattern>-->
-<!--                        </relocation>-->
+                        <!--                        <relocation>-->
+                        <!--                            <pattern>com.googlecode.cqengine</pattern>-->
+                        <!--                            <shadedPattern>selogger.com.googlecode.cqengine</shadedPattern>-->
+                        <!--                        </relocation>-->
                         <relocation>
                             <pattern>ch.qos.logback</pattern>
                             <shadedPattern>selogger.ch.qos.logback</shadedPattern>
