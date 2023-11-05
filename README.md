@@ -65,7 +65,7 @@ The [binary format descriptions](https://github.com/unloggedio/common/tree/maste
 ```xml
 <dependencies>
     <dependency>
-        <groupId>io.unlogged</groupId>
+        <groupId>video.bug</groupId>
         <artifactId>unlogged-java-sdk</artifactId>
         <version>0.1.9</version>
     </dependency>
