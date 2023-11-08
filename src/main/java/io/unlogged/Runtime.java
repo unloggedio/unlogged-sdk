@@ -92,21 +92,6 @@ public class Runtime {
                     " session Id: [" + config.getSessionId() + "]" +
                     " on hostname [" + NetworkClient.getHostname() + "]");
 
-            URL probesToRecordUrl = this.getClass().getClassLoader().getResource("probes.dat");
-
-            List<Integer> probesToRecord = new ArrayList<>();
-            try {
-
-                File file = new File(probesToRecordUrl.toURI());
-                lastProbesLoadTime = file.lastModified();
-                probesToRecord = probeFileToIdList(file);
-            } catch (Exception e) {
-                // uri is not hierarchical when running a jar
-                probesToRecordUrl = null;
-                probesToRecord = probeFileStreamToIdList(
-                        this.getClass().getClassLoader().getResourceAsStream("probes.dat"));
-            }
-
             switch (weaveParameters.getMode()) {
 
 
@@ -151,30 +136,9 @@ public class Runtime {
                             fileCollector1);
 
                     logger = Logging.initialiseDetailedAggregatedLogger(perThreadBinaryFileAggregatedLogger1,
-                            outputDir, probesToRecord);
+                            outputDir);
 
                     DetailedEventStreamAggregatedLogger detailedLogger = (DetailedEventStreamAggregatedLogger) logger;
-                    if (probesToRecordUrl != null) {
-                        URL finalProbesToRecordUrl = probesToRecordUrl;
-                        probeReaderExecutor.scheduleWithFixedDelay(
-                                () -> {
-                                    try {
-                                        File probesFile = new File(finalProbesToRecordUrl.toURI());
-                                        if (!probesFile.exists()) {
-                                            return;
-                                        }
-                                        long newProbesFileModifiedTime = probesFile.lastModified();
-                                        if (newProbesFileModifiedTime > lastProbesLoadTime) {
-                                            lastProbesLoadTime = newProbesFileModifiedTime;
-                                            List<Integer> newProbeIdList = probeFileToIdList(probesFile);
-                                            detailedLogger.setProbesToRecord(newProbeIdList);
-                                        }
-                                    } catch (URISyntaxException | IOException e) {
-                                        // should never happen
-                                    }
-                                }, 1000, 300, TimeUnit.MILLISECONDS
-                        );
-                    }
                     break;
 
             }

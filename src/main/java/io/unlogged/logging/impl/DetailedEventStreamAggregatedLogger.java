@@ -11,6 +11,9 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
+import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
+import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
 import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
@@ -78,6 +81,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     //    private final Set<String> classesToIgnore = new HashSet<>();
 //    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
+    InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
+            new DefaultCharArrayNodeFactory());
     private boolean isLombokPresent;
     private ClassLoader targetClassLoader;
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(() -> {
@@ -350,13 +355,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
      *
      * @param objectIdMap      object to id converter
      * @param aggregatedLogger writer
-     * @param probesToRecord   probe ids for which the object value need to be serialized and recorded in the event log
      */
     public DetailedEventStreamAggregatedLogger(
 //            String includedPackage,
             ObjectIdAggregatedStream objectIdMap,
-            AggregatedFileLogger aggregatedLogger,
-            List<Integer> probesToRecord) {
+            AggregatedFileLogger aggregatedLogger) {
 
 //        this.includedPackage = includedPackage;
         this.aggregatedLogger = aggregatedLogger;
@@ -371,8 +374,45 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //            System.err.println("Lombok not found");
             isLombokPresent = false;
         }
+        initSkipPackages();
 
+    }
 
+    private void initSkipPackages() {
+
+        invertedRadixTree.put("com.google", true);
+        invertedRadixTree.put("org.apache.http", true);
+        invertedRadixTree.put("java.util.stream", true);
+        invertedRadixTree.put("org.elasticsearch.client", true);
+        invertedRadixTree.put("org.hibernate", true);
+        invertedRadixTree.put("ch.qos", true);
+        invertedRadixTree.put("io.dropwizard", true);
+        invertedRadixTree.put("org.redis", true);
+        invertedRadixTree.put("redis", true);
+        invertedRadixTree.put("co.elastic", true);
+        invertedRadixTree.put("io.unlogged", true);
+        invertedRadixTree.put("com.insidious", true);
+        invertedRadixTree.put("java.awt", true);
+        invertedRadixTree.put("sun.nio", true);
+        invertedRadixTree.put("javax.swing", true);
+        invertedRadixTree.put("com.j256", true);
+        invertedRadixTree.put("net.openhft", true);
+        invertedRadixTree.put("com.intellij", true);
+        invertedRadixTree.put("java.lang.Class", true);
+        invertedRadixTree.put("reactor.core", true);
+        invertedRadixTree.put("io.undertow", true);
+        invertedRadixTree.put("org.thymeleaf", true);
+        invertedRadixTree.put("tech.jhipster", true);
+        invertedRadixTree.put("com.github", true);
+        invertedRadixTree.put("com.zaxxer", true);
+        invertedRadixTree.put("com.fasterxml", true);
+        invertedRadixTree.put("org.slf4j", true);
+        invertedRadixTree.put("java.io", true);
+        invertedRadixTree.put("java.util.regex", true);
+        invertedRadixTree.put("java.util.Base64", true);
+        invertedRadixTree.put("java.util.concurrent", true);
+        invertedRadixTree.put("com.amazon", true);
+        invertedRadixTree.put("com.hubspot", true);
     }
 
     /**
@@ -462,47 +502,15 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                }
                 if (value instanceof Class) {
                     bytes = ((Class<?>) value).getCanonicalName().getBytes(StandardCharsets.UTF_8);
-                } else if (className.startsWith("com.google")
-                        || className.startsWith("org.apache.http")
-                        || className.startsWith("java.util.stream")
-                        || className.startsWith("org.elasticsearch.client")
-                        || className.startsWith("org.hibernate")
-                        || className.startsWith("ch.qos")
-                        || className.startsWith("io.dropwizard")
-                        || className.contains("java.lang.reflect")
-                        || className.startsWith("org.redis")
-                        || className.startsWith("redis")
-                        || className.startsWith("co.elastic")
-                        || className.startsWith("io.unlogged")
-                        || className.startsWith("com.insidious")
-                        || className.startsWith("java.awt")
-                        || className.startsWith("sun.nio")
-                        || className.startsWith("javax.swing")
-                        || className.startsWith("com.j256")
-                        || className.startsWith("net.openhft")
-                        || className.startsWith("com.intellij")
-                        || className.startsWith("java.lang.Class")
-                        || className.startsWith("reactor.core")
-                        || className.startsWith("io.undertow")
-                        || className.startsWith("org.thymeleaf")
-                        || className.startsWith("tech.jhipster")
-                        || className.startsWith("com.github")
-                        || className.startsWith("com.zaxxer")
-                        || (className.startsWith("org.glassfish") && !className.equals(
-                        "org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
-                        || className.startsWith("com.fasterxml")
-                        || className.startsWith("org.slf4j")
-                        || (className.startsWith("org.springframework") && (!className.startsWith("org" +
-                        ".springframework.http") && !className.startsWith("org.springframework.data.domain")))
-                        || className.startsWith("java.io")
-                        || className.contains("$Lambda$")
-                        || className.contains("$$EnhancerBySpringCGLIB$$")
-                        || className.startsWith("java.util.regex")
-                        || className.startsWith("java.util.Base64")
-                        || className.startsWith("java.util.concurrent")
-                        || className.startsWith("com.amazon")
-                        || className.startsWith("com.hubspot")
-                        || value instanceof Iterator
+                } else if (
+                        invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
+                                || className.contains("java.lang.reflect")
+                                || (className.startsWith("org.glassfish")
+                                  && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                                || (className.startsWith("org.springframework")
+                                  && (!className.startsWith("org.springframework.http")
+                                  && !className.startsWith("org.springframework.data.domain")))
+                                || value instanceof Iterator
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
                     probesToRecord.remove(dataId);

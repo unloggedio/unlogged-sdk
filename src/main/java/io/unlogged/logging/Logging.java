@@ -40,13 +40,13 @@ public class Logging {
     }
 
     public static DetailedEventStreamAggregatedLogger initialiseDetailedAggregatedLogger(
-            AggregatedFileLogger aggregatedLogger, File outputDir, List<Integer> probesToRecord
+            AggregatedFileLogger aggregatedLogger, File outputDir
     ) throws IOException {
         TypeIdAggregatedStreamMap typeToId = new TypeIdAggregatedStreamMap(aggregatedLogger);
         ObjectIdAggregatedStream objectIdMap = new ObjectIdAggregatedStream(aggregatedLogger, typeToId, outputDir);
 
         DetailedEventStreamAggregatedLogger instance = new DetailedEventStreamAggregatedLogger(objectIdMap,
-                aggregatedLogger, probesToRecord);
+                aggregatedLogger);
         INSTANCE = instance;
         return instance;
     }
