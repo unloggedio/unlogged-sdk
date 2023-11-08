@@ -119,6 +119,17 @@ public enum AssertionType {
         try {
             switch (this) {
                 case EQUAL:
+                    if (actualValue.isBoolean()) {
+                        return actualValue.booleanValue() ?
+                                (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")):
+                                (expectedValue.toString().equals("0") || expectedValue.toString().equals("false"));
+
+                    }
+                    if (expectedValue.isBoolean()) {
+                        return expectedValue.booleanValue() ?
+                                (actualValue.toString().equals("1") || actualValue.toString().equals("true")):
+                                (actualValue.toString().equals("0") || actualValue.toString().equals("false"));
+                    }
                     return Objects.equals(actualValue, expectedValue);
                 case EQUAL_IGNORE_CASE:
                     return Objects.equals(actualValue.toString().toLowerCase(), expectedValue.toString().toLowerCase());
