@@ -19,7 +19,7 @@ import org.junit.runner.notification.RunNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Array;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,6 +68,20 @@ public class UnloggedTestRunner extends Runner {
         // spring loader
         // if spring exists
         try {
+
+            Annotation[] classAnnotations = testClass.getAnnotations();
+            boolean hasEnableAutoConfigAnnotation = false;
+            for (Annotation classAnnotation : classAnnotations) {
+                if (classAnnotation.annotationType().getCanonicalName().startsWith("org.springframework.")) {
+                    hasEnableAutoConfigAnnotation = true;
+                    break;
+                }
+            }
+            // no spring context creation if no spring annotation is used on the test class
+            if (!hasEnableAutoConfigAnnotation) {
+                return;
+            }
+
 
             Class<?> testContextManagerClass = Class.forName("org.springframework.test.context.TestContextManager");
 
@@ -239,7 +253,7 @@ public class UnloggedTestRunner extends Runner {
 
         AgentCommandRawResponse rawResponse = verificationResultRaw.getResponseObject();
         AgentCommandResponse acr = rawResponse.getAgentCommandResponse();
-//            Object responseObject = rawResponse.getResponseObject();
+        Object responseObject = rawResponse.getResponseObject();
 
         for (AtomicAssertion atomicAssertion : assertionList) {
             Boolean status = assertionResultMap.getResults().get(atomicAssertion.getId());
@@ -249,11 +263,20 @@ public class UnloggedTestRunner extends Runner {
 
             JsonNode objectNode;
             String methodReturnValue = (String) acr.getMethodReturnValue();
+            if (methodReturnValue == null) {
+                try {
+                    methodReturnValue = objectMapper.writeValueAsString(responseObject);
+                } catch (JsonProcessingException e) {
+                    methodReturnValue = String.valueOf(responseObject);
+                    // thats all we can try
+                }
+            }
             try {
                 objectNode = objectMapper.readTree(methodReturnValue);
             } catch (Exception e) {
                 objectNode = JsonNodeFactory.instance.textNode(methodReturnValue);
             }
+
 
             Object valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(objectNode, atomicAssertion.getKey());
             RuntimeException thrownException = new RuntimeException(
