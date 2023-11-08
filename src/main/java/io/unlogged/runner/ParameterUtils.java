@@ -21,11 +21,13 @@ public class ParameterUtils {
     public static String processResponseForFloatAndDoubleTypes(String responseClassname, String stringValue) {
         if (responseClassname.equalsIgnoreCase("float")
                 || responseClassname.equalsIgnoreCase("java.lang.float")
+                || responseClassname.equalsIgnoreCase("Ljava/lang/Float;")
                 || responseClassname.equals("F")) {
             return getFloatValue(stringValue);
         }
         if (responseClassname.equalsIgnoreCase("double")
                 || responseClassname.equalsIgnoreCase("java.lang.double")
+                || responseClassname.equalsIgnoreCase("Ljava/lang/Double;")
                 || responseClassname.equals("D")) {
             return getDoubleValue(stringValue);
         }

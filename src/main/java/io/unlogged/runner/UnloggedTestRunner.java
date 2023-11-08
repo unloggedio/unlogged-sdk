@@ -575,6 +575,8 @@ public class UnloggedTestRunner extends Runner {
         boolean processReturnValueAsFloatDouble = Objects.equals(methodReturnType, "F")
                 || Objects.equals(methodReturnType, "f")
                 || Objects.equals(methodReturnType, "java.lang.Float")
+                || Objects.equals(methodReturnType, "Ljava/lang/Float;")
+                || Objects.equals(methodReturnType, "Ljava/lang/Double;")
                 || Objects.equals(methodReturnType, "java.lang.Double")
                 || Objects.equals(methodReturnType, "D");
         for (int i = 0; i < methodSignatureTypes.size(); i++) {
@@ -584,9 +586,11 @@ public class UnloggedTestRunner extends Runner {
                 case "F":
                 case "f":
                 case "java.lang.Float":
+                case "Ljava/lang/Float;":
                 case "D":
                 case "d":
                 case "java.lang.Double":
+                case "Ljava/lang/Double;":
                     newValue = ParameterUtils.processResponseForFloatAndDoubleTypes(methodSignatureType, newValue);
                     newArgumentValues.add(newValue);
                     break;
