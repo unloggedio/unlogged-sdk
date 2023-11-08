@@ -175,8 +175,13 @@ public class UnloggedTestRunner extends Runner {
                         continue;
                     }
 
-                    String className = candidates.get(0).getMethod().getClassName();
-                    Description suiteDescription = Description.createSuiteDescription(className);
+                    MethodUnderTest method = candidates.get(0).getMethod();
+                    String className = method.getClassName();
+                    if (className.contains(".")) {
+                        className = className.substring(className.lastIndexOf(".") + 1);
+                    }
+                    Description suiteDescription = Description.createSuiteDescription(
+                            className + "." + method.getName());
 //                    System.err.println("running the tests from unlogged: " + className + "#" + methodHashKey);
                     notifier.fireTestSuiteStarted(suiteDescription);
 
@@ -192,6 +197,7 @@ public class UnloggedTestRunner extends Runner {
                         notifier.fireTestStarted(testDescription);
 
                         fireTest(notifier, mocksById, candidate, testCounterIndex, testDescription);
+                        notifier.fireTestFinished(testDescription);
                     }
                     notifier.fireTestSuiteFinished(suiteDescription);
                 }
@@ -227,7 +233,6 @@ public class UnloggedTestRunner extends Runner {
                     .getResponseObject()).printStackTrace();
         }
         if (isVerificationPassing) {
-            notifier.fireTestFinished(testDescription);
             return;
         }
 
@@ -254,6 +259,9 @@ public class UnloggedTestRunner extends Runner {
         AgentCommandRawResponse rawResponse = verificationResultRaw.getResponseObject();
         AgentCommandResponse acr = rawResponse.getAgentCommandResponse();
         Object responseObject = rawResponse.getResponseObject();
+        if (responseObject instanceof Throwable) {
+            ((Throwable) responseObject).printStackTrace();
+        }
 
         for (AtomicAssertion atomicAssertion : assertionList) {
             Boolean status = assertionResultMap.getResults().get(atomicAssertion.getId());
@@ -280,10 +288,10 @@ public class UnloggedTestRunner extends Runner {
 
             Object valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(objectNode, atomicAssertion.getKey());
             RuntimeException thrownException = new RuntimeException(
-                    "Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
-                            "[" + valueFromJsonNode + "] for assertion id " +
-                            "[" + atomicAssertion.getId() + "] on key " +
-                            "[" + atomicAssertion.getKey() + "] for candidate " +
+                    "Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
+                            "[" + valueFromJsonNode + "]\nfor assertion id " +
+                            "[" + atomicAssertion.getId() + "]\non key " +
+                            "[" + atomicAssertion.getKey() + "]\nfor candidate " +
                             "[" + candidate.getCandidateId() + "]" +
                             "[" + candidate.getName() + "]");
             Failure failure = new Failure(testDescription, thrownException);
