@@ -22,6 +22,7 @@ import io.unlogged.command.AgentCommandResponse;
 import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
 import io.unlogged.mocking.DeclaredMock;
+import io.unlogged.util.ClassTypeUtil;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
@@ -389,6 +390,7 @@ public class UnloggedTestRunner extends Runner {
         } catch (Throwable e) {
             // failed to start spring application context
             logger.warn("Failed to start spring application test context", e);
+            throw new RuntimeException("Failed to start spring application", e);
         }
     }
 
@@ -455,6 +457,7 @@ public class UnloggedTestRunner extends Runner {
     }
 
     private void fireTest(RunNotifier notifier, Map<String, DeclaredMock> mocksById, StoredCandidate candidate, int testCounterIndex, Description testDescription) {
+        MethodUnderTest methodUnderTest = candidate.getMethod();
         List<DeclaredMock> mockList = new ArrayList<>();
         List<String> mocksToUse = candidate.getMockIds();
         if (mocksToUse != null) {
@@ -515,8 +518,17 @@ public class UnloggedTestRunner extends Runner {
                 continue;
             }
 
+            if (atomicAssertion.getAssertionType() == AssertionType.ANYOF
+                    || atomicAssertion.getAssertionType() == AssertionType.ALLOF
+                    || atomicAssertion.getAssertionType() == AssertionType.NOTANYOF
+                    || atomicAssertion.getAssertionType() == AssertionType.NOTALLOF
+            ) {
+                continue;
+            }
+
             JsonNode objectNode;
-            String methodReturnValue = (String) acr.getMethodReturnValue();
+            String methodReturnValue = acr.getMethodReturnValue() instanceof String ?
+                    (String) acr.getMethodReturnValue() : String.valueOf(acr.getMethodReturnValue());
             if (methodReturnValue == null) {
                 try {
                     methodReturnValue = objectMapper.writeValueAsString(responseObject);
@@ -532,25 +544,72 @@ public class UnloggedTestRunner extends Runner {
             }
 
 
-            Object valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(objectNode, atomicAssertion.getKey());
+            JsonNode valueFromJsonNode = JsonTreeUtils.getValueFromJsonNode(objectNode, atomicAssertion.getKey());
+            Expression expression = atomicAssertion.getExpression();
+            JsonNode expressedValue = expression.compute(valueFromJsonNode);
+
             RuntimeException thrownException = new RuntimeException(
                     "Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
-                            "[" + valueFromJsonNode + "]\nfor assertion id " +
-                            "[" + atomicAssertion.getId() + "]\non key " +
-                            "[" + atomicAssertion.getKey() + "]\nfor candidate " +
+                            "[" + expressedValue + "]\n when the return value from method " +
+                            "[" + methodUnderTest.getName() + "]()\n value " +
+                            "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
+                            "(" + atomicAssertion.getKey() + ")")) +
+                            "]\nas expected in test candidate " +
                             "[" + candidate.getCandidateId() + "]" +
                             "[" + candidate.getName() + "]");
             Failure failure = new Failure(testDescription, thrownException);
-            notifier.fireTestFailure(failure);
-
-
+            notifier.fireTestAssumptionFailed(failure);
         }
 
 
     }
 
+
     private AssertionResultWithRawObject executeAndVerify(StoredCandidate candidate, List<DeclaredMock> mockList) {
+
+        List<String> methodArgumentValues = candidate.getMethodArguments();
+        ArrayList<String> newArgumentValues = new ArrayList<>(methodArgumentValues.size());
+        List<String> methodSignatureTypes = ClassTypeUtil.splitMethodDesc(candidate.getMethod().getSignature());
+        // remove the return type
+        String methodReturnType = methodSignatureTypes.remove(methodSignatureTypes.size() - 1);
+        boolean processReturnValueAsFloatDouble = Objects.equals(methodReturnType, "F")
+                || Objects.equals(methodReturnType, "f")
+                || Objects.equals(methodReturnType, "java.lang.Float")
+                || Objects.equals(methodReturnType, "java.lang.Double")
+                || Objects.equals(methodReturnType, "D");
+        for (int i = 0; i < methodSignatureTypes.size(); i++) {
+            String newValue = methodArgumentValues.get(i);
+            String methodSignatureType = methodSignatureTypes.get(i);
+            switch (methodSignatureType) {
+                case "F":
+                case "f":
+                case "java.lang.Float":
+                case "D":
+                case "d":
+                case "java.lang.Double":
+                    newValue = ParameterUtils.processResponseForFloatAndDoubleTypes(methodSignatureType, newValue);
+                    newArgumentValues.add(newValue);
+                    break;
+                default:
+                    newArgumentValues.add(newValue);
+            }
+
+        }
+        candidate.setMethodArguments(newArgumentValues);
+
+
         AgentCommandRawResponse executionResult = executeCandidate(candidate, mockList);
+
+        AgentCommandResponse acr = executionResult.getAgentCommandResponse();
+        if (acr != null) {
+            if (processReturnValueAsFloatDouble) {
+                Object returnValue = acr.getMethodReturnValue();
+                String processedReturnValue = ParameterUtils.processResponseForFloatAndDoubleTypes(methodReturnType,
+                        String.valueOf(returnValue));
+                acr.setMethodReturnValue(processedReturnValue);
+            }
+        }
+
         if (executionResult == null) {
             AssertionResult assertionResult = new AssertionResult();
             assertionResult.setPassing(false);
@@ -571,9 +630,11 @@ public class UnloggedTestRunner extends Runner {
             assertionResult.setPassing(false);
             return assertionResult;
         }
-        return AssertionEngine.executeAssertions(candidate.getTestAssertions(), getResponseNode(
-                (String) executionResult.getMethodReturnValue(), executionResult.getResponseClassName()
-        ));
+        return AssertionEngine.executeAssertions(
+                candidate.getTestAssertions(),
+                getResponseNode(String.valueOf(executionResult.getMethodReturnValue()),
+                        executionResult.getResponseClassName()
+                ));
     }
 
     private AgentCommandRawResponse executeCandidate(StoredCandidate candidate, List<DeclaredMock> mockList) {
