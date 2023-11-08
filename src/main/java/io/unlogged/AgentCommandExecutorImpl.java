@@ -16,8 +16,6 @@ import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
@@ -510,7 +508,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return agentCommandResponse;
     }
 
-    @NotNull
+    
     private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> fieldType) {
         ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
         DynamicType.Loaded<?> loadedMockedField;
@@ -725,7 +723,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return extendedClassInstance;
     }
 
-    @NotNull
+    
     private MockInstance createMockedInstance(
             ClassLoader targetClassLoader,
             Object objectInstanceByClass, Field field,
@@ -734,8 +732,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         ClassLoadingStrategy<ClassLoader> strategy = ClassLoadingStrategy.Default.INJECTION;
         MockInstance existingMockInstance;
         if (objectInstanceByClass == null) {
-            System.out.println(
-                    "objectInstanceByClass is null: " + field.getType().getCanonicalName() + " " + field.getName());
+            if (field != null) {
+                System.out.println(
+                        "objectInstanceByClass is null: " + field.getType().getCanonicalName() + " " + field.getName());
+            } else {
+            }
         }
         MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
                 byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader, field);
@@ -903,7 +904,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameters;
     }
 
-    @Nullable
+    
     private Object createObjectInstanceFromStringAndTypeInformation
             (String stringParameterType, TypeFactory typeFactory, String methodParameter, Class<?> parameterType) throws JsonProcessingException {
         Object parameterObject = null;
@@ -967,7 +968,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject;
     }
 
-    @NotNull
+    
     private Object createParameterUsingMocking(String methodParameter, Class<?> parameterType) throws JsonProcessingException {
         Class<?> currentClass;
         List<DeclaredMock> mockList = new ArrayList<>();
@@ -1016,7 +1017,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject.getMockedFieldInstance();
     }
 
-    @Nullable
+    
     private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
         Object valueToSet = null;
         if (int.class.equals(type) || Integer.class.equals(type)) {

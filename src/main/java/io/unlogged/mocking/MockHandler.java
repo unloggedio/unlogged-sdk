@@ -184,7 +184,12 @@ public class MockHandler {
 //                + "] on " + superInstance.getClass().getCanonicalName() + " from " + thisInstance.getClass().getCanonicalName());
 
         if (originalImplementation == null) {
-            System.err.println("originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
+            if (field != null) {
+                System.err.println(
+                        "originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
+            } else {
+                System.err.println("originalImplementation is null");
+            }
         }
         Method realMethod = originalImplementation.getClass()
                 .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
