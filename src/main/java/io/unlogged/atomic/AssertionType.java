@@ -120,15 +120,39 @@ public enum AssertionType {
             switch (this) {
                 case EQUAL:
                     if (actualValue.isBoolean()) {
-                        return actualValue.booleanValue() ?
-                                (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")):
-                                (expectedValue.toString().equals("0") || expectedValue.toString().equals("false"));
-
+                        if (actualValue.booleanValue()) {
+                            if (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")) {
+                                return true;
+                            }
+                            if (expectedValue.toString().equals("0") || expectedValue.toString().equals("false")) {
+                                return false;
+                            }
+                        } else {
+                            if (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")) {
+                                return false;
+                            }
+                            if (expectedValue.toString().equals("0") || expectedValue.toString().equals("false")) {
+                                return true;
+                            }
+                        }
                     }
                     if (expectedValue.isBoolean()) {
-                        return expectedValue.booleanValue() ?
-                                (actualValue.toString().equals("1") || actualValue.toString().equals("true")):
-                                (actualValue.toString().equals("0") || actualValue.toString().equals("false"));
+
+                        if (expectedValue.booleanValue()) {
+                            if (actualValue.toString().equals("1") || actualValue.toString().equals("true")) {
+                                return true;
+                            }
+                            if (actualValue.toString().equals("0") || actualValue.toString().equals("false")) {
+                                return false;
+                            }
+                        } else {
+                            if (actualValue.toString().equals("1") || actualValue.toString().equals("true")) {
+                                return false;
+                            }
+                            if (actualValue.toString().equals("0") || actualValue.toString().equals("false")) {
+                                return true;
+                            }
+                        }
                     }
                     return Objects.equals(actualValue, expectedValue);
                 case EQUAL_IGNORE_CASE:
