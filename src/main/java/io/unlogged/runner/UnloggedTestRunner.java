@@ -475,7 +475,8 @@ public class UnloggedTestRunner extends Runner {
 
         boolean isVerificationPassing = verificationResult.isPassing();
         System.out.println(
-                "[#" + testCounterIndex + "] Candidate [" + candidate.getName() + "] => " + isVerificationPassing);
+                "[#" + candidate.getName() + "] tested method [" + candidate.getMethod()
+                        .getName() + "] => " + isVerificationPassing);
 
         if (verificationResultRaw.getResponseObject().getResponseObject() instanceof Throwable) {
             ((Throwable) verificationResultRaw.getResponseObject()
@@ -486,11 +487,15 @@ public class UnloggedTestRunner extends Runner {
         }
 
         if (agentCommandResponse == null) {
+            System.out.println("Response is null");
             notifier.fireTestFailure(new Failure(testDescription, new RuntimeException("Response is null")));
             return;
         }
 
         if (verificationResultRaw.getResponseObject().getResponseObject() instanceof Throwable) {
+            Throwable responseObject = (Throwable) verificationResultRaw.getResponseObject().getResponseObject();
+            System.out.println("Method [" + candidate.getMethod().getName() + "] threw an exception");
+            responseObject.printStackTrace(System.err);
             notifier.fireTestFailure(new Failure(testDescription, (Throwable)
                     verificationResultRaw.getResponseObject().getResponseObject()));
 
@@ -500,6 +505,7 @@ public class UnloggedTestRunner extends Runner {
         AssertionResult assertionResultMap = verificationResultRaw.getAssertionResult();
 
         if (verificationResultRaw.getResponseObject() == null) {
+            System.out.println("Response is null");
             notifier.fireTestFailure(new Failure(testDescription,
                     new RuntimeException(String.valueOf(verificationResultRaw))));
 
@@ -509,6 +515,7 @@ public class UnloggedTestRunner extends Runner {
         AgentCommandResponse acr = rawResponse.getAgentCommandResponse();
         Object responseObject = rawResponse.getResponseObject();
         if (responseObject instanceof Throwable) {
+            System.out.println("Method threw an exception");
             ((Throwable) responseObject).printStackTrace();
         }
 
@@ -540,7 +547,7 @@ public class UnloggedTestRunner extends Runner {
             try {
                 objectNode = objectMapper.readTree(methodReturnValue);
             } catch (Exception e) {
-                objectNode = JsonNodeFactory.instance.textNode(methodReturnValue);
+                objectNode = objectMapper.getNodeFactory().textNode(methodReturnValue);
             }
 
 
@@ -548,6 +555,14 @@ public class UnloggedTestRunner extends Runner {
             Expression expression = atomicAssertion.getExpression();
             JsonNode expressedValue = expression.compute(valueFromJsonNode);
 
+            System.err.println("Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
+                    "[" + expressedValue + "]\n when the return value from method " +
+                    "[" + methodUnderTest.getName() + "]()\n value " +
+                    "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
+                    "(" + atomicAssertion.getKey() + ")")) +
+                    "]\nas expected in test candidate " +
+                    "[" + candidate.getCandidateId() + "]" +
+                    "[" + candidate.getName() + "]");
             RuntimeException thrownException = new RuntimeException(
                     "Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
                             "[" + expressedValue + "]\n when the return value from method " +
