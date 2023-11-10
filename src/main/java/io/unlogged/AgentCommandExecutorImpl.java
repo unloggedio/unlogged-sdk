@@ -508,7 +508,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return agentCommandResponse;
     }
 
-    
+
     private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> fieldType) {
         ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
         DynamicType.Loaded<?> loadedMockedField;
@@ -723,7 +723,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return extendedClassInstance;
     }
 
-    
+
     private MockInstance createMockedInstance(
             ClassLoader targetClassLoader,
             Object objectInstanceByClass, Field field,
@@ -904,7 +904,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameters;
     }
 
-    
+
     private Object createObjectInstanceFromStringAndTypeInformation
             (String stringParameterType, TypeFactory typeFactory, String methodParameter, Class<?> parameterType) throws JsonProcessingException {
         Object parameterObject = null;
@@ -968,7 +968,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject;
     }
 
-    
+
     private Object createParameterUsingMocking(String methodParameter, Class<?> parameterType) throws JsonProcessingException {
         Class<?> currentClass;
         List<DeclaredMock> mockList = new ArrayList<>();
@@ -1012,12 +1012,20 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             currentClass = currentClass.getSuperclass();
         }
 
-        MockInstance parameterObject = createMockedInstance(parameterType.getClassLoader(), null,
-                null, mockList, null, parameterType);
+        MockInstance parameterObject;
+        try {
+            parameterObject = createMockedInstance(parameterType.getClassLoader(), null,
+                    null, mockList, null, parameterType);
+        } catch (Exception e) {
+            // cant say that
+            // just failed to make an instance of this
+            // log something ?
+            return null;
+        }
         return parameterObject.getMockedFieldInstance();
     }
 
-    
+
     private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
         Object valueToSet = null;
         if (int.class.equals(type) || Integer.class.equals(type)) {
