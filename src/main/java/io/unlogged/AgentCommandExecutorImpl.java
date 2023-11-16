@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.unlogged.auth.RequestAuthentication;
+import io.unlogged.auth.UnloggedSpringAuthentication;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.mocking.*;
@@ -18,6 +20,9 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -121,6 +126,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 logger.setRecording(true);
             }
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
+
+            if (agentCommandRequest.getRequestAuthentication() != null) {
+
+                RequestAuthentication authRequest = agentCommandRequest.getRequestAuthentication();
+                UnloggedSpringAuthentication usa = new UnloggedSpringAuthentication(authRequest);
+
+                if (SecurityContextHolder.getContext() != null) {
+                    SecurityContextHolder.getContext().setAuthentication(usa);
+                }
+                SecurityContext block = ReactiveSecurityContextHolder.getContext().block();
+                if (block != null) {
+                    block.setAuthentication(usa);
+                }
+            }
+
             try {
 
 
