@@ -123,13 +123,14 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     //checks for presence of this module class, if not present throws exception
                     Class<?> jdk8Module = Class.forName(jacksonModule);
                     objectMapper1.registerModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
-                } catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
                     // jdk8 module not found
                 } catch (InvocationTargetException
                          | InstantiationException
                          | IllegalAccessException
                          | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
+                    // do not die
+//                    throw new RuntimeException(e);
                 }
             }
 
@@ -324,13 +325,14 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     //checks for presence of this module class, if not present throws exception
                     Class<?> jdk8Module = Class.forName(jacksonModule);
                     jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
-                } catch (ClassNotFoundException e) {
+                } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
                     // jdk8 module not found
                 } catch (InvocationTargetException
                          | InstantiationException
                          | IllegalAccessException
                          | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
+                    // do not die ?
+//                    throw new RuntimeException(e);
                 }
             }
 
