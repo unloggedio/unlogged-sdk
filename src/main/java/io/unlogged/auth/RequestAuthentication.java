@@ -12,6 +12,21 @@ public class RequestAuthentication {
     private Collection<SimpleAuthority> authorities;
     private String name;
 
+    public String getPrincipalClassName() {
+        return principalClassName;
+    }
+
+    public void setPrincipalClassName(String principalClassName) {
+        this.principalClassName = principalClassName;
+    }
+
+    public String getCredentialClassName() {
+        return credentialClassName;
+    }
+
+    public void setCredentialClassName(String credentialClassName) {
+        this.credentialClassName = credentialClassName;
+    }
 
     public Object getPrincipal() {
         return principal;
