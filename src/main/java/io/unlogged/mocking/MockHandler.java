@@ -150,7 +150,7 @@ public class MockHandler {
                             break;
                         case MOCK:
                             MockHandler mockHandler = new MockHandler(returnParameter.getDeclaredMocks(), objectMapper,
-                                    byteBuddy, objenesis, originalImplementation, originalFieldParent,
+                                    byteBuddy, objenesis, null, originalFieldParent,
                                     targetClassLoader, field);
                             Class<?> fieldType = invokedMethod.getReturnType();
                             DynamicType.Loaded<?> loadedMockedField = byteBuddy

@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -75,6 +74,7 @@ public class UnloggedTestRunner extends Runner {
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
+    private boolean isSpringPresent;
     private Method getBeanMethod;
     private Object applicationContext;
     private final DiscardEventLogger eventLogger = new DiscardEventLogger() {
@@ -91,7 +91,7 @@ public class UnloggedTestRunner extends Runner {
             }
         }
     };
-    private Object springTestContextManager;
+//    private Object springTestContextManager;
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
@@ -99,9 +99,6 @@ public class UnloggedTestRunner extends Runner {
         this.testClass = testClass;
 
         Runtime.getInstance("format=discard");
-
-        trySpringIntegration(testClass);
-
     }
 
     public static ObjectMapper createObjectMapper() {
@@ -311,89 +308,6 @@ public class UnloggedTestRunner extends Runner {
         return objectMapperInstance;
     }
 
-    private void trySpringIntegration(Class<?> testClass) {
-        // spring loader
-        // if spring exists
-        try {
-
-            Annotation[] classAnnotations = testClass.getAnnotations();
-            boolean hasEnableAutoConfigAnnotation = false;
-            for (Annotation classAnnotation : classAnnotations) {
-                if (classAnnotation.annotationType().getCanonicalName().startsWith("org.springframework.")) {
-                    hasEnableAutoConfigAnnotation = true;
-                    break;
-                }
-            }
-            // no spring context creation if no spring annotation is used on the test class
-            if (!hasEnableAutoConfigAnnotation) {
-                return;
-            }
-
-
-            Class<?> testContextManagerClass = Class.forName("org.springframework.test.context.TestContextManager");
-
-            this.springTestContextManager = testContextManagerClass.getConstructor(Class.class).newInstance(testClass);
-            Method getTestContextMethod = testContextManagerClass.getMethod("getTestContext");
-            Class<?> testContextClass = Class.forName("org.springframework.test.context.TestContext");
-
-            Method getApplicationContextMethod = testContextClass.getMethod("getApplicationContext");
-
-            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
-                    "getAutowireCapableBeanFactory");
-
-            Class<?> pspcClass = Class.forName(
-                    "org.springframework.context.support.PropertySourcesPlaceholderConfigurer");
-
-            Object propertySourcesPlaceholderConfigurer = pspcClass.getConstructor().newInstance();
-
-            Method pspcProcessBeanFactoryMethod = pspcClass.getMethod("postProcessBeanFactory",
-                    Class.forName("org.springframework.beans.factory.config.ConfigurableListableBeanFactory"));
-
-            Class<?> propertiesClass = Class.forName("java.util.Properties");
-            Method pspcClassSetPropertiesMethod = pspcClass.getMethod("setProperties", propertiesClass);
-
-//            PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer = new PropertySourcesPlaceholderConfigurer();
-            Class<?> yamlPropertiesFactoryBeanClass = Class.forName(
-                    "org.springframework.beans.factory.config.YamlPropertiesFactoryBean");
-            Object yaml = yamlPropertiesFactoryBeanClass.getConstructor().newInstance();
-            Method yamlGetObjectMethod = yamlPropertiesFactoryBeanClass.getMethod("getObject");
-            Class<?> classPathResourceClass = Class.forName("org.springframework.core.io.ClassPathResource");
-            Object classPathResource = classPathResourceClass.getConstructor(String.class)
-                    .newInstance("config/application.yml");
-//            ClassPathResource classPathResource = new ClassPathResource("config/application.yml");
-            Method setResourceMethod = yamlPropertiesFactoryBeanClass.getMethod("setResources",
-                    Class.forName("[Lorg.springframework.core.io.Resource;"));
-            Method resourceExistsMethod = classPathResourceClass.getMethod("exists");
-            if ((boolean) resourceExistsMethod.invoke(classPathResource)) {
-//                yaml.setResources(classPathResource);
-                setResourceMethod.invoke(yaml, classPathResource);
-//                propertySourcesPlaceholderConfigurer.setProperties(yaml.getObject());
-                Object yamlObject = yamlGetObjectMethod.invoke(yaml);
-                pspcClassSetPropertiesMethod.invoke(propertySourcesPlaceholderConfigurer, yamlObject);
-            }
-
-
-            Object testContext = getTestContextMethod.invoke(this.springTestContextManager);
-            Object applicationContext = getApplicationContextMethod.invoke(testContext);
-            this.applicationContext = applicationContext;
-
-            Object factory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
-                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
-
-            pspcProcessBeanFactoryMethod.invoke(propertySourcesPlaceholderConfigurer, factory);
-
-//            propertySourcesPlaceholderConfigurer.postProcessBeanFactory(
-//                    (DefaultListableBeanFactory) this.springTestContextManager.getTestContext().getApplicationContext()
-//                            .getAutowireCapableBeanFactory());
-        } catch (Throwable e) {
-            // failed to start spring application context
-            logger.warn("Failed to start spring application test context", e);
-            throw new RuntimeException("Failed to start spring application", e);
-        }
-    }
-
     @Override
     public Description getDescription() {
         return Description.createTestDescription(testClass, "Unlogged test runner");
@@ -436,16 +350,27 @@ public class UnloggedTestRunner extends Runner {
                     for (StoredCandidate candidate : candidates) {
                         int testCounterIndex = testCounter.incrementAndGet();
 
-                        Class<?> targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
+                        Class<?> targetClassTypeInstance;
                         String name = candidate.getName() == null ?
                                 candidate.getCandidateId() : candidate.getName();
+                        targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
+
+//                        if (isSpringPresent) {
+//                        } else {
+//                            targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
+//                        }
+
                         Description testDescription = Description.createTestDescription(
-                                targetClassTypeInstance, name
-                        );
+                                targetClassTypeInstance, name);
+
                         notifier.fireTestStarted(testDescription);
 
-                        fireTest(notifier, mocksById, candidate, testCounterIndex, testDescription);
+                        fireTest(notifier, mocksById, candidate, testDescription);
+
                         notifier.fireTestFinished(testDescription);
+//                        if (springTestContextManager != null) {
+//                            ((TestContextManager) springTestContextManager).afterTestMethod();
+//                        }
                     }
                     notifier.fireTestSuiteFinished(suiteDescription);
                 }
@@ -456,7 +381,7 @@ public class UnloggedTestRunner extends Runner {
         }
     }
 
-    private void fireTest(RunNotifier notifier, Map<String, DeclaredMock> mocksById, StoredCandidate candidate, int testCounterIndex, Description testDescription) {
+    private void fireTest(RunNotifier notifier, Map<String, DeclaredMock> mocksById, StoredCandidate candidate, Description testDescription) {
         MethodUnderTest methodUnderTest = candidate.getMethod();
         List<DeclaredMock> mockList = new ArrayList<>();
         List<String> mocksToUse = candidate.getMockIds();

@@ -21,26 +21,19 @@
  */
 package io.unlogged.core.bytecode;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.command.AgentCommand;
 import io.unlogged.command.AgentCommandRequest;
-import io.unlogged.command.AgentCommandResponse;
-import io.unlogged.command.ResponseType;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
 import io.unlogged.util.ByteTools;
 import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
-import okhttp3.*;
+import okhttp3.MediaType;
 import org.objectweb.asm.*;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,12 +44,12 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
 
     private final Weaver weaver;
     private final TypeHierarchy typeHierarchy;
-    private final String agentUrl = "http://localhost:12100";
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final OkHttpClient client = new OkHttpClient.Builder()
-            .callTimeout(Duration.of(5, ChronoUnit.SECONDS))
-            .readTimeout(Duration.of(5, ChronoUnit.SECONDS))
-            .connectTimeout(Duration.of(200, ChronoUnit.MILLIS)).build();
+//    private final String agentUrl = "http://localhost:12100";
+//    private final ObjectMapper objectMapper = new ObjectMapper();
+//    private final OkHttpClient client = new OkHttpClient.Builder()
+//            .callTimeout(Duration.of(5, ChronoUnit.SECONDS))
+//            .readTimeout(Duration.of(5, ChronoUnit.SECONDS))
+//            .connectTimeout(Duration.of(200, ChronoUnit.MILLIS)).build();
 
     public ProbeInstrumenter(TypeHierarchy typeHierarchy) throws IOException {
         this.typeHierarchy = typeHierarchy;
@@ -128,27 +121,27 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
         List<String> parameters = Arrays.asList(compressedClassWeaveInfo, probeDataCompressedBase64);
         agentCommandRequest.setMethodParameters(parameters);
         agentCommandRequest.setCommand(AgentCommand.REGISTER_CLASS);
-        RequestBody body = RequestBody.create(objectMapper.writeValueAsString(agentCommandRequest), JSON);
-        Request request = new Request.Builder()
-                .url(agentUrl + "/command")
-                .post(body)
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            String responseBody = response.body().string();
-            AgentCommandResponse agentCommandResponse = objectMapper.readValue(responseBody,
-                    AgentCommandResponse.class);
-            // successfully posted to the running server
-            // hmm
-            if (agentCommandResponse.getResponseType() == ResponseType.NORMAL) {
-//                System.err.println("Posted class weave info to running process directly yay");
-//                diagnostics.addError("Posted class weave info to running process directly yay");
-//                return instrumentedClassBytes.getBytes();
-            }
-        } catch (Throwable e) {
-            // server isnt up
-            // process isnt running
-        }
+//        RequestBody body = RequestBody.create(objectMapper.writeValueAsString(agentCommandRequest), JSON);
+//        Request request = new Request.Builder()
+//                .url(agentUrl + "/command")
+//                .post(body)
+//                .build();
+//
+//        try (Response response = client.newCall(request).execute()) {
+//            String responseBody = response.body().string();
+//            AgentCommandResponse agentCommandResponse = objectMapper.readValue(responseBody,
+//                    AgentCommandResponse.class);
+//            // successfully posted to the running server
+//            // hmm
+//            if (agentCommandResponse.getResponseType() == ResponseType.NORMAL) {
+////                System.err.println("Posted class weave info to running process directly yay");
+////                diagnostics.addError("Posted class weave info to running process directly yay");
+////                return instrumentedClassBytes.getBytes();
+//            }
+//        } catch (Throwable e) {
+//            // server isnt up
+//            // process isnt running
+//        }
 
 
         // Create a ClassReader to read the original class bytes

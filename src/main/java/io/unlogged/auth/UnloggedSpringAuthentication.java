@@ -1,11 +1,11 @@
 package io.unlogged.auth;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+//import org.springframework.security.core.Authentication;
+//import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
 
-public class UnloggedSpringAuthentication implements Authentication {
+public class UnloggedSpringAuthentication {
 
     private final RequestAuthentication authRequest;
 
@@ -18,37 +18,37 @@ public class UnloggedSpringAuthentication implements Authentication {
     }
 
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    //    @Override
+    public Collection<?> getAuthorities() {
         return authRequest.getAuthorities();
     }
 
-    @Override
+    //    @Override
     public Object getCredentials() {
         return authRequest.getCredential();
     }
 
-    @Override
+    //    @Override
     public Object getDetails() {
         return authRequest.getDetails();
     }
 
-    @Override
+    //    @Override
     public Object getPrincipal() {
         return authRequest.getPrincipal();
     }
 
-    @Override
+    // @Override
     public boolean isAuthenticated() {
         return authRequest.isAuthenticated();
     }
 
-    @Override
+    //    @Override
     public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
         // bah
     }
 
-    @Override
+    //    @Override
     public String getName() {
         return authRequest.getName();
     }

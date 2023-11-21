@@ -75,6 +75,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     //    private final Map<String, WeaveLog> classMap = new HashMap<>();
 //    private final Map<Integer, DataInfo> callProbes = new HashMap<>();
     private final Set<Integer> probesToRecord = new HashSet<>();
+    private final Set<Long> valueToSkip = new HashSet<>();
     private final SerializationMode SERIALIZATION_MODE = SerializationMode.JACKSON;
     private final ThreadLocal<ByteArrayOutputStream> output =
             ThreadLocal.withInitial(() -> new ByteArrayOutputStream(1_000_000));
@@ -383,10 +384,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     private void initSkipPackages() {
 
         invertedRadixTree.put("com.google", true);
-        invertedRadixTree.put("org.apache.http", true);
         invertedRadixTree.put("java.util.stream", true);
         invertedRadixTree.put("org.elasticsearch.client", true);
+        invertedRadixTree.put("org.apache", true);
         invertedRadixTree.put("org.hibernate", true);
+        invertedRadixTree.put("org.jgrapht", true);
         invertedRadixTree.put("ch.qos", true);
         invertedRadixTree.put("io.dropwizard", true);
         invertedRadixTree.put("org.redis", true);
@@ -482,7 +484,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
         long objectId = objectIdMap.getId(value);
 
-        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId)) {
+        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(objectId)) {
 
             if (DEBUG && value != null) {
                 System.out.println("record serialized value for probe [" + dataId + "] -> " + value.getClass());
@@ -508,10 +510,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
                                 || className.contains("java.lang.reflect")
                                 || (className.startsWith("org.glassfish")
-                                  && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                                && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                                 || (className.startsWith("org.springframework")
-                                  && (!className.startsWith("org.springframework.http")
-                                  && !className.startsWith("org.springframework.data.domain")))
+                                && (!className.startsWith("org.springframework.http")
+                                && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
@@ -566,9 +568,9 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             } catch (Throwable e) {
                 if (e instanceof JsonMappingException) {
                     bytes = (FAILED_TO_RECORD_MESSAGE + e.getMessage() + "\"}").getBytes();
-                } else {
-                    probesToRecord.remove(dataId);
                 }
+                probesToRecord.remove(dataId);
+                valueToSkip.add(objectId);
 //                if (value != null) {
 //                    kryo.register(value.getClass());
 //                    String message = e.getMessage();

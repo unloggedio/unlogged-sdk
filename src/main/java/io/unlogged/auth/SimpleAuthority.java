@@ -1,8 +1,6 @@
 package io.unlogged.auth;
 
-import org.springframework.security.core.GrantedAuthority;
-
-public class SimpleAuthority implements GrantedAuthority {
+public class SimpleAuthority {
     private String authority;
 
     public SimpleAuthority() {
@@ -12,7 +10,7 @@ public class SimpleAuthority implements GrantedAuthority {
         this.authority = authority;
     }
 
-    @Override
+    //    @Override
     public String getAuthority() {
         return authority;
     }

@@ -14,20 +14,22 @@ import io.unlogged.mocking.*;
 import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
+import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
+import org.jetbrains.annotations.NotNull;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             .with(new NamingStrategy.SuffixingRandom("Unlogged"));
     private final Map<String, MockInstance> globalFieldMockMap = new HashMap<>();
     Objenesis objenesis = new ObjenesisStd();
+    private Object applicationContext;
+    private Object springTestContextManager;
+    private boolean isSpringPresent;
+    private Method getBeanMethod;
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -126,28 +132,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 logger.setRecording(true);
             }
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
+//            TestExecutionListener reactorContextTestExecutionListener = new ReactorContextTestExecutionListener();
+//            reactorContextTestExecutionListener.beforeTestMethod(null);
 
-            if (agentCommandRequest.getRequestAuthentication() != null) {
-
-                RequestAuthentication authRequest = agentCommandRequest.getRequestAuthentication();
-                UnloggedSpringAuthentication usa = new UnloggedSpringAuthentication(authRequest);
-
-                if (SecurityContextHolder.getContext() != null) {
-                    SecurityContextHolder.getContext().setAuthentication(usa);
-                }
-//                SecurityContext block = ReactiveSecurityContextHolder.getContext().block();
-                ReactiveSecurityContextHolder.withAuthentication(usa);
-//                ReactiveSecurityContextHolder.getContext()
-//                        .map(e -> {
-//                            e.setAuthentication(usa);
-//                            return e;
-//                        });
-
-
-//                if (block != null) {
-//                    block.setAuthentication(usa);
-//                }
-            }
 
             try {
 
@@ -197,6 +184,83 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
                 }
 
+                UnloggedSpringAuthentication authInstance = null;
+                UnloggedSpringAuthentication usa = null;
+                Object mockedContext = null;
+                RequestAuthentication requestAuthentication = agentCommandRequest.getRequestAuthentication();
+                if (requestAuthentication != null && requestAuthentication.getPrincipalClassName() != null) {
+
+                    String principalString = String.valueOf(requestAuthentication.getPrincipal());
+                    String userPrincipalClassName = requestAuthentication.getPrincipalClassName();
+
+                    Object principalObject = objectMapper.readValue(principalString,
+                            Class.forName(userPrincipalClassName));
+                    requestAuthentication.setPrincipal(principalObject);
+
+                    // spring is present
+                    // so either have applicationContext or testApplicationContext
+                    // instance of SpringApplicationContext
+
+
+                    if (this.springTestContextManager == null) {
+                        this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+                                ".reactive.context" +
+                                ".AnnotationConfigReactiveWebServerApplicationContext");
+                    }
+
+
+                    if (this.springTestContextManager == null) {
+
+
+//                        AnnotationDescription springBootTestAnnotation = getAnnotationDescription(
+//                                "org.springframework.boot.test.context.SpringBootTest");
+
+
+                        TestBaseImplementation baseImplementation = new TestBaseImplementation();
+
+                        DynamicType.Builder<Object> builder = byteBuddyInstance
+                                .subclass(Object.class)
+                                .name("UnloggedTestAnnotationCarrierClass");
+                        try {
+                            AnnotationDescription withSecurityContextAnnotation = getAnnotationDescription(
+                                    "org.springframework.security.test.context.support.WithSecurityContext");
+                            builder = builder.annotateType(withSecurityContextAnnotation);
+                        } catch (Exception e) {
+
+                        }
+                        DynamicType.Unloaded<Object> dynamicallyCreatedTestClassMaker = builder
+                                .defineMethod("basicTest", Void.class)
+                                .withParameters(new ArrayList<TypeDefinition>())
+                                .intercept(MethodDelegation.to(baseImplementation))
+                                .make();
+
+                        DynamicType.Loaded<Object> dynamicallyCreatedTestClassInstance = dynamicallyCreatedTestClassMaker.load(
+                                targetClassLoader);
+
+                        trySpringIntegration(dynamicallyCreatedTestClassInstance.getLoaded());
+                    }
+
+                    if (this.springTestContextManager != null) {
+                        RequestAuthentication authRequest = requestAuthentication;
+
+                        Class<?> authClass = Class.forName("org.springframework.security.core.Authentication");
+
+                        Class<? extends UnloggedSpringAuthentication> springAuthImplementatorClass = byteBuddyInstance
+                                .subclass(UnloggedSpringAuthentication.class)
+                                .implement(authClass)
+                                .make()
+                                .load(targetClassLoader).getLoaded();
+
+                        authInstance = springAuthImplementatorClass.getConstructor(
+                                        RequestAuthentication.class)
+                                .newInstance(authRequest);
+
+                        mockedContext = Class.forName(
+                                "org.springframework.security.core.context.SecurityContextImpl"
+                        ).getConstructor(authClass).newInstance(authInstance);
+                    }
+                }
+
 
                 // gets a method or throws exception if no such method
                 Method methodToExecute = getMethodToExecute(targetClassType, agentCommandRequest.getMethodName(),
@@ -233,8 +297,129 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 objectInstanceByClass = arrangeMocks(targetClassType, targetClassLoader, objectInstanceByClass,
                         declaredMocksList);
 
+                Class<?> SECURITY_CONTEXT_KEY = null;
+                try {
+                    SECURITY_CONTEXT_KEY = Class.forName("org.springframework.security.core.context" +
+                            ".SecurityContext");
+                    isSpringPresent = true;
+                } catch (Exception e) {
+                    // no spring
+                }
 
-                Object methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+                Object methodReturnValue;
+                if (isSpringPresent && mockedContext != null) {
+                    final Map<String, Object> resultContainer = new HashMap<>();
+
+                    final Mono<?> securityContext = Mono.just(mockedContext);
+                    Object finalObjectInstanceByClass = objectInstanceByClass;
+                    Object[] finalParameters = parameters;
+                    assert SECURITY_CONTEXT_KEY != null;
+
+                    Class<?> finalSECURITY_CONTEXT_KEY = SECURITY_CONTEXT_KEY;
+
+                    CountDownLatch cdl = new CountDownLatch(1);
+                    Mono.defer(() -> {
+                                try {
+                                    // Invoke the method using reflection
+                                    Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
+
+                                    // Handle different return types
+                                    if (returnValue instanceof Mono) {
+                                        return (Mono<?>) returnValue;
+                                    } else if (returnValue instanceof Flux) {
+                                        return ((Flux<?>) returnValue).collectList();
+                                    } else {
+                                        return Mono.justOrEmpty(returnValue);
+                                    }
+                                } catch (IllegalAccessException | InvocationTargetException e) {
+                                    return Mono.error(e);
+                                }
+                            })
+                            .contextWrite(ctx -> {
+//                                System.out.println("setting sec");
+                                return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                            }) // Set the security context
+                            .doOnSuccess(result -> {
+                                resultContainer.put("returnValue", result);
+                                cdl.countDown(); // Count down on successful completion
+                            })
+                            .doOnError(error -> {
+                                resultContainer.put("exception", error);
+                                cdl.countDown(); // Count down on error
+                            })
+                            .subscribe();
+
+                    cdl.await();
+//                    Mono.deferContextual(ctx -> Mono.just(Context.of(finalSECURITY_CONTEXT_KEY, securityContext)))
+//                            .flatMap(context -> {
+//                                return ReactiveSecurityContextHolder.withSecurityContext(Mono.just(finalMockedContext));
+//                            }).then((Mono.defer(() -> {
+//                                try {
+//                                    Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
+//
+//                                    if (returnValue instanceof Mono) {
+//                                        return (Mono<?>) returnValue;
+//                                    } else if (returnValue instanceof Flux) {
+//                                        return ((Flux<?>) returnValue).collectList();
+//                                    } else {
+//                                        return Mono.justOrEmpty(returnValue);
+//                                    }
+//                                } catch (IllegalAccessException | InvocationTargetException e) {
+//                                    return Mono.error(e);
+//                                }
+//                            })))
+//                            .subscribe(
+//                                    result -> resultContainer.put("returnValue", result),
+//                                    error -> resultContainer.put("exception", error)
+//                            );
+
+
+//                    Mono.deferContextual(Mono::just)
+//                            .cast(Context.class)
+////                            .contextWrite(Context.of(SECURITY_CONTEXT_KEY, securityContext))
+//                            .flatMap(context -> ReactiveSecurityContextHolder.withSecurityContext(securityContext)
+//                            .then(Mono.defer(() -> {
+//                                try {
+//                                    Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass,
+//                                            finalParameters);
+//                                    if (returnValue instanceof Mono) {
+//                                        return (Mono<?>) returnValue;
+//                                    } else if (returnValue instanceof Flux) {
+//                                        return ((Flux<?>) returnValue).collectList();
+//                                    }
+//                                    return Mono.justOrEmpty(returnValue);
+//                                } catch (IllegalAccessException | InvocationTargetException e) {
+//                                    return Mono.error(e);
+//                                }
+//                            })).subscribe(
+//                                    returnValue -> resultContainer.put("returnValue", returnValue),
+//                                    error -> resultContainer.put("exception", error)
+//                            );
+                    if (resultContainer.containsKey("returnValue")) {
+                        methodReturnValue = resultContainer.get("returnValue");
+                    } else {
+                        throw (Throwable) resultContainer.get("exception");
+                    }
+
+                } else {
+
+                    try {
+                        Class<?> sch = Class.forName("org.springframework.security.core.context.SecurityContextHolder");
+                        Method gcm = sch.getMethod("getContext");
+                        Object contextInstance = gcm.invoke(null);
+                        Class<?> authenticationClass = Class.forName(
+                                "org.springframework.security.core.Authentication");
+                        Method setMethod = contextInstance.getClass()
+                                .getMethod("setAuthentication", authenticationClass);
+                        setMethod.invoke(contextInstance, authInstance);
+
+                    } catch (Exception e) {
+                        // failed to set auth for non reactive spring app
+                    }
+
+                    methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+                }
+//                reactorContextTestExecutionListener.afterTestMethod(null);
 
                 Object serializedValue = serializeMethodReturnValue(methodReturnValue);
                 agentCommandResponse.setMethodReturnValue(serializedValue);
@@ -287,6 +472,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
         return agentCommandRawResponse;
 
+    }
+
+    @NotNull
+    private AnnotationDescription getAnnotationDescription(String className) throws ClassNotFoundException {
+        Class<?> springBootTestAnnotationClass = Class.forName(className);
+
+
+        AnnotationDescription springBootTestAnnotation =
+                AnnotationDescription.Builder
+                        .ofType((Class<? extends Annotation>) springBootTestAnnotationClass)
+                        .build();
+        return springBootTestAnnotation;
     }
 
     @Override
@@ -876,15 +1073,27 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     potentialFieldName = methodName.substring(2);
                 }
 
-                if (potentialFieldName != null && providedValues.has(potentialFieldName)) {
+                if (potentialFieldName == null) {
+                    potentialFieldName = "5";
+                }
+
+                potentialFieldName = potentialFieldName.substring(0, 1).toLowerCase() + potentialFieldName.substring(1);
+
+                if (providedValues.has(potentialFieldName)) {
                     JsonNode providedValue = providedValues.get(potentialFieldName);
 //                                Object valueToReturn = getValueToSet(typeFactory, providedValue, valueType);
 
                     if (methodName.startsWith("get") || methodName.startsWith("is")) {
                         ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
-                        ReturnValue returnParameter = new ReturnValue(providedValue.asText(),
-                                valueType.getCanonicalName(), ReturnValueType.REAL);
-                        thenParameterList.add(new ThenParameter(returnParameter, MethodExitType.NORMAL));
+                        ReturnValue returnParameter = new ReturnValue(providedValue.toString(),
+                                valueType.getCanonicalName(), ReturnValueType.MOCK);
+
+                        DeclaredMock returnParamCallMock = new DeclaredMock();
+                        returnParameter.addDeclaredMock(returnParamCallMock);
+
+                        ThenParameter thenParameter = new ThenParameter(returnParameter, MethodExitType.NORMAL);
+
+                        thenParameterList.add(thenParameter);
                         DeclaredMock dummyMockDefinition = new DeclaredMock(
                                 "generated mock for " + methodName, valueType.getCanonicalName(),
                                 potentialFieldName, methodName, new ArrayList<>(), thenParameterList
@@ -1106,5 +1315,94 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
         return sessionInstance;
     }
+
+    private void trySpringIntegration(Class<?> testClass) {
+        // spring loader
+        // if spring exists
+        try {
+            Class.forName("org.springframework.security.core.context.SecurityContext");
+            isSpringPresent = true;
+
+
+            Annotation[] classAnnotations = testClass.getAnnotations();
+            boolean hasEnableAutoConfigAnnotation = false;
+            for (Annotation classAnnotation : classAnnotations) {
+                if (classAnnotation.annotationType().getCanonicalName().startsWith("org.springframework.")) {
+                    hasEnableAutoConfigAnnotation = true;
+                    break;
+                }
+            }
+            Class<?> testContextManagerClass = null;
+            try {
+                testContextManagerClass = Class.forName("org.springframework.test.context.TestContextManager");
+            } catch (Exception e) {
+            }
+            // no spring context creation if no spring annotation is used on the test class
+            if (!hasEnableAutoConfigAnnotation) {
+                return;
+            }
+
+
+            this.springTestContextManager = testContextManagerClass.getConstructor(Class.class).newInstance(testClass);
+            Method getTestContextMethod = testContextManagerClass.getMethod("getTestContext");
+            Class<?> testContextClass = Class.forName("org.springframework.test.context.TestContext");
+
+            Method getApplicationContextMethod = testContextClass.getMethod("getApplicationContext");
+
+            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
+                    "getAutowireCapableBeanFactory");
+
+            Class<?> pspcClass = Class.forName(
+                    "org.springframework.context.support.PropertySourcesPlaceholderConfigurer");
+
+            Object propertySourcesPlaceholderConfigurer = pspcClass.getConstructor().newInstance();
+
+            Method pspcProcessBeanFactoryMethod = pspcClass.getMethod("postProcessBeanFactory",
+                    Class.forName("org.springframework.beans.factory.config.ConfigurableListableBeanFactory"));
+
+            Class<?> propertiesClass = Class.forName("java.util.Properties");
+            Method pspcClassSetPropertiesMethod = pspcClass.getMethod("setProperties", propertiesClass);
+
+//            PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer = new PropertySourcesPlaceholderConfigurer();
+            Class<?> yamlPropertiesFactoryBeanClass = Class.forName(
+                    "org.springframework.beans.factory.config.YamlPropertiesFactoryBean");
+            Object yaml = yamlPropertiesFactoryBeanClass.getConstructor().newInstance();
+            Method yamlGetObjectMethod = yamlPropertiesFactoryBeanClass.getMethod("getObject");
+            Class<?> classPathResourceClass = Class.forName("org.springframework.core.io.ClassPathResource");
+            Object classPathResource = classPathResourceClass.getConstructor(String.class)
+                    .newInstance("config/application.yml");
+//            ClassPathResource classPathResource = new ClassPathResource("config/application.yml");
+            Method setResourceMethod = yamlPropertiesFactoryBeanClass.getMethod("setResources",
+                    Class.forName("[Lorg.springframework.core.io.Resource;"));
+            Method resourceExistsMethod = classPathResourceClass.getMethod("exists");
+            if ((boolean) resourceExistsMethod.invoke(classPathResource)) {
+//                yaml.setResources(classPathResource);
+                setResourceMethod.invoke(yaml, classPathResource);
+//                propertySourcesPlaceholderConfigurer.setProperties(yaml.getObject());
+                Object yamlObject = yamlGetObjectMethod.invoke(yaml);
+                pspcClassSetPropertiesMethod.invoke(propertySourcesPlaceholderConfigurer, yamlObject);
+            }
+
+
+            Object testContext = getTestContextMethod.invoke(this.springTestContextManager);
+            Object applicationContext = getApplicationContextMethod.invoke(testContext);
+            this.applicationContext = applicationContext;
+
+            Object factory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
+                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+
+            pspcProcessBeanFactoryMethod.invoke(propertySourcesPlaceholderConfigurer, factory);
+
+//            propertySourcesPlaceholderConfigurer.postProcessBeanFactory(
+//                    (DefaultListableBeanFactory) this.springTestContextManager.getTestContext().getApplicationContext()
+//                            .getAutowireCapableBeanFactory());
+        } catch (Throwable e) {
+            // failed to start spring application context
+            throw new RuntimeException("Failed to create spring application context", e);
+        }
+    }
+
 
 }
