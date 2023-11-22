@@ -208,12 +208,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 ".AnnotationConfigReactiveWebServerApplicationContext");
                     }
 
+                    if (this.springTestContextManager == null) {
+                        this.springTestContextManager = logger.getObjectByClassName(
+                                "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+                        );
+                    }
+
 
                     if (this.springTestContextManager == null) {
-
-
-//                        AnnotationDescription springBootTestAnnotation = getAnnotationDescription(
-//                                "org.springframework.boot.test.context.SpringBootTest");
 
 
                         TestBaseImplementation baseImplementation = new TestBaseImplementation();
@@ -307,7 +309,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
                 Object methodReturnValue;
-                if (isSpringPresent && mockedContext != null) {
+                if (isSpringPresent && mockedContext != null && springTestContextManager != null
+                        && springTestContextManager.getClass()
+                        .getCanonicalName().contains("AnnotationConfigReactiveWebServerApplicationContext")) {
                     final Map<String, Object> resultContainer = new HashMap<>();
 
                     final Mono<?> securityContext = Mono.just(mockedContext);
@@ -350,51 +354,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             .subscribe();
 
                     cdl.await();
-//                    Mono.deferContextual(ctx -> Mono.just(Context.of(finalSECURITY_CONTEXT_KEY, securityContext)))
-//                            .flatMap(context -> {
-//                                return ReactiveSecurityContextHolder.withSecurityContext(Mono.just(finalMockedContext));
-//                            }).then((Mono.defer(() -> {
-//                                try {
-//                                    Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
-//
-//                                    if (returnValue instanceof Mono) {
-//                                        return (Mono<?>) returnValue;
-//                                    } else if (returnValue instanceof Flux) {
-//                                        return ((Flux<?>) returnValue).collectList();
-//                                    } else {
-//                                        return Mono.justOrEmpty(returnValue);
-//                                    }
-//                                } catch (IllegalAccessException | InvocationTargetException e) {
-//                                    return Mono.error(e);
-//                                }
-//                            })))
-//                            .subscribe(
-//                                    result -> resultContainer.put("returnValue", result),
-//                                    error -> resultContainer.put("exception", error)
-//                            );
 
 
-//                    Mono.deferContextual(Mono::just)
-//                            .cast(Context.class)
-////                            .contextWrite(Context.of(SECURITY_CONTEXT_KEY, securityContext))
-//                            .flatMap(context -> ReactiveSecurityContextHolder.withSecurityContext(securityContext)
-//                            .then(Mono.defer(() -> {
-//                                try {
-//                                    Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass,
-//                                            finalParameters);
-//                                    if (returnValue instanceof Mono) {
-//                                        return (Mono<?>) returnValue;
-//                                    } else if (returnValue instanceof Flux) {
-//                                        return ((Flux<?>) returnValue).collectList();
-//                                    }
-//                                    return Mono.justOrEmpty(returnValue);
-//                                } catch (IllegalAccessException | InvocationTargetException e) {
-//                                    return Mono.error(e);
-//                                }
-//                            })).subscribe(
-//                                    returnValue -> resultContainer.put("returnValue", returnValue),
-//                                    error -> resultContainer.put("exception", error)
-//                            );
                     if (resultContainer.containsKey("returnValue")) {
                         methodReturnValue = resultContainer.get("returnValue");
                     } else {
