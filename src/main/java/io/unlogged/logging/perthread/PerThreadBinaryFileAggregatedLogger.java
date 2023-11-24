@@ -9,7 +9,6 @@ import io.unlogged.logging.util.NetworkClient;
 import java.io.*;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,10 +42,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     private final BlockingQueue<UploadFile> fileList;
 
-    private final Map<Integer, OutputStream> threadFileMap = new HashMap<>();
+    private final Map<Integer, OutputStream> threadFileMap = new ConcurrentHashMap<>();
 
-    private final Map<Integer, String> currentFileMap = new HashMap<>();
-    private final Map<Integer, AtomicInteger> count = new HashMap<>();
+    private final Map<Integer, String> currentFileMap = new ConcurrentHashMap<>();
+    private final Map<Integer, Integer> count = new ConcurrentHashMap<>();
     private final String hostname;
     private final FileNameGenerator fileNameGenerator;
     private final IErrorLogger errorLogger;
@@ -135,13 +134,13 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         return threadFileMap.get(threadId);
     }
 
-    private synchronized void prepareNextFile(int currentThreadId) throws IOException {
+    private void prepareNextFile(int currentThreadId) throws IOException {
 
 //        errorLogger.log("prepare next file [" + currentThreadId + "]");
 
         if (count.containsKey(currentThreadId) && threadFileMap.get(currentThreadId) != null) {
-            int eventCount = count.get(currentThreadId).get();
-            if (eventCount < 1) {
+            int eventCount = count.get(currentThreadId);
+            if (eventCount < MAX_EVENTS_PER_FILE) {
                 return;
             }
         }
@@ -188,8 +187,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             return;
         }
 
-
-        count.put(currentThreadId, new AtomicInteger(0));
+        count.put(currentThreadId, 0);
 //        valueIdFilterSet.put(currentThreadId,
 //                BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_FILTER_BIT_SIZE));
 //        probeIdFilterSet.put(currentThreadId,
@@ -269,7 +267,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         int currentThreadId = threadId.get();
 
         try {
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
         } catch (IOException e) {
@@ -284,6 +282,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     }
 
+    // dead code
     public void writeNewException(byte[] exceptionBytes) {
         if (1 < 2) {
             return;
@@ -293,7 +292,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         int currentThreadId = threadId.get();
 
         try {
-            if (getThreadEventCount(currentThreadId).get() >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCount(currentThreadId) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
         } catch (IOException e) {
@@ -308,7 +307,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             tempOut.writeInt(exceptionBytes.length);
             tempOut.write(exceptionBytes);
             getStreamForThread(threadId.get()).write(baos.toByteArray());
-            getThreadEventCount(currentThreadId).addAndGet(1);
+            getThreadEventCountinc(currentThreadId, 1);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -375,7 +374,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCountinc(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -444,7 +443,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addValueId(valueId);
 //            fileCollector.addProbeId(probeId);
-            if (getThreadEventCount(currentThreadId).addAndGet(1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCountinc(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -477,7 +476,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-            getThreadEventCount(currentThreadId).addAndGet(1);
+            getThreadEventCountinc(currentThreadId, 1);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addValueId(valueId);
@@ -500,10 +499,20 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     }
 
     @Override
-    public AtomicInteger getThreadEventCount(int currentThreadId) {
+    public int getThreadEventCount(int currentThreadId) {
         if (!count.containsKey(currentThreadId)) {
-            count.put(currentThreadId, new AtomicInteger(0));
+            count.put(currentThreadId, 0);
         }
+        return count.get(currentThreadId);
+    }
+
+     public int getThreadEventCountinc(int currentThreadId, int incVal) {
+        if (!count.containsKey(currentThreadId)) {
+            count.put(currentThreadId, 0);
+        }
+
+        int countOldVal = count.get(currentThreadId);
+        count.put(currentThreadId, countOldVal+incVal);
         return count.get(currentThreadId);
     }
 }
