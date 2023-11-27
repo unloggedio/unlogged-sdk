@@ -282,39 +282,6 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     }
 
-    // dead code
-    public void writeNewException(byte[] exceptionBytes) {
-        if (1 < 2) {
-            return;
-        }
-        int bytesToWrite = 1 + 4 + exceptionBytes.length;
-
-        int currentThreadId = threadId.get();
-
-        try {
-            if (getThreadEventCount(currentThreadId) >= MAX_EVENTS_PER_FILE) {
-                prepareNextFile(currentThreadId);
-            }
-        } catch (IOException e) {
-            errorLogger.log(e);
-        }
-
-
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(bytesToWrite);
-            DataOutputStream tempOut = new DataOutputStream(baos);
-            tempOut.writeByte(3);
-            tempOut.writeInt(exceptionBytes.length);
-            tempOut.write(exceptionBytes);
-            getStreamForThread(threadId.get()).write(baos.toByteArray());
-            getThreadEventCountinc(currentThreadId, 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-//        writeString(toString);
-        // System.err.println("Write new exception - 3," + toString.length() + " - " + toString + " = " + this.bytesWritten);
-    }
-
     public void writeEvent(int probeId, long valueId) {
         long timestamp = System.nanoTime();
         int currentThreadId = threadId.get();
