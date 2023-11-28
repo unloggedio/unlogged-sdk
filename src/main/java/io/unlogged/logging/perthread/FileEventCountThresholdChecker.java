@@ -31,7 +31,7 @@ class FileEventCountThresholdChecker implements Runnable {
         Integer[] keySet = threadFileMap.keySet().toArray(new Integer[0]);
 //        errorLogger.log("started event count checker cron for threads: " + Arrays.toString(keySet));
         for (Integer theThreadId : keySet) {
-            int eventCount = threadEventCountProvider.getThreadEventCount(theThreadId).get();
+            int eventCount = threadEventCountProvider.getThreadEventCount(theThreadId);
             if (eventCount > 0) {
 //                errorLogger.log("thread [" + theThreadId + "] has [" + eventCount + "] events, flushing");
                 onExpiryRunner.apply(theThreadId);
@@ -43,7 +43,7 @@ class FileEventCountThresholdChecker implements Runnable {
         Integer[] keySet = threadFileMap.keySet().toArray(new Integer[0]);
 //        errorLogger.log("started event count checker cron for threads: " + Arrays.toString(keySet));
         for (Integer theThreadId : keySet) {
-            int eventCount = threadEventCountProvider.getThreadEventCount(theThreadId).get();
+            threadEventCountProvider.getThreadEventCount(theThreadId);
             onExpiryRunner.apply(theThreadId);
         }
     }

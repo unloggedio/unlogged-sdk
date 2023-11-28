@@ -135,14 +135,12 @@ public class RawFileCollector implements Runnable {
         if (shutdownComplete) {
             return;
         }
-        boolean doneFinalize = false;
         try {
             UploadFile logFile = fileList.poll(1, TimeUnit.SECONDS);
             if (logFile == null) {
                 if (fileCount > 0 || shutdown) {
                     errorLogger.log(
                             "files from queue, currently [" + fileCount + "] files in list : shutdown: " + shutdown);
-                    doneFinalize = true;
                     finalizeArchiveAndUpload();
                     return;
                 }
@@ -170,9 +168,7 @@ public class RawFileCollector implements Runnable {
             errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
                     .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
             if (archivedIndexWriter.fileCount() >= filesPerArchive || shutdown) {
-                if (!doneFinalize) {
-                    finalizeArchiveAndUpload();
-                }
+                finalizeArchiveAndUpload();
             }
             if (shutdown) {
                 shutdownComplete = true;

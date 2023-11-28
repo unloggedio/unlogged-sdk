@@ -97,7 +97,6 @@ public class ObjectIdAggregatedStream extends ObjectIdMap {
                     output.writeInt(e.getLineNumber());
 
                 }
-                aggregatedLogger.writeNewException(outputStream.toByteArray());
             } catch (Throwable e) {
                 // ignore all exceptions
             }
