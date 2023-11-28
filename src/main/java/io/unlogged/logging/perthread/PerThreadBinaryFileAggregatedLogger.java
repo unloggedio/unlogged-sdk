@@ -140,7 +140,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
         if (count.containsKey(currentThreadId) && threadFileMap.get(currentThreadId) != null) {
             int eventCount = count.get(currentThreadId);
-            if (eventCount < MAX_EVENTS_PER_FILE) {
+            if (eventCount < 1) {
                 return;
             }
         }
