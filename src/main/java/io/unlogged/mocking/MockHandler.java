@@ -184,7 +184,16 @@ public class MockHandler {
                                 ".CompletableFuture<").length(), classNameToBeConstructed.length() - 1);
                         typeReference = getTypeReference(typeFactory, futureClassName);
                         returnValueInstance = objectMapper.readValue(returnParameter.getValue(), typeReference);
-                        return CompletableFuture.completedFuture(returnValueInstance);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return CompletableFuture.supplyAsync(() -> finalReturnValueInstance);
+                    }
+                    if (classNameToBeConstructed.startsWith("java.util.Optional<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util" +
+                                ".Optional<").length(), classNameToBeConstructed.length() - 1);
+                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(), typeReference);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return Optional.of(finalReturnValueInstance);
                     }
                     typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
                 } catch (Exception e) {
