@@ -15,6 +15,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -105,43 +106,12 @@ public class MockHandler {
                         return null;
                     }
                     ReturnValue returnParameter = thenParameter.getReturnParameter();
+                    ClassLoader classLoader = thisInstance.getClass().getClassLoader();
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
                             try {
-                                if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
-                                    if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
-
-                                        TypeFactory typeFactory = objectMapper.getTypeFactory()
-                                                .withClassLoader(thisInstance.getClass().getClassLoader());
-
-
-                                        JavaType typeReference;
-                                        try {
-                                            String classNameToBeConstructed = returnParameter.getClassName();
-                                            typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
-                                        } catch (Exception e) {
-                                            // failed to construct from the canonical name,
-                                            // happens when this is a generic type
-                                            // so we try to construct using type from the method param class
-                                            typeReference = typeFactory.constructType(invokedMethod.getReturnType());
-                                        }
-
-                                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
-                                                typeReference);
-                                    }
-                                } else {
-                                    // this is an instance of exception class
-                                    Class<?> exceptionClassType = thisInstance.getClass().getClassLoader()
-                                            .loadClass(returnParameter.getClassName());
-                                    try {
-                                        Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
-                                                String.class);
-                                        returnValueInstance =
-                                                constructorWithMessage.newInstance(returnParameter.getValue());
-                                    } catch (Exception e) {
-                                        returnValueInstance = exceptionClassType.getConstructor().newInstance();
-                                    }
-                                }
+                                returnValueInstance = createReturnValueInstance(thenParameter, returnParameter,
+                                        invokedMethod, classLoader);
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 System.err.println("Failed to create instance of class [" +
@@ -157,7 +127,7 @@ public class MockHandler {
                                     .subclass(fieldType)
                                     .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
                                     .make()
-                                    .load(thisInstance.getClass().getClassLoader());
+                                    .load(classLoader);
 
                             returnValueInstance = objenesis.newInstance(loadedMockedField.getLoaded());
                             break;
@@ -194,6 +164,52 @@ public class MockHandler {
         Method realMethod = originalImplementation.getClass()
                 .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
         return realMethod.invoke(originalImplementation, methodArguments);
+    }
+
+    private Object createReturnValueInstance(ThenParameter thenParameter, ReturnValue returnParameter, Method invokedMethod, ClassLoader classLoader)
+            throws Exception {
+        Object returnValueInstance = null;
+        TypeFactory typeFactory = objectMapper.getTypeFactory()
+                .withClassLoader(classLoader);
+
+        if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
+            if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
+
+
+                JavaType typeReference;
+                try {
+                    String classNameToBeConstructed = returnParameter.getClassName();
+                    if (classNameToBeConstructed.startsWith("java.util.concurrent.CompletableFuture<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util.concurrent" +
+                                ".CompletableFuture<").length(), classNameToBeConstructed.length() - 1);
+                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(), typeReference);
+                        return CompletableFuture.completedFuture(returnValueInstance);
+                    }
+                    typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
+                } catch (Exception e) {
+                    // failed to construct from the canonical name,
+                    // happens when this is a generic type
+                    // so we try to construct using type from the method param class
+                    typeReference = typeFactory.constructType(invokedMethod.getReturnType());
+                }
+
+                returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
+                        typeReference);
+            }
+        } else {
+            // this is an instance of exception class
+            Class<?> exceptionClassType = classLoader.loadClass(returnParameter.getClassName());
+            try {
+                Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
+                        String.class);
+                returnValueInstance =
+                        constructorWithMessage.newInstance(returnParameter.getValue());
+            } catch (Exception e) {
+                returnValueInstance = exceptionClassType.getConstructor().newInstance();
+            }
+        }
+        return returnValueInstance;
     }
 
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) {
