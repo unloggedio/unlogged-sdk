@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.unlogged.mocking.construction.JsonDeserializer;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.MethodDelegation;
@@ -15,15 +16,17 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class MockHandler {
-    private final List<DeclaredMock> declaredMocks = new ArrayList<>();
     private final ObjectMapper objectMapper;
+
+
+    private final List<DeclaredMock> declaredMocks = new ArrayList<>();
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
@@ -32,6 +35,8 @@ public class MockHandler {
     private final ClassLoader targetClassLoader;
     private final Field field;
 
+    private final JsonDeserializer jsonDeserializer;
+
     public MockHandler(
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
@@ -39,6 +44,7 @@ public class MockHandler {
             Objenesis objenesis, Object originalImplementation,
             Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
         this.objectMapper = objectMapper;
+        this.jsonDeserializer = new JsonDeserializer(objectMapper);
         this.byteBuddy = byteBuddy;
         this.objenesis = objenesis;
         this.originalImplementation = originalImplementation;
@@ -60,6 +66,7 @@ public class MockHandler {
         }
         return typeFactory.constructFromCanonical(classNameToBeConstructed);
     }
+
 
     public Field getField() {
         return field;
@@ -169,33 +176,13 @@ public class MockHandler {
     private Object createReturnValueInstance(ThenParameter thenParameter, ReturnValue returnParameter, Method invokedMethod, ClassLoader classLoader)
             throws Exception {
         Object returnValueInstance = null;
-        TypeFactory typeFactory = objectMapper.getTypeFactory()
-                .withClassLoader(classLoader);
+        TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(classLoader);
 
         if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
             if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
-
-
                 JavaType typeReference;
                 try {
-                    String classNameToBeConstructed = returnParameter.getClassName();
-                    if (classNameToBeConstructed.startsWith("java.util.concurrent.CompletableFuture<")) {
-                        String futureClassName = classNameToBeConstructed.substring(("java.util.concurrent" +
-                                ".CompletableFuture<").length(), classNameToBeConstructed.length() - 1);
-                        typeReference = getTypeReference(typeFactory, futureClassName);
-                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(), typeReference);
-                        Object finalReturnValueInstance = returnValueInstance;
-                        return CompletableFuture.supplyAsync(() -> finalReturnValueInstance);
-                    }
-                    if (classNameToBeConstructed.startsWith("java.util.Optional<")) {
-                        String futureClassName = classNameToBeConstructed.substring(("java.util" +
-                                ".Optional<").length(), classNameToBeConstructed.length() - 1);
-                        typeReference = getTypeReference(typeFactory, futureClassName);
-                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(), typeReference);
-                        Object finalReturnValueInstance = returnValueInstance;
-                        return Optional.of(finalReturnValueInstance);
-                    }
-                    typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
+                    typeReference = getTypeReference(typeFactory, returnParameter.getClassName());
                 } catch (Exception e) {
                     // failed to construct from the canonical name,
                     // happens when this is a generic type
@@ -203,23 +190,23 @@ public class MockHandler {
                     typeReference = typeFactory.constructType(invokedMethod.getReturnType());
                 }
 
-                returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
-                        typeReference);
+                returnValueInstance = jsonDeserializer.createInstance(returnParameter.getValue(), typeReference);
             }
+
         } else {
             // this is an instance of exception class
             Class<?> exceptionClassType = classLoader.loadClass(returnParameter.getClassName());
             try {
                 Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
                         String.class);
-                returnValueInstance =
-                        constructorWithMessage.newInstance(returnParameter.getValue());
+                returnValueInstance = constructorWithMessage.newInstance(returnParameter.getValue());
             } catch (Exception e) {
                 returnValueInstance = exceptionClassType.getConstructor().newInstance();
             }
         }
         return returnValueInstance;
     }
+
 
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) {
         boolean mockMatched = true;
@@ -367,4 +354,5 @@ public class MockHandler {
     public void removeDeclaredMock(List<DeclaredMock> mocksToRemove) {
         this.declaredMocks.removeAll(mocksToRemove);
     }
+
 }
