@@ -260,28 +260,6 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     }
 
-    public void writeNewString(long id, String stringObject) {
-        int stringLength = stringObject.length();
-        int bytesToWrite = 1 + 8 + 4 + stringLength;
-
-        int currentThreadId = threadId.get();
-
-        try {
-            if (getThreadEventCount(currentThreadId) >= MAX_EVENTS_PER_FILE) {
-                prepareNextFile(currentThreadId);
-            }
-        } catch (IOException e) {
-            errorLogger.log(e);
-        }
-
-
-        if (stringLength > 0) {
-            fileCollector.indexStringEntry(id, stringObject);
-        }
-
-
-    }
-
     public void writeEvent(int probeId, long valueId) {
         long timestamp = System.nanoTime();
         int currentThreadId = threadId.get();
@@ -341,7 +319,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addProbeId(probeId);
-            if (getThreadEventCountinc(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCountAddAndGet(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -410,7 +388,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addValueId(valueId);
 //            fileCollector.addProbeId(probeId);
-            if (getThreadEventCountinc(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
+            if (getThreadEventCountAddAndGet(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
 
@@ -443,7 +421,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             getStreamForThread(currentThreadId).write(baos.toByteArray());
 
-            getThreadEventCountinc(currentThreadId, 1);
+            getThreadEventCountAddAndGet(currentThreadId, 1);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
 //            probeIdFilterSet.get(currentThreadId).add(probeId);
 //            fileCollector.addValueId(valueId);
@@ -473,13 +451,15 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         return count.get(currentThreadId);
     }
 
-     public int getThreadEventCountinc(int currentThreadId, int incVal) {
+    public int getThreadEventCountAddAndGet(int currentThreadId, int incVal) {
         if (!count.containsKey(currentThreadId)) {
-            count.put(currentThreadId, 0);
+            count.put(currentThreadId, incVal);
+            return incVal;
         }
 
         int countOldVal = count.get(currentThreadId);
-        count.put(currentThreadId, countOldVal+incVal);
-        return count.get(currentThreadId);
+        int value = countOldVal + incVal;
+        count.put(currentThreadId, value);
+        return value;
     }
 }
