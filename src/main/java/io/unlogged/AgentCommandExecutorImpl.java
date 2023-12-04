@@ -1172,7 +1172,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (newInstance == null) {
             try {
                 newInstance = objenesis.newInstance(loadedClass);
-            } catch (java.lang.InstantiationError e) {
+            } catch (java.lang.InstantiationError | IllegalAccessError e) {
                 // failed to create using objenesis
             }
         }
@@ -1227,7 +1227,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     if (value == null) {
                         continue;
                     }
-                    buildMap.put(className, value);
+                    buildMap.put(fieldTypeName, value);
                 }
                 try {
                     field.set(newInstance, value);

@@ -283,7 +283,7 @@ public class UnloggedTestRunner extends Runner {
                 //checks for presence of this module class, if not present throws exception
                 Class<?> jdk8Module = Class.forName(jacksonModule);
                 jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
-            } catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
                 // jdk8 module not found
             } catch (InvocationTargetException
                      | InstantiationException
@@ -315,7 +315,7 @@ public class UnloggedTestRunner extends Runner {
 
     @Override
     public void run(RunNotifier notifier) {
-        System.err.println("UTR.run invoked");
+//        System.err.println("UTR.run invoked");
 
         try {
             Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
@@ -344,8 +344,12 @@ public class UnloggedTestRunner extends Runner {
                     }
                     Description suiteDescription = Description.createSuiteDescription(
                             className + "." + method.getName());
-//                    System.err.println("running the tests from unlogged: " + className + "#" + methodHashKey);
-                    notifier.fireTestSuiteStarted(suiteDescription);
+//                    System.err.println(className );
+                    try {
+                        notifier.fireTestSuiteStarted(suiteDescription);
+                    } catch (NoSuchMethodError ingnored) {
+                        // ingnored
+                    }
 
                     for (StoredCandidate candidate : candidates) {
                         int testCounterIndex = testCounter.incrementAndGet();
@@ -372,7 +376,12 @@ public class UnloggedTestRunner extends Runner {
 //                            ((TestContextManager) springTestContextManager).afterTestMethod();
 //                        }
                     }
-                    notifier.fireTestSuiteFinished(suiteDescription);
+                    try {
+                        notifier.fireTestSuiteFinished(suiteDescription);
+                    } catch (NoSuchMethodError ingnored) {
+                        // ingnored
+                    }
+
                 }
             }
         } catch (Throwable throwable) {
@@ -480,21 +489,21 @@ public class UnloggedTestRunner extends Runner {
             Expression expression = atomicAssertion.getExpression();
             JsonNode expressedValue = expression.compute(valueFromJsonNode);
 
-            System.err.println("Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
-                    "[" + expressedValue + "]\n when the return value from method " +
-                    "[" + methodUnderTest.getName() + "]()\n value " +
+            System.err.println("Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
+                    "[" + expressedValue + "]\n\t when the return value from method " +
+                    "[" + methodUnderTest.getName() + "()]\n\t value " +
                     "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
                     "(" + atomicAssertion.getKey() + ")")) +
-                    "]\nas expected in test candidate " +
+                    "] as expected in test candidate " +
                     "[" + candidate.getCandidateId() + "]" +
                     "[" + candidate.getName() + "]");
             RuntimeException thrownException = new RuntimeException(
-                    "Expected [" + atomicAssertion.getExpectedValue() + "]\ninstead of actual\n" +
-                            "[" + expressedValue + "]\n when the return value from method " +
-                            "[" + methodUnderTest.getName() + "]()\n value " +
+                    "Expected [" + atomicAssertion.getExpectedValue() + "]instead of actual" +
+                            "[" + expressedValue + "]\n\t when the return value from method " +
+                            "[" + methodUnderTest.getName() + "]()\n\t value " +
                             "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
                             "(" + atomicAssertion.getKey() + ")")) +
-                            "]\nas expected in test candidate " +
+                            "] as expected in test candidate " +
                             "[" + candidate.getCandidateId() + "]" +
                             "[" + candidate.getName() + "]");
             Failure failure = new Failure(testDescription, thrownException);
