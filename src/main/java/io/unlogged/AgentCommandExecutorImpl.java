@@ -1147,7 +1147,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             noArgsConstructor = loadedClass.getConstructor();
             try {
                 newInstance = noArgsConstructor.newInstance();
-            } catch (InvocationTargetException e) {
+            } catch (InvocationTargetException | InstantiationException e) {
 //                throw new RuntimeException(e);
             }
         } catch (NoSuchMethodException e) {
