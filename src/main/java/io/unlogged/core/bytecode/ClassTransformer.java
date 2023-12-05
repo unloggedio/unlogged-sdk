@@ -2,6 +2,7 @@ package io.unlogged.core.bytecode;
 
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
+import io.unlogged.core.bytecode.method.MethodTransformerUnprobed;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
@@ -178,16 +179,37 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc,
                                      String signature, String[] exceptions) {
-        MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        if (mv != null) {
-            mv = new TryCatchBlockSorter(mv, access, name, desc, signature, exceptions);
-            MethodTransformer trans = new MethodTransformer(
+
+        // create unprobed method
+        MethodVisitor mv_unprobed = cv.visitMethod(access, name , desc, signature, exceptions);
+
+        // create probed method
+        MethodVisitor mv_probed;
+        if (name.equals("<init>")){
+            mv_probed = cv.visitMethod(access, name , desc, signature, exceptions);
+        }
+        else{
+            mv_probed = cv.visitMethod(access, name + "_PROBED_METHOD", desc, signature, exceptions);
+        }
+
+        if ((mv_probed != null) && (mv_unprobed != null)) {
+            mv_unprobed = new TryCatchBlockSorter(mv_unprobed, access, name, desc, signature, exceptions);
+            MethodTransformerUnprobed transformer_unprobed = new MethodTransformerUnprobed(
                     weavingInfo, config, sourceFileName,
                     fullClassName, outerClassName, access,
-                    name, desc, signature, exceptions, mv
+                    name, desc, signature, exceptions, mv_unprobed
             );
-            return new JSRInliner(trans, access, name, desc, signature, exceptions);
-        } else {
+
+            mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
+            MethodTransformer transformer_probed = new MethodTransformer(
+                    weavingInfo, config, sourceFileName,
+                    fullClassName, outerClassName, access,
+                    name, desc, signature, exceptions, mv_probed
+            );
+
+            return new JSRInliner(transformer_probed, transformer_unprobed, access, name, desc, signature, exceptions);
+        }
+        else {
             return null;
         }
     }

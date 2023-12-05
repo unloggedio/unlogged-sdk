@@ -9,7 +9,8 @@ import org.objectweb.asm.commons.JSRInlinerAdapter;
  */
 public class JSRInliner extends JSRInlinerAdapter {
 
-	private MethodTransformer analysis;
+	private MethodTransformer analysis_probed;
+	private MethodTransformerUnprobed analysis_unprobed;
 	
 	/**
 	 * Create an instance of the object
@@ -20,10 +21,11 @@ public class JSRInliner extends JSRInlinerAdapter {
 	 * @param signature is a generics signature
 	 * @param exceptions specifies exceptions thrown by the method 
 	 */
-	public JSRInliner(MethodTransformer mv, int access, String name, String desc, String signature, String[] exceptions) {
+	public JSRInliner(MethodTransformer transfromer_probed, MethodTransformerUnprobed transformer_unprobed, int access, String name, String desc, String signature, String[] exceptions) {
 		// The second parameter is null so that the object delays the execution of the given MethodTransformer
 		super(Opcodes.ASM5, null, access, name, desc, signature, exceptions);
-		this.analysis = mv;
+		this.analysis_probed = transfromer_probed;
+		this.analysis_unprobed = transformer_unprobed;
 	}
 	
 	/**
@@ -37,10 +39,12 @@ public class JSRInliner extends JSRInlinerAdapter {
 		super.visitEnd();
 		
 		// Provide the resultant instruction list for creating a list of labels in the method 
-		analysis.setup(localVariables, instructions);
+		analysis_probed.setup(localVariables, instructions);
+		analysis_unprobed.setup(localVariables, instructions);
 		
 		// Analyze the inlined method
-		super.accept(analysis);
+		super.accept(analysis_probed);
+		super.accept(analysis_unprobed);
 	}	
 	
 }
