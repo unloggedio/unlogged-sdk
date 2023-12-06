@@ -180,25 +180,28 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc,
                                      String signature, String[] exceptions) {
 
-        // create unprobed method
-        MethodVisitor mv_unprobed = cv.visitMethod(access, name , desc, signature, exceptions);
 
-        // create probed method
-        MethodVisitor mv_probed;
-        if (name.equals("<init>")){
-            mv_probed = cv.visitMethod(access, name , desc, signature, exceptions);
-        }
-        else{
-            mv_probed = cv.visitMethod(access, name + "_PROBED_METHOD", desc, signature, exceptions);
-        }
+         // create probed method
+        MethodVisitor mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
+
+
+        // create unprobed method
+        String name_simple = name + "_SIMPLE";
+        MethodVisitor mv_unprobed = super.visitMethod(access, name_simple, desc, signature, exceptions);
+        mv_unprobed.visitCode();
+        mv_unprobed.visitEnd();
+        // return mv_unprobed;
+
+
+       
 
         if ((mv_probed != null) && (mv_unprobed != null)) {
-            mv_unprobed = new TryCatchBlockSorter(mv_unprobed, access, name, desc, signature, exceptions);
-            MethodTransformerUnprobed transformer_unprobed = new MethodTransformerUnprobed(
-                    weavingInfo, config, sourceFileName,
-                    fullClassName, outerClassName, access,
-                    name, desc, signature, exceptions, mv_unprobed
-            );
+            // mv_unprobed = new TryCatchBlockSorter(mv_unprobed, access, name_simple, desc, signature, exceptions);
+            // MethodTransformerUnprobed transformer_unprobed = new MethodTransformerUnprobed(
+            //         weavingInfo, config, sourceFileName,
+            //         fullClassName, outerClassName, access,
+            //         name, desc, signature, exceptions, mv_unprobed
+            // );
 
             mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
             MethodTransformer transformer_probed = new MethodTransformer(
@@ -207,7 +210,7 @@ public class ClassTransformer extends ClassVisitor {
                     name, desc, signature, exceptions, mv_probed
             );
 
-            return new JSRInliner(transformer_probed, transformer_unprobed, access, name, desc, signature, exceptions);
+            return new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
         }
         else {
             return null;
