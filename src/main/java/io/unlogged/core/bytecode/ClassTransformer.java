@@ -5,6 +5,8 @@ import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
+import net.bytebuddy.implementation.bind.annotation.This;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
@@ -178,25 +180,8 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 
-        // create unprobed method
-        String name_simple = name + "_SIMPLE";
-        MethodVisitor mv_unprobed = super.visitMethod(access, name_simple, desc, signature, exceptions);
 
-        // // Adding if statement with early exit
-        // Label exitLabel = new Label();
-
-        // // Assuming your condition is some integer comparison (e.g., if i > 0)
-        // mv_unprobed.visitVarInsn(Opcodes.ILOAD, 1); // Load the variable onto the stack
-        // mv_unprobed.visitJumpInsn(Opcodes.IFLE, exitLabel); // Jump to exitLabel if less than or equal to 0
-
-        // // Code to execute if the condition is true
-        // // For example, return from the method
-        // mv_unprobed.visitInsn(Opcodes.RETURN);
-
-        // // Exit label
-        // mv_unprobed.visitLabel(exitLabel);
-
-        // create probed method
+		// create probed method
         MethodVisitor mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
 
         MethodVisitor method_visitor_probe;
@@ -215,7 +200,53 @@ public class ClassTransformer extends ClassVisitor {
             method_visitor_probe = null;
         }
 
-        return new CustomMethodVisitor(mv_unprobed, method_visitor_probe);
+		String name_simple = name + "_SIMPLE";
+		MethodVisitor mv_unprobed = super.visitMethod(access, name_simple, desc, signature, exceptions);
+
+		// early exit with probes
+		Label exitLabel = new Label();
+
+		// Assuming your condition is some integer comparison (e.g., if i > 0)
+		mv_unprobed.visitVarInsn(Opcodes.ILOAD, 1); // Load the variable onto the stack
+		mv_unprobed.visitJumpInsn(Opcodes.IFLE, exitLabel); // Jump to exitLabel if less than or equal to 0
+	
+		// add data to stack
+		Type[] argumentTypes = Type.getArgumentTypes(desc);
+		for (int i = 0; i <= argumentTypes.length-1; i++) {
+			pushArgument(mv_unprobed, i + 1, argumentTypes[i]);
+		}
+
+		mv_unprobed.visitMethodInsn(Opcodes.INVOKESTATIC, "this", name, desc, false);
+		// Return the result from the method
+		mv_unprobed.visitInsn(Opcodes.IRETURN);
+
+		// Exit label
+		mv_unprobed.visitLabel(exitLabel);
+		return new CustomMethodVisitor(mv_unprobed, method_visitor_probe);
+    }
+
+	private void pushArgument(MethodVisitor mv, int argIndex, Type argType) {
+        // Determine the opcode based on the argument type
+        int opcode;
+        if (argType.equals(Type.INT_TYPE) || argType.equals(Type.BOOLEAN_TYPE) || argType.equals(Type.CHAR_TYPE) || argType.equals(Type.SHORT_TYPE) || argType.equals(Type.BYTE_TYPE)) {
+            opcode = Opcodes.ILOAD;
+        } else if (argType.equals(Type.FLOAT_TYPE)) {
+            opcode = Opcodes.FLOAD;
+        } else if (argType.equals(Type.LONG_TYPE)) {
+            opcode = Opcodes.LLOAD;
+        } else if (argType.equals(Type.DOUBLE_TYPE)) {
+            opcode = Opcodes.DLOAD;
+        } else {
+            opcode = Opcodes.ALOAD;
+        }
+
+        // Load the argument onto the stack
+        mv.visitVarInsn(opcode, argIndex);
+
+        // If the argument type is double or long, increment the index again
+        if (argType.equals(Type.LONG_TYPE) || argType.equals(Type.DOUBLE_TYPE)) {
+            argIndex++;
+        }
     }
 
     private static class CustomMethodVisitor extends MethodVisitor {
