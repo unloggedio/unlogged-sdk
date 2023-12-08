@@ -182,9 +182,10 @@ public class ClassTransformer extends ClassVisitor {
 
 
 		// create probed method
-        MethodVisitor mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
 
         MethodVisitor method_visitor_probe;
+		String name_probed = name + "_PROBED";
+		MethodVisitor mv_probed = super.visitMethod(access, name_probed , desc, signature, exceptions);
         if (mv_probed != null) {
 
             mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
@@ -200,8 +201,8 @@ public class ClassTransformer extends ClassVisitor {
             method_visitor_probe = null;
         }
 
-		String name_simple = name + "_SIMPLE";
-		MethodVisitor mv_unprobed = super.visitMethod(access, name_simple, desc, signature, exceptions);
+		// String name_simple = name + "_SIMPLE";
+		MethodVisitor mv_unprobed = super.visitMethod(access, name, desc, signature, exceptions);
 
 		// early exit with probes
 		Label exitLabel = new Label();
@@ -216,7 +217,7 @@ public class ClassTransformer extends ClassVisitor {
 			pushArgument(mv_unprobed, i + 1, argumentTypes[i]);
 		}
 
-		mv_unprobed.visitMethodInsn(Opcodes.INVOKESTATIC, "this", name, desc, false);
+		mv_unprobed.visitMethodInsn(Opcodes.INVOKESTATIC, "this", name_probed, desc, false);
 		// Return the result from the method
 		mv_unprobed.visitInsn(Opcodes.IRETURN);
 
