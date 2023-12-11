@@ -5,7 +5,6 @@ import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
-import net.bytebuddy.implementation.bind.annotation.This;
 
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
@@ -180,30 +179,29 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 
-
 		// create probed method
-
-        MethodVisitor method_visitor_probe;
 		String name_probed = name + "_PROBED";
 		MethodVisitor mv_probed = super.visitMethod(access, name_probed , desc, signature, exceptions);
-        if (mv_probed != null) {
+		if (mv_probed != null) {
 
-            mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
-            MethodTransformer transformer_probed = new MethodTransformer(
-                    weavingInfo, config, sourceFileName,
-                    fullClassName, outerClassName, access,
-                    name, desc, signature, exceptions, mv_probed
-            );
+			mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
+			MethodTransformer transformer_probed = new MethodTransformer(
+					weavingInfo, config, sourceFileName,
+					fullClassName, outerClassName, access,
+					name, desc, signature, exceptions, mv_probed
+			);
 
-            method_visitor_probe = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
-        }
-        else {
-            method_visitor_probe = null;
-        }
+			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
+		}
+       
 
-		// String name_simple = name + "_SIMPLE";
+		System.out.println("--------");
+		System.out.println("name = " + name);
+		System.out.println("className = " + this.className);
+		System.out.println("--------");
+		
 		MethodVisitor mv_unprobed = super.visitMethod(access, name, desc, signature, exceptions);
-
+			
 		// early exit with probes
 		Label exitLabel = new Label();
 
@@ -223,7 +221,8 @@ public class ClassTransformer extends ClassVisitor {
 
 		// Exit label
 		mv_unprobed.visitLabel(exitLabel);
-		return new CustomMethodVisitor(mv_unprobed, method_visitor_probe);
+		
+		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
 
 	private void pushArgument(MethodVisitor mv, int argIndex, Type argType) {
