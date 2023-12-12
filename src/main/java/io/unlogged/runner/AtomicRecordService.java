@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 import static java.io.File.separator;
 
 public class AtomicRecordService {
-    public static final String TEST_CONTENT_PATH = "src" + separator + "test" + separator + "tempbranch" + separator;
-    public static final String TEST_RESOURCES_PATH = TEST_CONTENT_PATH + "resources" + separator + "branch-e" + separator;
+    public static final String TEST_CONTENT_PATH = "src" + separator + "test" + separator;
+    public static final String TEST_RESOURCES_PATH = TEST_CONTENT_PATH + "resources" + separator;
     private static final Logger logger = LoggerFactory.getLogger(AtomicRecordService.class);
     private final String UNLOGGED_RESOURCE_FOLDER_NAME = "unlogged";
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -78,6 +78,9 @@ public class AtomicRecordService {
     public Map<String, AtomicRecord> updateMap() {
         Map<String, AtomicRecord> recordsMap = new TreeMap<>();
         List<File> files = getFilesInUnloggedFolder();
+        File pathMarker = new File("");
+        logger.info("[TEMP-LOG] Absolute path : " + pathMarker.getAbsolutePath());
+        System.out.println("[TEMP-LOG] Absolute path : " + pathMarker.getAbsolutePath());
         logger.info("[TEMP-LOG] UpdateMap list length : " + files.size());
         System.out.println("[TEMP-LOG] UpdateMap list length : " + files.size());
 //        if (files.size() == 0) {
