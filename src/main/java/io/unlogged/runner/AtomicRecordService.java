@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 import static java.io.File.separator;
 
 public class AtomicRecordService {
-    public static final String TEST_CONTENT_PATH = "src" + separator + "test" + separator;
-    public static final String TEST_RESOURCES_PATH = TEST_CONTENT_PATH + "resources" + separator;
+    public static final String TEST_CONTENT_PATH = "src" + separator + "test" + separator + "tempbranch" + separator;
+    public static final String TEST_RESOURCES_PATH = TEST_CONTENT_PATH + "resources" + separator + "branch-e" + separator;
     private static final Logger logger = LoggerFactory.getLogger(AtomicRecordService.class);
     private final String UNLOGGED_RESOURCE_FOLDER_NAME = "unlogged";
     private final ObjectMapper objectMapper = new ObjectMapper();
