@@ -62,11 +62,14 @@ public class AtomicRecordService {
         ArrayList<File> returnFileList = new ArrayList<>();
 
         File rootDir = new File(TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
+        logger.info("[TEMP-LOG] Location test file are picked from : " + TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
+        System.out.println("[TEMP-LOG] Location test file are picked from : " + TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
         File[] files = rootDir.listFiles();
         if (files != null) {
             Collections.addAll(returnFileList, files);
         }
-
+        logger.info("[TEMP-LOG] File List length : " + returnFileList.size());
+        System.out.println("[TEMP-LOG] UpdateMap list length : " + returnFileList.size());
         return returnFileList;
     }
 
@@ -75,6 +78,8 @@ public class AtomicRecordService {
     public Map<String, AtomicRecord> updateMap() {
         Map<String, AtomicRecord> recordsMap = new TreeMap<>();
         List<File> files = getFilesInUnloggedFolder();
+        logger.info("[TEMP-LOG] UpdateMap list length : " + files.size());
+        System.out.println("[TEMP-LOG] UpdateMap list length : " + files.size());
 //        if (files.size() == 0) {
 //            return new TreeMap<>();
 //        }

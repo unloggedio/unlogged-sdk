@@ -319,6 +319,8 @@ public class UnloggedTestRunner extends Runner {
 
         try {
             Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
+            logger.info("[TEMP-LOG] Size of recordsMap : On TestRun " + recordsMap.size());
+            System.out.println("[TEMP-LOG] Size of recordsMap : On TestRun " + recordsMap.size());
             Map<String, DeclaredMock> mocksById = recordsMap.values()
                     .stream()
                     .map(AtomicRecord::getDeclaredMockMap)
