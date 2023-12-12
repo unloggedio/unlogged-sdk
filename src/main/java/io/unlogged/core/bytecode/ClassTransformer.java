@@ -193,21 +193,24 @@ public class ClassTransformer extends ClassVisitor {
 
 			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
-       
-
-		System.out.println("--------");
-		System.out.println("name = " + name);
-		System.out.println("className = " + this.className);
-		System.out.println("--------");
 		
-		MethodVisitor mv_unprobed = super.visitMethod(access, name, desc, signature, exceptions);
-			
+		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, super.visitMethod(access, name , desc, signature, exceptions));
+		mv_unprobed.visitCode();
+
 		// early exit with probes
 		Label exitLabel = new Label();
 
-		// Assuming your condition is some integer comparison (e.g., if i > 0)
-		mv_unprobed.visitVarInsn(Opcodes.ILOAD, 1); // Load the variable onto the stack
-		mv_unprobed.visitJumpInsn(Opcodes.IFLE, exitLabel); // Jump to exitLabel if less than or equal to 0
+		// get counter LHS value 
+		mv_unprobed.visitVarInsn(Opcodes.ALOAD, 0);
+		mv_unprobed.visitFieldInsn(Opcodes.GETFIELD, fullClassName, "map_store", "Ljava/util/Map;");
+		mv_unprobed.visitLdcInsn(name);
+		mv_unprobed.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
+
+		// Compute the logging condition and jump when reminder is not zero 
+		int divisor = 10; // placeholder value to be parsed with annotation processor
+		mv_unprobed.visitLdcInsn(divisor);
+		mv_unprobed.visitInsn(Opcodes.IREM);
+		mv_unprobed.visitJumpInsn(Opcodes.IFNE, exitLabel);
 	
 		// add data to stack
 		Type[] argumentTypes = Type.getArgumentTypes(desc);
@@ -225,7 +228,7 @@ public class ClassTransformer extends ClassVisitor {
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
 
-	private void pushArgument(MethodVisitor mv, int argIndex, Type argType) {
+	private void pushArgument(MethodVisitorWithoutProbe mv, int argIndex, Type argType) {
         // Determine the opcode based on the argument type
         int opcode;
         if (argType.equals(Type.INT_TYPE) || argType.equals(Type.BOOLEAN_TYPE) || argType.equals(Type.CHAR_TYPE) || argType.equals(Type.SHORT_TYPE) || argType.equals(Type.BYTE_TYPE)) {
