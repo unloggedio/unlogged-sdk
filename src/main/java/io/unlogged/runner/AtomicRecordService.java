@@ -62,13 +62,13 @@ public class AtomicRecordService {
         ArrayList<File> returnFileList = new ArrayList<>();
 
         File rootDir = new File(TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
-        logger.info("[TEMP-LOG] Location test file are picked from : " + TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
-        System.out.println("[TEMP-LOG] Location test file are picked from : " + TEST_RESOURCES_PATH + UNLOGGED_RESOURCE_FOLDER_NAME);
+		System.out.println("TEST_RESOURCES_PATH = " + TEST_RESOURCES_PATH);
+		System.out.println("UNLOGGED_RESOURCE_FOLDER_NAME = " + UNLOGGED_RESOURCE_FOLDER_NAME);
+		System.out.println("rootDir_absolutepath = " + rootDir.getAbsolutePath());
         File[] files = rootDir.listFiles();
         if (files != null) {
             Collections.addAll(returnFileList, files);
         }
-        logger.info("[TEMP-LOG] File List length : " + returnFileList.size());
         System.out.println("[TEMP-LOG] UpdateMap list length : " + returnFileList.size());
         return returnFileList;
     }
@@ -79,15 +79,13 @@ public class AtomicRecordService {
         Map<String, AtomicRecord> recordsMap = new TreeMap<>();
         List<File> files = getFilesInUnloggedFolder();
         File pathMarker = new File("");
-        logger.info("[TEMP-LOG] Absolute path : " + pathMarker.getAbsolutePath());
-        System.out.println("[TEMP-LOG] Absolute path : " + pathMarker.getAbsolutePath());
-        logger.info("[TEMP-LOG] UpdateMap list length : " + files.size());
+        System.out.println("[TEMP-LOG] Absolute path pathMarker : " + pathMarker.getAbsolutePath());
         System.out.println("[TEMP-LOG] UpdateMap list length : " + files.size());
 //        if (files.size() == 0) {
 //            return new TreeMap<>();
 //        }
         for (File file : files) {
-            System.out.println("Load resource file: " + file.getPath());
+            System.out.println("Load resource file: " + file.getAbsolutePath());
             AtomicRecord record = getAtomicRecordFromFile(file);
             if (record != null) {
                 String classname = record.getClassname();

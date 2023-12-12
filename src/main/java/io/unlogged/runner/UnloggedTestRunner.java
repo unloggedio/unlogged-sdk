@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -316,6 +317,10 @@ public class UnloggedTestRunner extends Runner {
     @Override
     public void run(RunNotifier notifier) {
 //        System.err.println("UTR.run invoked");
+
+		System.out.println("[TEMP-LOG] override_run called");
+		File override_run_pathMarker = new File("");
+        System.out.println("[TEMP-LOG] Absolute path override_run_pathMarker : " + override_run_pathMarker.getAbsolutePath());
 
         try {
             Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
