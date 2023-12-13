@@ -86,6 +86,51 @@ public class ClassTransformer extends ClassVisitor {
         return super.visitTypeAnnotation(typeRef, typePath, descriptor, visible);
     }
 
+	@Override
+    public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+        return super.visitField(access, name, descriptor, signature, value);
+    }
+
+	@Override
+    public void visitEnd() {
+        // Add the static field declaration at the end of the class
+        FieldVisitor fieldVisitor = cv.visitField(
+                Opcodes.ACC_STATIC,
+                "map_store",
+                "Ljava/util/HashMap;",
+                "Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;",
+                null
+        );
+
+        if (fieldVisitor != null) {
+            fieldVisitor.visitEnd();
+        }
+
+        // Add a <clinit> method to initialize the static field
+        MethodVisitor clinitVisitor = cv.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
+        clinitVisitor.visitCode();
+        clinitVisitor.visitTypeInsn(Opcodes.NEW, "java/util/HashMap");
+        clinitVisitor.visitInsn(Opcodes.DUP);
+        clinitVisitor.visitMethodInsn(
+                Opcodes.INVOKESPECIAL,
+                "java/util/HashMap",
+                "<init>",
+                "()V",
+                false
+        );
+        clinitVisitor.visitFieldInsn(
+                Opcodes.PUTSTATIC,
+				className,
+                "map_store",
+                "Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;"
+        );
+        clinitVisitor.visitInsn(Opcodes.RETURN);
+        clinitVisitor.visitMaxs(2, 0);
+        clinitVisitor.visitEnd();
+
+        super.visitEnd();
+    }
+
     /**
      * @return the weaving result.
      */
