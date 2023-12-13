@@ -10,6 +10,7 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -31,6 +32,7 @@ public class ClassTransformer extends ClassVisitor {
     private String sourceFileName;
     private byte[] weaveResult;
     private String classLoaderIdentifier;
+	private HashSet<String> methodList = new HashSet<>();
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -112,18 +114,26 @@ public class ClassTransformer extends ClassVisitor {
         clinitVisitor.visitTypeInsn(Opcodes.NEW, "java/util/HashMap");
         clinitVisitor.visitInsn(Opcodes.DUP);
         clinitVisitor.visitMethodInsn(
-                Opcodes.INVOKESPECIAL,
-                "java/util/HashMap",
-                "<init>",
-                "()V",
-                false
+			Opcodes.INVOKESPECIAL,
+			"java/util/HashMap",
+			"<init>",
+			"()V",
+			false
         );
         clinitVisitor.visitFieldInsn(
-                Opcodes.PUTSTATIC,
-				className,
-                "map_store",
-                "Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;"
+			Opcodes.PUTSTATIC,
+			className,
+			"map_store",
+			"Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;"
         );
+
+		for (String localMethod: this.methodList) { 
+			clinitVisitor.visitLdcInsn(localMethod);
+			clinitVisitor.visitLdcInsn(0);
+			clinitVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "map_store", "put", "(Ljava/lang/String;I)V", false);
+		}
+		
+		
         clinitVisitor.visitInsn(Opcodes.RETURN);
         clinitVisitor.visitMaxs(2, 0);
         clinitVisitor.visitEnd();
@@ -223,6 +233,8 @@ public class ClassTransformer extends ClassVisitor {
      */
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+		// create hashset of methods
+		this.methodList.add(name);
 
 		// create probed method
 		String name_probed = name + "_PROBED";
