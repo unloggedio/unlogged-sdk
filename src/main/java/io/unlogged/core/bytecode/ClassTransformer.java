@@ -258,8 +258,8 @@ public class ClassTransformer extends ClassVisitor {
 		Label exitLabel = new Label();
 
 		// get counter LHS value 
-		mv_unprobed.visitVarInsn(Opcodes.ALOAD, 0);
-		mv_unprobed.visitFieldInsn(Opcodes.GETFIELD, fullClassName, "map_store", "Ljava/util/Map;");
+		mv_unprobed.visitFieldInsn(Opcodes.GETSTATIC, fullClassName, "map_store", "Ljava/util/Map;");
+		
 		mv_unprobed.visitLdcInsn(name);
 		mv_unprobed.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
 
