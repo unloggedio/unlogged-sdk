@@ -232,12 +232,16 @@ public class ClassTransformer extends ClassVisitor {
      * Create an instance of a MethodVisitor that inserts logging code into a method.
      */
     @Override
-    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-		// create hashset of methods
-		this.methodList.add(name);
-
+    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
+		
 		// create probed method
-		String name_probed = name + "_PROBED";
+		String name_probed = name;
+		if (!name.equals("<init>")) {
+			// create hashset of methods
+			this.methodList.add(name);
+			name_probed = name + "_PROBED";
+		}
+
 		MethodVisitor mv_probed = super.visitMethod(access, name_probed , desc, signature, exceptions);
 		if (mv_probed != null) {
 
@@ -251,6 +255,10 @@ public class ClassTransformer extends ClassVisitor {
 			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
+		if (name.equals("<init>")) {
+			return mv_probed;
+		}
+
 		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, super.visitMethod(access, name , desc, signature, exceptions));
 		mv_unprobed.visitCode();
 
