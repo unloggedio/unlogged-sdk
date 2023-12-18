@@ -262,10 +262,8 @@ public class Runtime {
         return bytesToIntList(probeToRecordBytes);
     }
 
-
-	// called like: if (probeCounter(CustomerController.map_store, "gen_sum", 12)) {
-	public static boolean probeCounter(HashMap<String, Integer> map_store, String methodName, int callCounter) {
-		if (map_store.get(methodName) % callCounter == 0){
+	public static boolean probeCounter(int methodCounter, int divisor) {
+		if (methodCounter % divisor == 0){
 			return true;
 		}
 		else {
