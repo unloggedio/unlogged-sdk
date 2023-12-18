@@ -78,24 +78,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// Pop the result (discard it)
 		mv.visitInsn(Opcodes.POP);
 
-		// add the if logic
+		// add the if condition
 		Label exitLabel = new Label();
-
-		// get counter LHS value 
-		mv.visitFieldInsn(Opcodes.GETSTATIC, this.className, "map_store", "Ljava/util/Map;");
-		
-		mv.visitLdcInsn(this.methodName);
-		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
-
-		// Compute the logging condition and jump when reminder is not zero 
-		// divisor for frequency logging
-		
-		// default value of divisor
+		mv.visitFieldInsn(Opcodes.GETSTATIC, "CustomerController", "map_store", "Ljava/util/Map;");
+		mv.visitLdcInsn("gen_sum");
 		int divisor = getDivisor();
-
-		mv.visitLdcInsn(divisor);
-		mv.visitInsn(Opcodes.IREM);
-		mv.visitJumpInsn(Opcodes.IFNE, exitLabel);
+		mv.visitIntInsn(Opcodes.BIPUSH, divisor);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "Runtime", "probeCounter", "(Ljava/util/Map;Ljava/lang/String;I)Z", false);
+		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 	
 		// add data to stack
 		Type[] argumentTypes = Type.getArgumentTypes(this.desc);

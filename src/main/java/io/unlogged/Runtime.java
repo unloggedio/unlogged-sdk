@@ -264,7 +264,7 @@ public class Runtime {
 
 
 	// called like: if (probeCounter(CustomerController.map_store, "gen_sum", 12)) {
-	public boolean probeCounter(HashMap<String, Integer> map_store, String methodName, int callCounter) {
+	public static boolean probeCounter(HashMap<String, Integer> map_store, String methodName, int callCounter) {
 		if (map_store.get(methodName) % callCounter == 0){
 			return true;
 		}
