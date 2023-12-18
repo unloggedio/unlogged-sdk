@@ -17,8 +17,10 @@ public @interface Unlogged {
      *
      * @return Array of strings, each one being a package name
      */
+	
     String[] includePackage() default "";
 
     boolean enable() default true;
 
+	String defaultCounter() default "1";
 }

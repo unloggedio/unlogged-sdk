@@ -4,6 +4,8 @@ import java.util.HashMap;
 
 import org.objectweb.asm.*;
 
+import io.unlogged.core.processor.UnloggedProcessor;
+
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	private String methodName;
@@ -11,7 +13,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String desc;
 	private String nameProbed;
 	private int classCounter;
-	private int defaultCounter = 10;
+	private int defaultCounter;
 	private HashMap<String, Integer> methodCounter = new HashMap<String, Integer>();
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounter, MethodVisitor mv) {
@@ -21,6 +23,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = this.methodName + "_PROBED";
+		this.defaultCounter = UnloggedProcessor.getDefaultCounter();
 	}
 
 	private void pushArgument(MethodVisitor mv, int argIndex, Type argType) {
@@ -80,11 +83,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// add the if condition
 		Label exitLabel = new Label();
-		mv.visitFieldInsn(Opcodes.GETSTATIC, "CustomerController", "map_store", "Ljava/util/Map;");
-		mv.visitLdcInsn("gen_sum");
+		mv.visitFieldInsn(Opcodes.GETSTATIC, this.className, "map_store", "Ljava/util/Map;"); // Load map_store onto the stack
+		mv.visitLdcInsn(this.methodName);
+		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
 		int divisor = getDivisor();
 		mv.visitIntInsn(Opcodes.BIPUSH, divisor);
-		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "Runtime", "probeCounter", "(Ljava/util/Map;Ljava/lang/String;I)Z", false);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", "(LI;I)Z", false);
 		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 	
 		// add data to stack
@@ -99,10 +103,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// Exit label
 		mv.visitLabel(exitLabel);
-
-
-		// add `if (probeCounter(className.map_store,  methodName, divisor))` condition
-
+		
 		super.visitCode();
 	}
 
