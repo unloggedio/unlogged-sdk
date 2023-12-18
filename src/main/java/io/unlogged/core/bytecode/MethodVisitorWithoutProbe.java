@@ -9,14 +9,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String className;
 	private String desc;
 	private String nameProbed;
-	private HashMap<String, Integer> classCounter;
+	private int classCounterValue;
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, HashMap<String, Integer> classCounter, MethodVisitor mv) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounterValue, MethodVisitor mv) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.className = className;
 		this.desc = desc;
-		this.classCounter = classCounter;
+		this.classCounterValue = classCounterValue;
 		this.nameProbed = this.methodName + "_PROBED";
 	}
 
@@ -71,10 +71,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// Compute the logging condition and jump when reminder is not zero 
 		// divisor for frequency logging
-		int divisor = 10; // default value
+		
+		// default value of divisor
+		int divisor = 10;
 
-		if (this.classCounter.get(className) != null) {
-			divisor = this.classCounter.get(className);
+		// write classCounter if defined
+		if (this.classCounterValue != 0) {
+			divisor = this.classCounterValue;
 		}
 
 		mv.visitLdcInsn(divisor);
