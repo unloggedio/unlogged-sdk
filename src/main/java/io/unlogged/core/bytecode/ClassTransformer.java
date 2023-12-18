@@ -10,6 +10,7 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 
 /**
@@ -33,6 +34,7 @@ public class ClassTransformer extends ClassVisitor {
     private byte[] weaveResult;
     private String classLoaderIdentifier;
 	private HashSet<String> methodList = new HashSet<>();
+	private HashMap<String, Integer> classCounter = new HashMap<>();
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -78,8 +80,24 @@ public class ClassTransformer extends ClassVisitor {
 
     @Override
     public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-//		System.err.println("Visit annotation: " + descriptor + " on class: " + className);
-        return super.visitAnnotation(descriptor, visible);
+		// check for the annotation @UnloggedParamClass
+		if ("Lio/unlogged/UnloggedParamClass;".equals(descriptor)) {
+			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
+				@Override
+				public void visit(String key, Object value) {
+					// check for key string
+					if ("loggingFrequency".equals(key)) {
+						Integer valueInteger = Integer.parseInt((String)value);
+						classCounter.put(className, valueInteger);
+						System.out.println("--------");
+						System.out.println("valueInteger: " + valueInteger);
+						System.out.println("--------");
+					}
+					super.visit(key, value);
+				}
+			};
+		}
+		return super.visitAnnotation(descriptor, visible);
     }
 
     @Override
@@ -272,7 +290,11 @@ public class ClassTransformer extends ClassVisitor {
 		mv_unprobed.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
 
 		// Compute the logging condition and jump when reminder is not zero 
-		int divisor = 10; // placeholder value to be parsed with annotation processor
+		// divisor for frequency logging
+		int divisor = 10; // default value
+		if (classCounter.get(className) != null) {
+			divisor = classCounter.get(className);
+		}
 		mv_unprobed.visitLdcInsn(divisor);
 		mv_unprobed.visitInsn(Opcodes.IREM);
 		mv_unprobed.visitJumpInsn(Opcodes.IFNE, exitLabel);
