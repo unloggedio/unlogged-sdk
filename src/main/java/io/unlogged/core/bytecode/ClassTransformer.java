@@ -89,9 +89,6 @@ public class ClassTransformer extends ClassVisitor {
 					if ("loggingFrequency".equals(key)) {
 						Integer valueInteger = Integer.parseInt((String)value);
 						classCounter.put(className, valueInteger);
-						System.out.println("--------");
-						System.out.println("valueInteger: " + valueInteger);
-						System.out.println("--------");
 					}
 					super.visit(key, value);
 				}
@@ -284,7 +281,7 @@ public class ClassTransformer extends ClassVisitor {
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
 
-	int getCounter (HashMap<String, Integer> mapCounter, String key) {
+	private static int getCounter (HashMap<String, Integer> mapCounter, String key) {
 		if (mapCounter.get(key) == null) {
 			return 0;
 		}
@@ -292,153 +289,6 @@ public class ClassTransformer extends ClassVisitor {
 			return mapCounter.get(key);
 		}
 	}
-
-    private static class CustomMethodVisitor extends MethodVisitor {
-
-        private final MethodVisitor method_visitor_1;
-        private final MethodVisitor method_visitor_2;
-
-        public CustomMethodVisitor(MethodVisitor method_visitor_1, MethodVisitor method_visitor_2) {
-            super(Opcodes.ASM7);
-            this.method_visitor_1 = method_visitor_1;
-            this.method_visitor_2 = method_visitor_2;
-        }
-
-        // Override methods from MethodVisitor and delegate to both mv1 and mv2 as needed
-
-        @Override
-        public void visitInsn(int opcode) {
-            method_visitor_1.visitInsn(opcode);
-            method_visitor_2.visitInsn(opcode);
-        }
-
-        @Override
-        public void visitIntInsn(int opcode, int operand) {
-            method_visitor_1.visitIntInsn(opcode, operand);
-            method_visitor_2.visitIntInsn(opcode, operand);
-        }
-
-        @Override
-        public void visitVarInsn(int opcode, int varIndex) {
-            method_visitor_1.visitVarInsn(opcode, varIndex);
-            method_visitor_2.visitVarInsn(opcode, varIndex);
-        }
-
-        @Override
-        public void visitTypeInsn(int opcode, String type) {
-            method_visitor_1.visitTypeInsn(opcode, type);
-            method_visitor_2.visitTypeInsn(opcode, type);
-        }
-
-        @Override
-        public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
-            method_visitor_1.visitFieldInsn(opcode, owner, name, descriptor);
-            method_visitor_2.visitFieldInsn(opcode, owner, name, descriptor);
-        }
-
-        @Override
-        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-            method_visitor_1.visitMethodInsn(opcode & ~Opcodes.SOURCE_MASK, owner, name, descriptor, isInterface);
-            method_visitor_2.visitMethodInsn(opcode & ~Opcodes.SOURCE_MASK, owner, name, descriptor, isInterface);
-        }
-
-        @Override
-        public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
-            method_visitor_1.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
-            method_visitor_2.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
-        }
-
-        @Override
-        public void visitJumpInsn(int opcode, Label label) {
-            method_visitor_1.visitJumpInsn(opcode, label);
-            method_visitor_2.visitJumpInsn(opcode, label);
-        }
-
-        @Override
-        public void visitLabel(final Label label) {
-            method_visitor_1.visitLabel(label);
-            method_visitor_2.visitLabel(label);
-        }
-
-        @Override
-        public void visitLdcInsn(final Object value) {
-            method_visitor_1.visitLdcInsn(value);
-            method_visitor_2.visitLdcInsn(value);
-        }
-
-        @Override
-        public void visitIincInsn(final int varIndex, final int increment) {
-            method_visitor_1.visitIincInsn(varIndex, increment);
-            method_visitor_2.visitIincInsn(varIndex, increment);
-        }
-
-        @Override
-        public void visitTableSwitchInsn(int min, int max, Label dflt, Label... labels) {
-            method_visitor_1.visitTableSwitchInsn(min, max, dflt, labels);
-            method_visitor_2.visitTableSwitchInsn(min, max, dflt, labels);
-
-        }
-
-        @Override
-        public void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels) {
-            method_visitor_1.visitLookupSwitchInsn(dflt, keys, labels);
-            method_visitor_2.visitLookupSwitchInsn(dflt, keys, labels);
-        }
-
-        @Override
-        public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
-            method_visitor_1.visitMultiANewArrayInsn(descriptor, numDimensions);
-            method_visitor_2.visitMultiANewArrayInsn(descriptor, numDimensions);
-        }
-
-        // @Override
-        // public AnnotationVisitor visitInsnAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
-        //     return method_visitor_1.visitInsnAnnotation(typeRef, typePath, descriptor, visible);
-        //     return method_visitor_2.visitInsnAnnotation(typeRef, typePath, descriptor, visible);
-        // }
-
-        @Override
-        public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
-            method_visitor_1.visitTryCatchBlock(start, end, handler, type);
-            method_visitor_2.visitTryCatchBlock(start, end, handler, type);
-
-        }
-
-        // @Override
-        // public AnnotationVisitor visitTryCatchAnnotation(
-        //     final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
-        //     return method_visitor_1.visitTryCatchAnnotation(typeRef, typePath, descriptor, visible);
-        // }
-
-        @Override
-        public void visitLocalVariable(String name, String descriptor, String signature, Label start, Label end, int index) {
-            method_visitor_1.visitLocalVariable(name, descriptor, signature, start, end, index);
-            method_visitor_2.visitLocalVariable(name, descriptor, signature, start, end, index);
-        }
-
-        // @Override
-        // public AnnotationVisitor visitLocalVariableAnnotation(int typeRef, TypePath typePath, Label[] start, Label[] end, int[] index, String descriptor, boolean visible) {
-        //     return mv.visitLocalVariableAnnotation(typeRef, typePath, start, end, index, descriptor, visible);
-        // }
-
-        @Override
-        public void visitLineNumber(final int line, final Label start) {
-            method_visitor_1.visitLineNumber(line, start);
-            method_visitor_2.visitLineNumber(line, start);
-        }
-
-        @Override
-        public void visitMaxs(final int maxStack, final int maxLocals) {
-            method_visitor_1.visitMaxs(maxStack, maxLocals);
-            method_visitor_2.visitMaxs(maxStack, maxLocals);
-        }
-
-        @Override
-        public void visitEnd() {
-            method_visitor_1.visitEnd();
-            method_visitor_2.visitEnd();
-        }
-    }
 
     public String[] getInterfaces() {
         return interfaces;
