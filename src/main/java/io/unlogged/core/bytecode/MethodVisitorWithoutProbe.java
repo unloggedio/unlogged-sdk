@@ -81,6 +81,9 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		if (this.classCounterValue != 0) {
 			divisor = this.classCounterValue;
 		}
+		if (this.methodCounter.get(this.methodName) != null) {
+			divisor = this.methodCounter.get(this.methodName);
+		}
 
 		mv.visitLdcInsn(divisor);
 		mv.visitInsn(Opcodes.IREM);
@@ -104,23 +107,15 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-		System.out.println("--------");
-		System.out.println("annotationVisitor is called");
-		System.out.println("class name = " + this.className);
-		System.out.println("method name = " + this.methodName);
-		System.out.println("descriptor = " + descriptor);
 		// check for the annotation @UnloggedParamMethod
 		if ("Lio/unlogged/UnloggedParamMethod;".equals(descriptor)) {
-			System.out.println("unlogged annotation for method found");
 			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
 				@Override
 				public void visit(String key, Object value) {
 					// check for key string
 					if ("loggingFrequency".equals(key)) {
-						System.out.println("loggingFrequency is found");
 						Integer valueInteger = Integer.parseInt((String)value);
 						methodCounter.put(methodName, valueInteger);
-						System.out.println("valueInteger from method visitor = " + valueInteger);
 					}
 					super.visit(key, value);
 				}
