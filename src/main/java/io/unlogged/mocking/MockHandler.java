@@ -11,13 +11,14 @@ import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
 import org.objenesis.Objenesis;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
@@ -190,7 +191,16 @@ public class MockHandler {
                     typeReference = typeFactory.constructType(invokedMethod.getReturnType());
                 }
 
-                returnValueInstance = jsonDeserializer.createInstance(returnParameter.getValue(), typeReference);
+                if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Mono")) {
+                    returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnParameter.getValue(),
+                            typeReference.containedType(0)));
+                } else if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Flux")) {
+                    returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnParameter.getValue(),
+                            typeFactory.constructArrayType(typeReference.containedType(0))));
+                } else {
+                    returnValueInstance = jsonDeserializer.createInstance(returnParameter.getValue(), typeReference);
+                }
+
             }
 
         } else {

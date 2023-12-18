@@ -712,10 +712,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 continue;
                             }
                         }
-                        if (Modifier.isFinal(field.getModifiers())) {
-                            continue;
+//                        if (Modifier.isFinal(field.getModifiers())) {
+//                            continue;
+//                        }
+                        try {
+                            field.set(extendedClassInstance, fieldValue);
+                        } catch (Throwable e) {
+                            //
                         }
-                        field.set(extendedClassInstance, fieldValue);
                     } else {
 
                         String key = targetClassName + "#" + field.getName();
