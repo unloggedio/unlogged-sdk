@@ -22,6 +22,16 @@ public class CustomMethodVisitor extends MethodVisitor {
 	}
 
 	@Override
+	public void visitCode() {
+		if (mv_probed != null) {
+		  mv_probed.visitCode();
+		}
+		if (mv_unprobed != null) {
+			mv_unprobed.visitCode();
+		}
+	}
+
+	@Override
 	public void visitIntInsn(int opcode, int operand) {
 		mv_unprobed.visitIntInsn(opcode, operand);
 		mv_probed.visitIntInsn(opcode, operand);

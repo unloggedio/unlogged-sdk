@@ -276,12 +276,11 @@ public class ClassTransformer extends ClassVisitor {
 
 		int classCounterValue = getCounter(this.classCounter, className);
 		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, className, desc, classCounterValue, super.visitMethod(access, name , desc, signature, exceptions));
-		mv_unprobed.visitCode();
 
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
 
-	private static int getCounter (HashMap<String, Integer> mapCounter, String key) {
+	private int getCounter (HashMap<String, Integer> mapCounter, String key) {
 		if (mapCounter.get(key) == null) {
 			return 0;
 		}
