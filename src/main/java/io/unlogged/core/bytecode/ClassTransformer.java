@@ -251,7 +251,7 @@ public class ClassTransformer extends ClassVisitor {
 		
 		// create probed method
 		String name_probed = name;
-		if (!name.equals("<init>")) {
+		if (!name.equals("<init>") && !name.equals("<clinit>")) {
 			// create hashset of methods
 			this.methodList.add(name);
 			name_probed = name + "_PROBED";
@@ -270,7 +270,7 @@ public class ClassTransformer extends ClassVisitor {
 			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
-		if (name.equals("<init>")) {
+		if (name.equals("<init>") || name.equals("<clinit>")) {
 			return mv_probed;
 		}
 
