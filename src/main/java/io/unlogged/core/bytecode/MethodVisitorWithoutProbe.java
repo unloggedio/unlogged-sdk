@@ -1,4 +1,5 @@
 package io.unlogged.core.bytecode;
+
 import java.util.HashMap;
 
 import org.objectweb.asm.*;
@@ -10,6 +11,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String desc;
 	private String nameProbed;
 	private int classCounterValue;
+	private HashMap<String, Integer> methodCounter = new HashMap<String, Integer>();
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounterValue, MethodVisitor mv) {
 		super(api, mv);
@@ -98,5 +100,32 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitLabel(exitLabel);
 
 		super.visitCode();
+	}
+
+	@Override
+	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+		System.out.println("--------");
+		System.out.println("annotationVisitor is called");
+		System.out.println("class name = " + this.className);
+		System.out.println("method name = " + this.methodName);
+		System.out.println("descriptor = " + descriptor);
+		// check for the annotation @UnloggedParamMethod
+		if ("Lio/unlogged/UnloggedParamMethod;".equals(descriptor)) {
+			System.out.println("unlogged annotation for method found");
+			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
+				@Override
+				public void visit(String key, Object value) {
+					// check for key string
+					if ("loggingFrequency".equals(key)) {
+						System.out.println("loggingFrequency is found");
+						Integer valueInteger = Integer.parseInt((String)value);
+						methodCounter.put(methodName, valueInteger);
+						System.out.println("valueInteger from method visitor = " + valueInteger);
+					}
+					super.visit(key, value);
+				}
+			};
+		}
+		return super.visitAnnotation(descriptor, visible);
 	}
 }
