@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -260,6 +261,17 @@ public class Runtime {
         byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
         return bytesToIntList(probeToRecordBytes);
     }
+
+
+	// called like: if (probeCounter(CustomerController.map_store, "gen_sum", 12)) {
+	public boolean probeCounter(HashMap<String, Integer> map_store, String methodName, int callCounter) {
+		if (map_store.get(methodName) % callCounter == 0){
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
 
     /**
      * Close data streams if necessary
