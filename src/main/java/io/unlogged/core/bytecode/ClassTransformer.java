@@ -34,7 +34,7 @@ public class ClassTransformer extends ClassVisitor {
     private byte[] weaveResult;
     private String classLoaderIdentifier;
 	private HashSet<String> methodList = new HashSet<>();
-	private HashMap<String, Integer> classCounter = new HashMap<>();
+	private HashMap<String, Integer> classCounterMap = new HashMap<>();
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -88,7 +88,7 @@ public class ClassTransformer extends ClassVisitor {
 					// check for key string
 					if ("loggingFrequency".equals(key)) {
 						Integer valueInteger = Integer.parseInt((String)value);
-						classCounter.put(className, valueInteger);
+						classCounterMap.put(className, valueInteger);
 					}
 					super.visit(key, value);
 				}
@@ -274,8 +274,8 @@ public class ClassTransformer extends ClassVisitor {
 			return mv_probed;
 		}
 
-		int classCounterValue = getCounter(this.classCounter, className);
-		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, className, desc, classCounterValue, super.visitMethod(access, name , desc, signature, exceptions));
+		int classCounter = getCounter(this.classCounterMap, className);
+		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, className, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }

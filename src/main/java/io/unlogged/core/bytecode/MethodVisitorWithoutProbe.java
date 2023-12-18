@@ -10,15 +10,16 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String className;
 	private String desc;
 	private String nameProbed;
-	private int classCounterValue;
+	private int classCounter;
+	private int defaultCounter = 10;
 	private HashMap<String, Integer> methodCounter = new HashMap<String, Integer>();
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounterValue, MethodVisitor mv) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounter, MethodVisitor mv) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.className = className;
 		this.desc = desc;
-		this.classCounterValue = classCounterValue;
+		this.classCounter = classCounter;
 		this.nameProbed = this.methodName + "_PROBED";
 	}
 
@@ -46,6 +47,22 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
         }
     }
 
+	private int getDivisor(){
+		int divisor = this.defaultCounter;
+
+		// write classCounter if defined 
+		if (this.classCounter != 0) {
+			divisor = this.classCounter;
+		}
+
+		// write methodCounter if defined
+		if (this.methodCounter.get(this.methodName) != null) {
+			divisor = this.methodCounter.get(this.methodName);
+		}
+
+		return divisor;
+	}
+
 	@Override
 	public void visitCode() {
 		// Add the line: this.map_store.put(this.method_name, map_store.get(method_name) + 1);
@@ -60,7 +77,6 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
 		// Pop the result (discard it)
 		mv.visitInsn(Opcodes.POP);
-	
 
 		// add the if logic
 		Label exitLabel = new Label();
@@ -75,15 +91,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// divisor for frequency logging
 		
 		// default value of divisor
-		int divisor = 10;
-
-		// write classCounter if defined
-		if (this.classCounterValue != 0) {
-			divisor = this.classCounterValue;
-		}
-		if (this.methodCounter.get(this.methodName) != null) {
-			divisor = this.methodCounter.get(this.methodName);
-		}
+		int divisor = getDivisor();
 
 		mv.visitLdcInsn(divisor);
 		mv.visitInsn(Opcodes.IREM);
@@ -101,6 +109,9 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// Exit label
 		mv.visitLabel(exitLabel);
+
+
+		// add `if (probeCounter(className.map_store,  methodName, divisor))` condition
 
 		super.visitCode();
 	}
