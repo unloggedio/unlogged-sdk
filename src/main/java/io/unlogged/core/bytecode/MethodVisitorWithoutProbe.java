@@ -122,8 +122,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-		// check for the annotation @UnloggedParamMethod
-		if ("Lio/unlogged/UnloggedParamMethod;".equals(descriptor)) {
+		// check for the annotation @UnloggedMethod
+		if ("Lio/unlogged/UnloggedMethod;".equals(descriptor)) {
 			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
 				@Override
 				public void visit(String key, Object value) {

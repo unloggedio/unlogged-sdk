@@ -80,8 +80,8 @@ public class ClassTransformer extends ClassVisitor {
 
     @Override
     public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-		// check for the annotation @UnloggedParamClass
-		if ("Lio/unlogged/UnloggedParamClass;".equals(descriptor)) {
+		// check for the annotation @UnloggedClass
+		if ("Lio/unlogged/UnloggedClass;".equals(descriptor)) {
 			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
 				@Override
 				public void visit(String key, Object value) {
