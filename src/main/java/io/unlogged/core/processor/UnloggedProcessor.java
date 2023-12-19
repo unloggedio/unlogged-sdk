@@ -374,7 +374,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
 			Unlogged unlogged = element.getAnnotation(Unlogged.class);
-			defaultCounter = Integer.parseInt(unlogged.defaultCounter());
+			defaultCounter = Integer.parseInt(unlogged.loggingFrequency());
 		}
 
         if (roundEnv.processingOver()) {

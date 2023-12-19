@@ -22,5 +22,5 @@ public @interface Unlogged {
 
     boolean enable() default true;
 
-	String defaultCounter() default "1";
+	String loggingFrequency() default "1";
 }
