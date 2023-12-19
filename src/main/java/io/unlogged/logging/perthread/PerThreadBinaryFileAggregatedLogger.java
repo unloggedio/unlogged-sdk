@@ -134,7 +134,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         return threadFileMap.get(threadId);
     }
 
-    private void prepareNextFile(int currentThreadId) throws IOException {
+    private synchronized void prepareNextFile(int currentThreadId) throws IOException {
 
 //        errorLogger.log("prepare next file [" + currentThreadId + "]");
 
