@@ -1,11 +1,14 @@
 package io.unlogged.core.bytecode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import org.objectweb.asm.*;
 
 import io.unlogged.core.processor.UnloggedProcessor;
+import io.unlogged.util.ClassTypeUtil;
 
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
@@ -101,9 +104,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// load arguments in stack 
 		pushArgument(mv);
-		String[] invokeDesc = this.desc.split("[\\(\\)]");
-		String invokeDescArgument = invokeDesc.length == 3 ? invokeDesc[1] : null;
-		String probeCounterDesc = "(II" + invokeDescArgument + ")Z";
+		List<String> descParsed = ClassTypeUtil.splitMethodDesc(this.desc);
+		String descParsedString = "";
+		for (int i=0;i<=descParsed.size()-2;i++) {
+			descParsedString = descParsedString + descParsed.get(i);
+		}
+		String probeCounterDesc = "(II" + descParsedString + ")Z";
 		
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
 		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
