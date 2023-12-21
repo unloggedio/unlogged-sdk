@@ -18,6 +18,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -118,8 +119,9 @@ public class MockHandler {
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
                             try {
-                                returnValueInstance = createReturnValueInstance(thenParameter, returnParameter,
-                                        invokedMethod, classLoader);
+                                returnValueInstance = createReturnValueInstance(thenParameter,
+                                        invokedMethod, classLoader, returnParameter.getClassName(),
+                                        returnParameter.getValue());
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 System.err.println("Failed to create instance of class [" +
@@ -174,16 +176,34 @@ public class MockHandler {
         return realMethod.invoke(originalImplementation, methodArguments);
     }
 
-    private Object createReturnValueInstance(ThenParameter thenParameter, ReturnValue returnParameter, Method invokedMethod, ClassLoader classLoader)
+    private Object createReturnValueInstance(ThenParameter thenParameter, Method invokedMethod, ClassLoader classLoader, String classNameToBeConstructed, String returnValueSerialized)
             throws Exception {
         Object returnValueInstance = null;
         TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(classLoader);
 
         if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
-            if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
+            if (returnValueSerialized != null && returnValueSerialized.length() > 0) {
                 JavaType typeReference;
                 try {
-                    typeReference = getTypeReference(typeFactory, returnParameter.getClassName());
+                    if (classNameToBeConstructed.startsWith("java.util.concurrent.CompletableFuture<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util.concurrent" +
+                                ".CompletableFuture<").length(), classNameToBeConstructed.length() - 1);
+//                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = createReturnValueInstance(thenParameter, invokedMethod, classLoader,
+                                futureClassName, returnValueSerialized);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return CompletableFuture.supplyAsync(() -> finalReturnValueInstance);
+                    }
+                    if (classNameToBeConstructed.startsWith("java.util.Optional<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util" +
+                                ".Optional<").length(), classNameToBeConstructed.length() - 1);
+//                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = createReturnValueInstance(thenParameter, invokedMethod, classLoader,
+                                futureClassName, returnValueSerialized);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return Optional.of(finalReturnValueInstance);
+                    }
+                    typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
                 } catch (Exception e) {
                     // failed to construct from the canonical name,
                     // happens when this is a generic type
@@ -192,24 +212,23 @@ public class MockHandler {
                 }
 
                 if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Mono")) {
-                    returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnParameter.getValue(),
+                    returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
                             typeReference.containedType(0)));
                 } else if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Flux")) {
-                    returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnParameter.getValue(),
+                    returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnValueSerialized,
                             typeFactory.constructArrayType(typeReference.containedType(0))));
                 } else {
-                    returnValueInstance = jsonDeserializer.createInstance(returnParameter.getValue(), typeReference);
+                    returnValueInstance = jsonDeserializer.createInstance(returnValueSerialized, typeReference);
                 }
 
             }
 
         } else {
             // this is an instance of exception class
-            Class<?> exceptionClassType = classLoader.loadClass(returnParameter.getClassName());
+            Class<?> exceptionClassType = classLoader.loadClass(classNameToBeConstructed);
             try {
-                Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
-                        String.class);
-                returnValueInstance = constructorWithMessage.newInstance(returnParameter.getValue());
+                Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(String.class);
+                returnValueInstance = constructorWithMessage.newInstance(returnValueSerialized);
             } catch (Exception e) {
                 returnValueInstance = exceptionClassType.getConstructor().newInstance();
             }
