@@ -105,22 +105,22 @@ public class ClassTypeUtil {
 
 	// check if method values are of starting method [public static void main]
 	public static boolean checkIfStartingMethod (int access, String desc, String name) {
+
+		// check name
+		if (!name.equals("main")) {
+			return false; 
+		}
+
 		// check access
 		if (access != (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC)) {
 			return false;
 		}
 
 		// check descriptor
-		if (desc != "([Ljava/lang/String;)V") {
+		if (!desc.equals("([Ljava/lang/String;)V")) {
 			return false;
-		}
-
-		// check name
-		if (name != "main") {
-			return false; 
 		}
 
 		return true;
 	}
-
 }
