@@ -13,17 +13,17 @@ import io.unlogged.util.ClassTypeUtil;
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	private String methodName;
-	private String className;
+	private String fullClassName;
 	private String desc;
 	private String nameProbed;
 	private int classCounter;
 	private int defaultCounter;
 	private HashMap<String, Integer> methodCounter = new HashMap<String, Integer>();
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String className, String desc, int classCounter, MethodVisitor mv) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, String desc, int classCounter, MethodVisitor mv) {
 		super(api, mv);
 		this.methodName = methodName;
-		this.className = className;
+		this.fullClassName = fullClassName;
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = this.methodName + "_PROBED";
@@ -82,10 +82,10 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	public void visitCode() {
 		// Add the line: this.map_store.put(this.method_name, map_store.get(method_name) + 1);
 
-		mv.visitFieldInsn(Opcodes.GETSTATIC, this.className, "map_store", "Ljava/util/Map;");
+		mv.visitFieldInsn(Opcodes.GETSTATIC, this.fullClassName, "map_store", "Ljava/util/Map;");
 		mv.visitLdcInsn(this.methodName);
 
-		mv.visitFieldInsn(Opcodes.GETSTATIC, this.className, "map_store", "Ljava/util/Map;"); // Load map_store onto the stack
+		mv.visitFieldInsn(Opcodes.GETSTATIC, this.fullClassName, "map_store", "Ljava/util/Map;"); // Load map_store onto the stack
 		mv.visitLdcInsn(this.methodName);
 		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
 		mv.visitInsn(Opcodes.ICONST_1); // Load the constant 1 onto the stack
@@ -96,7 +96,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 		// add the if condition
 		Label exitLabel = new Label();
-		mv.visitFieldInsn(Opcodes.GETSTATIC, this.className, "map_store", "Ljava/util/Map;"); // Load map_store onto the stack
+		mv.visitFieldInsn(Opcodes.GETSTATIC, this.fullClassName, "map_store", "Ljava/util/Map;"); // Load map_store onto the stack
 		mv.visitLdcInsn(this.methodName);
 		mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
 		int divisor = getDivisor();

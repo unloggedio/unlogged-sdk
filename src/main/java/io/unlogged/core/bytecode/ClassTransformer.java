@@ -106,11 +106,6 @@ public class ClassTransformer extends ClassVisitor {
         return super.visitTypeAnnotation(typeRef, typePath, descriptor, visible);
     }
 
-	@Override
-    public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
-        return super.visitField(access, name, descriptor, signature, value);
-    }
-
     /**
      * @return the weaving result.
      */
@@ -209,7 +204,7 @@ public class ClassTransformer extends ClassVisitor {
 			// clinit is made before this step
 			this.hasStaticInitialiser = true;
 			mv_probed = super.visitMethod(access, name, desc, signature, exceptions);
-			mv_probed = new InitStaticTransformer(mv_probed, className, this.methodList);
+			mv_probed = new InitStaticTransformer(mv_probed, fullClassName, this.methodList);
 		}
 		else if (name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
@@ -238,7 +233,7 @@ public class ClassTransformer extends ClassVisitor {
 		}
 
 		int classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, className, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
+		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
@@ -249,23 +244,26 @@ public class ClassTransformer extends ClassVisitor {
 		if (!this.hasStaticInitialiser) {	
 			// staticInitialiser is not defined, define one
 			this.hasStaticInitialiser = true;
-
 			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
 			staticNew.visitCode();
-			staticNew.visitTypeInsn(Opcodes.NEW, "java/util/HashMap");
+
+			// Instantiate HashMap<String, Integer>
+			staticNew.visitTypeInsn(Opcodes.NEW, Type.getInternalName(java.util.HashMap.class));
 			staticNew.visitInsn(Opcodes.DUP);
 			staticNew.visitMethodInsn(
 				Opcodes.INVOKESPECIAL,
-				"java/util/HashMap",
+				Type.getInternalName(java.util.HashMap.class),
 				"<init>",
 				"()V",
 				false
 			);
+
+			// Store the instance in the static field map_store
 			staticNew.visitFieldInsn(
 				Opcodes.PUTSTATIC,
-				className,
+				fullClassName,
 				"map_store",
-				"Ljava/util/HashMap;"
+				Type.getDescriptor(java.util.HashMap.class)
 			);
 
 			for (String localMethod: this.methodList) { 
@@ -273,7 +271,7 @@ public class ClassTransformer extends ClassVisitor {
 				staticNew.visitLdcInsn(0);
 				staticNew.visitMethodInsn(Opcodes.INVOKESTATIC, "map_store", "put", "(Ljava/lang/String;I)V", false);
 			}
-			
+
 			staticNew.visitInsn(Opcodes.RETURN);
 			staticNew.visitMaxs(2, 0);
 			staticNew.visitEnd();
