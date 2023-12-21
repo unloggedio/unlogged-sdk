@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.32</version>
+    <version>0.1.34</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -349,10 +349,10 @@
                             <pattern>net.bytebuddy</pattern>
                             <shadedPattern>selogger.net.bytebuddy</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>net.openhft</pattern>
-                            <shadedPattern>selogger.net.openhft</shadedPattern>
-                        </relocation>
+<!--                        <relocation>-->
+<!--                            <pattern>net.openhft</pattern>-->
+<!--                            <shadedPattern>selogger.net.openhft</shadedPattern>-->
+<!--                        </relocation>-->
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>selogger.com.fasterxml.jackson</shadedPattern>

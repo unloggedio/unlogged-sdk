@@ -15,6 +15,10 @@ public class AssertionEngine {
             AtomicAssertion assertion, JsonNode responseNode
     ) {
         AssertionResult assertionResult = new AssertionResult();
+        if (assertion == null) {
+            assertionResult.setPassing(true);
+            return assertionResult;
+        }
 
         AssertionType assertionType = assertion.getAssertionType();
 
