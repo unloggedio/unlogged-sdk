@@ -5,12 +5,12 @@ import java.util.HashSet;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-public class initStaticTransformer extends MethodVisitor {
+public class InitStaticTransformer extends MethodVisitor {
 
 	private String className;
 	private HashSet<String> methodList;
 
-	public initStaticTransformer(MethodVisitor mv, String className, HashSet<String> methodList) {
+	public InitStaticTransformer(MethodVisitor mv, String className, HashSet<String> methodList) {
 		super(Opcodes.ASM7, mv);
 		this.className = className;
 		this.methodList = methodList;
@@ -29,10 +29,10 @@ public class initStaticTransformer extends MethodVisitor {
 			false
 		);
 		mv.visitFieldInsn(
-			Opcodes.PUTSTATIC,
+			Opcodes.PUTSTATIC, 
 			className,
 			"map_store",
-			"Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;"
+			"Ljava/util/Map;"
 		);
 
 		for (String localMethod: this.methodList) { 

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.objectweb.asm.Opcodes;
+
 public class ClassTypeUtil {
 
     public ClassTypeUtil() {
@@ -101,5 +103,24 @@ public class ClassTypeUtil {
 
     }
 
+	// check if method values are of starting method [public static void main]
+	public static boolean checkIfStartingMethod (int access, String desc, String name) {
+		// check access
+		if (access != (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC)) {
+			return false;
+		}
+
+		// check descriptor
+		if (desc != "([Ljava/lang/String;)V") {
+			return false;
+		}
+
+		// check name
+		if (name != "main") {
+			return false; 
+		}
+
+		return true;
+	}
 
 }

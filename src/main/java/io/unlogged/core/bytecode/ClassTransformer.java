@@ -3,6 +3,7 @@ package io.unlogged.core.bytecode;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
+import io.unlogged.util.ClassTypeUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -12,6 +13,7 @@ import org.objectweb.asm.commons.TryCatchBlockSorter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -207,9 +209,9 @@ public class ClassTransformer extends ClassVisitor {
 			// clinit is made before this step
 			this.hasStaticInitialiser = true;
 			mv_probed = super.visitMethod(access, name, desc, signature, exceptions);
-			mv_probed = new initStaticTransformer(mv_probed, className, this.methodList);
+			mv_probed = new InitStaticTransformer(mv_probed, className, this.methodList);
 		}
-		else if (name.equals("<init>")){
+		else if (name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
 			mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
 		}
@@ -231,7 +233,7 @@ public class ClassTransformer extends ClassVisitor {
 			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
-		if (name.equals("<init>") || name.equals("<clinit>")) {
+		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			return mv_probed;
 		}
 
@@ -263,7 +265,7 @@ public class ClassTransformer extends ClassVisitor {
 				Opcodes.PUTSTATIC,
 				className,
 				"map_store",
-				"Ljava/util/HashMap<Ljava/lang/String;Ljava/lang/Integer;>;"
+				"Ljava/util/HashMap;"
 			);
 
 			for (String localMethod: this.methodList) { 
