@@ -23,6 +23,8 @@ import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
 import io.unlogged.mocking.DeclaredMock;
 import io.unlogged.util.ClassTypeUtil;
+import junit.framework.AssertionFailedError;
+import org.jetbrains.annotations.NotNull;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -70,7 +73,6 @@ public class UnloggedTestRunner extends Runner {
 
     }
 
-    final private Class<?> testClass;
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
@@ -91,13 +93,17 @@ public class UnloggedTestRunner extends Runner {
             }
         }
     };
-//    private Object springTestContextManager;
+    private Description testDescription;
+    private Map<String, Description> descriptionMap = new HashMap<>();
+    private Map<Description, StoredCandidate> descriptionStoredCandidateMap = new HashMap<>();
+    //    private Object springTestContextManager;
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
         this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
-        this.testClass = testClass;
+        this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
+        collectTests();
         Runtime.getInstance("format=discard");
     }
 
@@ -310,78 +316,87 @@ public class UnloggedTestRunner extends Runner {
 
     @Override
     public Description getDescription() {
-        return Description.createTestDescription(testClass, "Unlogged test runner");
+        logger.error("getDescirption: " + testDescription);
+        return testDescription;
     }
 
     @Override
     public void run(RunNotifier notifier) {
-//        System.err.println("UTR.run invoked");
+
+        Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
+        Map<String, DeclaredMock> mocksById = recordsMap.values()
+                .stream()
+                .map(AtomicRecord::getDeclaredMockMap)
+                .map(Map::values)
+                .flatMap(Collection::stream)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toMap(DeclaredMock::getId, e -> e));
+
+        logger.warn("testStart: " + testDescription);
+//        notifier.fireTestSuiteStarted(testDescription);
+        for (Description description : testDescription.getChildren()) {
+
+            executeByDescription(notifier, mocksById, description);
+        }
+        logger.warn("fireTestFinished: " + testDescription);
+    }
+
+    private void executeByDescription(RunNotifier notifier, Map<String, DeclaredMock> mocksById, Description description) {
+        notifier.fireTestStarted(description);
+        StoredCandidate candidate = descriptionStoredCandidateMap.get(description);
+        if (candidate != null) {
+            Throwable throwable = fireTest(mocksById, candidate);
+            if (throwable != null) {
+                notifier.fireTestFailure(new Failure(description, throwable));
+            }
+        }
+
+        if (description.getChildren() != null) {
+            for (Description child : description.getChildren()) {
+                executeByDescription(notifier, mocksById, child);
+            }
+        }
+
+
+        notifier.fireTestFinished(description);
+    }
+
+    public void collectTests() {
+        descriptionStoredCandidateMap.clear();
 
         try {
             Map<String, io.unlogged.runner.AtomicRecord> recordsMap = atomicRecordService.updateMap();
-            Map<String, DeclaredMock> mocksById = recordsMap.values()
-                    .stream()
-                    .map(AtomicRecord::getDeclaredMockMap)
-                    .map(Map::values)
-                    .flatMap(Collection::stream)
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toMap(DeclaredMock::getId, e -> e));
 
-            for (String classFileResource : recordsMap.keySet()) {
-                AtomicRecord classRecords = recordsMap.get(classFileResource);
+
+            for (String className : recordsMap.keySet()) {
+                AtomicRecord classRecords = recordsMap.get(className);
                 Map<String, List<StoredCandidate>> storedCandidateMap = classRecords.getStoredCandidateMap();
 //                System.err.println("running the tests from unlogged: " + classFileResource);
+
+                Description suiteDescription = Description.createSuiteDescription(Class.forName(className));
+//                    System.err.println(className );
+                testDescription.addChild(suiteDescription);
+
                 for (String methodHashKey : storedCandidateMap.keySet()) {
                     List<StoredCandidate> candidates = storedCandidateMap.get(methodHashKey);
                     if (candidates.size() == 0) {
                         continue;
                     }
 
-                    MethodUnderTest method = candidates.get(0).getMethod();
-                    String className = method.getClassName();
-                    if (className.contains(".")) {
-                        className = className.substring(className.lastIndexOf(".") + 1);
-                    }
-                    Description suiteDescription = Description.createSuiteDescription(
-                            className + "." + method.getName());
-//                    System.err.println(className );
-                    try {
-                        notifier.fireTestSuiteStarted(suiteDescription);
-                    } catch (NoSuchMethodError ingnored) {
-                        // ingnored
-                    }
-
                     for (StoredCandidate candidate : candidates) {
-                        int testCounterIndex = testCounter.incrementAndGet();
 
                         Class<?> targetClassTypeInstance;
-                        String name = candidate.getName() == null ?
+                        String candidateId = candidate.getName() == null ?
                                 candidate.getCandidateId() : candidate.getName();
                         targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
 
-//                        if (isSpringPresent) {
-//                        } else {
-//                            targetClassTypeInstance = Class.forName(candidate.getMethod().getClassName());
-//                        }
+                        Description testDescription = getTestDescription(targetClassTypeInstance, candidateId,
+                                candidate.getCandidateId());
+                        suiteDescription.addChild(testDescription);
+//                        this.testDescription.addChild(testDescription);
+                        descriptionStoredCandidateMap.put(testDescription, candidate);
 
-                        Description testDescription = Description.createTestDescription(
-                                targetClassTypeInstance, name);
-
-                        notifier.fireTestStarted(testDescription);
-
-                        fireTest(notifier, mocksById, candidate, testDescription);
-
-                        notifier.fireTestFinished(testDescription);
-//                        if (springTestContextManager != null) {
-//                            ((TestContextManager) springTestContextManager).afterTestMethod();
-//                        }
                     }
-                    try {
-                        notifier.fireTestSuiteFinished(suiteDescription);
-                    } catch (NoSuchMethodError ingnored) {
-                        // ingnored
-                    }
-
                 }
             }
         } catch (Throwable throwable) {
@@ -390,7 +405,36 @@ public class UnloggedTestRunner extends Runner {
         }
     }
 
-    private void fireTest(RunNotifier notifier, Map<String, DeclaredMock> mocksById, StoredCandidate candidate, Description testDescription) {
+    @NotNull
+    private Description getTestDescription(Class<?> targetClassTypeInstance, String name, String id) {
+        String key = targetClassTypeInstance.getCanonicalName() + name + id;
+        if (descriptionMap.containsKey(key)) {
+            return descriptionMap.get(key);
+        }
+        Description testDescription1 = Description.createTestDescription(targetClassTypeInstance.getCanonicalName(),
+                name, id);
+        descriptionMap.put(key, testDescription1);
+        return testDescription1;
+    }
+
+    private Description getSuiteDescription(MethodUnderTest method, String className) {
+        String key = className + "." + method.getName();
+        if (descriptionMap.containsKey(key)) {
+            return descriptionMap.get(key);
+        }
+        Description suiteDescription = null;
+        try {
+            suiteDescription = Description.createSuiteDescription(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            suiteDescription = Description.createSuiteDescription(className, (Serializable) method);
+
+        }
+        descriptionMap.put(key, suiteDescription);
+        return suiteDescription;
+    }
+
+    private Throwable fireTest(
+            Map<String, DeclaredMock> mocksById, StoredCandidate candidate) {
         MethodUnderTest methodUnderTest = candidate.getMethod();
         List<DeclaredMock> mockList = new ArrayList<>();
         List<String> mocksToUse = candidate.getMockIds();
@@ -408,40 +452,39 @@ public class UnloggedTestRunner extends Runner {
         AssertionResult verificationResult = verificationResultRaw.getAssertionResult();
 
         boolean isVerificationPassing = verificationResult.isPassing();
-        System.out.println(
-                "[#" + candidate.getName() + "] tested method [" + candidate.getMethod()
-                        .getName() + "] => " + isVerificationPassing);
+//        System.out.println(
+//                "[#" + candidate.getName() + "] tested method [" + candidate.getMethod()
+//                        .getName() + "] => " + isVerificationPassing);
 
-        if (verificationResultRaw.getResponseObject().getResponseObject() instanceof Throwable) {
-            ((Throwable) verificationResultRaw.getResponseObject()
-                    .getResponseObject()).printStackTrace();
-        }
+//        if (verificationResultRaw.getResponseObject().getResponseObject() instanceof Throwable) {
+//            ((Throwable) verificationResultRaw.getResponseObject()
+//                    .getResponseObject()).printStackTrace();
+//        }
         if (isVerificationPassing) {
-            return;
+            return null;
         }
 
         if (agentCommandResponse == null) {
-            System.out.println("Response is null");
-            notifier.fireTestFailure(new Failure(testDescription, new RuntimeException("Response is null")));
-            return;
+//            System.out.println("Response is null");
+//            notifier.fireTestFailure();
+            return new AssertionFailedError("Response is null");
         }
 
         if (verificationResultRaw.getResponseObject().getResponseObject() instanceof Throwable) {
-            Throwable responseObject = (Throwable) verificationResultRaw.getResponseObject().getResponseObject();
-            System.out.println("Method [" + candidate.getMethod().getName() + "] threw an exception");
-            responseObject.printStackTrace(System.err);
-            notifier.fireTestFailure(new Failure(testDescription, (Throwable)
-                    verificationResultRaw.getResponseObject().getResponseObject()));
-
+//            Throwable responseObject = (Throwable) verificationResultRaw.getResponseObject().getResponseObject();
+//            System.out.println("Method [" + candidate.getMethod().getName() + "] threw an exception");
+//            responseObject.printStackTrace(System.err);
+//            notifier.fireTestFailure(new Failure(testDescription, (Throwable)
+//                    verificationResultRaw.getResponseObject().getResponseObject()));
+            return (Throwable) verificationResultRaw.getResponseObject().getResponseObject();
         }
 
         List<AtomicAssertion> assertionList = AtomicAssertionUtils.flattenAssertionMap(assertions);
         AssertionResult assertionResultMap = verificationResultRaw.getAssertionResult();
 
         if (verificationResultRaw.getResponseObject() == null) {
-            System.out.println("Response is null");
-            notifier.fireTestFailure(new Failure(testDescription,
-                    new RuntimeException(String.valueOf(verificationResultRaw))));
+//            System.out.println("Response is null");
+            return new AssertionFailedError(String.valueOf(verificationResultRaw));
 
         }
 
@@ -449,8 +492,8 @@ public class UnloggedTestRunner extends Runner {
         AgentCommandResponse acr = rawResponse.getAgentCommandResponse();
         Object responseObject = rawResponse.getResponseObject();
         if (responseObject instanceof Throwable) {
-            System.out.println("Method threw an exception");
-            ((Throwable) responseObject).printStackTrace();
+//            System.out.println("Method threw an exception");
+//            ((Throwable) responseObject).printStackTrace();
         }
 
         for (AtomicAssertion atomicAssertion : assertionList) {
@@ -489,15 +532,15 @@ public class UnloggedTestRunner extends Runner {
             Expression expression = atomicAssertion.getExpression();
             JsonNode expressedValue = expression.compute(valueFromJsonNode);
 
-            System.err.println("Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
-                    "[" + expressedValue + "]\n\t when the return value from method " +
-                    "[" + methodUnderTest.getName() + "()]\n\t value " +
-                    "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
-                    "(" + atomicAssertion.getKey() + ")")) +
-                    "] as expected in test candidate " +
-                    "[" + candidate.getCandidateId() + "]" +
-                    "[" + candidate.getName() + "]");
-            RuntimeException thrownException = new RuntimeException(
+//            System.err.println("Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
+//                    "[" + expressedValue + "]\n\t when the return value from method " +
+//                    "[" + methodUnderTest.getName() + "()]\n\t value " +
+//                    "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
+//                    "(" + atomicAssertion.getKey() + ")")) +
+//                    "] as expected in test candidate " +
+//                    "[" + candidate.getCandidateId() + "]" +
+//                    "[" + candidate.getName() + "]");
+            AssertionFailedError thrownException = new AssertionFailedError(
                     "Expected [" + atomicAssertion.getExpectedValue() + "]instead of actual" +
                             "[" + expressedValue + "]\n\t when the return value from method " +
                             "[" + methodUnderTest.getName() + "]()\n\t value " +
@@ -506,11 +549,14 @@ public class UnloggedTestRunner extends Runner {
                             "] as expected in test candidate " +
                             "[" + candidate.getCandidateId() + "]" +
                             "[" + candidate.getName() + "]");
-            Failure failure = new Failure(testDescription, thrownException);
-            notifier.fireTestAssumptionFailed(failure);
+//            Failure failure = new Failure(testDescription, thrownException);
+//            throw thrownException;
+            return thrownException;
+//            notifier.fireTestAssumptionFailed(failure);
         }
 
 
+        return null;
     }
 
 
@@ -568,10 +614,18 @@ public class UnloggedTestRunner extends Runner {
             assertionResult.setPassing(false);
             return new AssertionResultWithRawObject(assertionResult,
                     new AgentCommandRawResponse(new AgentCommandResponse(),
-                            new Exception("execution result is null")));
+                            new AssertionFailedError("execution result is null")));
         }
-        AssertionResult assertionResult = verifyCandidateExecution(executionResult.getAgentCommandResponse(),
-                candidate);
+        AssertionResult assertionResult;
+        try {
+            assertionResult = verifyCandidateExecution(executionResult.getAgentCommandResponse(),
+                    candidate);
+        } catch (AssertionFailedError assertionFailedError) {
+            assertionResult = new AssertionResult();
+            assertionResult.setPassing(false);
+            return new AssertionResultWithRawObject(assertionResult,
+                    new AgentCommandRawResponse(new AgentCommandResponse(), assertionFailedError));
+        }
         return new AssertionResultWithRawObject(assertionResult, executionResult);
 //        return assertionResult;
     }
@@ -608,7 +662,7 @@ public class UnloggedTestRunner extends Runner {
             return commandExecutor.executeCommandRaw(agentCommandRequest);
 
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
             agentCommandResponse.setResponseType(ResponseType.FAILED);
             return new AgentCommandRawResponse(agentCommandResponse, e);
@@ -630,7 +684,8 @@ public class UnloggedTestRunner extends Runner {
                     return objectMapper.readTree("\"" + methodReturnValue + "\"");
                 } catch (JsonProcessingException e1) {
                     // failed to read as a json node
-                    throw new RuntimeException(e1);
+                    throw new AssertionFailedError("Failed to parse response: " + methodReturnValue
+                            + " => " + e1.getMessage());
                 }
             }
         }

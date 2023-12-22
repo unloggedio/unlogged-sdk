@@ -163,17 +163,17 @@ public class MockHandler {
 //                .getCanonicalName() + "] with args [" + Arrays.asList(methodArguments)
 //                + "] on " + superInstance.getClass().getCanonicalName() + " from " + thisInstance.getClass().getCanonicalName());
 
-        if (originalImplementation == null) {
-            if (field != null) {
-                System.err.println(
-                        "originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
-            } else {
-                System.err.println("originalImplementation is null");
-            }
-        }
-        Method realMethod = originalImplementation.getClass()
-                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
-        return realMethod.invoke(originalImplementation, methodArguments);
+//        if (originalImplementation == null) {
+//            if (field != null) {
+//                System.err.println(
+//                        "originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
+//            } else {
+//                System.err.println("originalImplementation is null");
+//            }
+//        }
+//        Method realMethod = originalImplementation.getClass()
+//                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
+        return invokedMethod.invoke(originalImplementation, methodArguments);
     }
 
     private Object createReturnValueInstance(ThenParameter thenParameter, Method invokedMethod, ClassLoader classLoader, String classNameToBeConstructed, String returnValueSerialized)

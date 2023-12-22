@@ -413,7 +413,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 closeHibernateSessionIfPossible(sessionInstance);
             }
         } catch (Throwable exception) {
-            exception.printStackTrace();
+//            exception.printStackTrace();
             Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
             agentCommandResponse.setMessage(exceptionCause.getMessage());
             try {
