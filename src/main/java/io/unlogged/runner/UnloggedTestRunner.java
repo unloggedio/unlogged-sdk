@@ -24,7 +24,6 @@ import io.unlogged.logging.DiscardEventLogger;
 import io.unlogged.mocking.DeclaredMock;
 import io.unlogged.util.ClassTypeUtil;
 import junit.framework.AssertionFailedError;
-import org.jetbrains.annotations.NotNull;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
@@ -332,19 +331,19 @@ public class UnloggedTestRunner extends Runner {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toMap(DeclaredMock::getId, e -> e));
 
-        logger.warn("testStart: " + testDescription);
-//        notifier.fireTestSuiteStarted(testDescription);
+//        logger.warn("testStart: " + testDescription);
+//        notifier.fireTestStarted(testDescription);
         for (Description description : testDescription.getChildren()) {
-
             executeByDescription(notifier, mocksById, description);
         }
-        logger.warn("fireTestFinished: " + testDescription);
+//        notifier.fireTestFinished(testDescription);
+//        logger.warn("fireTestFinished: " + testDescription);
     }
 
     private void executeByDescription(RunNotifier notifier, Map<String, DeclaredMock> mocksById, Description description) {
-        notifier.fireTestStarted(description);
         StoredCandidate candidate = descriptionStoredCandidateMap.get(description);
         if (candidate != null) {
+            notifier.fireTestStarted(description);
             Throwable throwable = fireTest(mocksById, candidate);
             if (throwable != null) {
                 notifier.fireTestFailure(new Failure(description, throwable));
@@ -356,9 +355,10 @@ public class UnloggedTestRunner extends Runner {
                 executeByDescription(notifier, mocksById, child);
             }
         }
+        if (candidate != null) {
+            notifier.fireTestFinished(description);
+        }
 
-
-        notifier.fireTestFinished(description);
     }
 
     public void collectTests() {
@@ -405,14 +405,19 @@ public class UnloggedTestRunner extends Runner {
         }
     }
 
-    @NotNull
     private Description getTestDescription(Class<?> targetClassTypeInstance, String name, String id) {
         String key = targetClassTypeInstance.getCanonicalName() + name + id;
         if (descriptionMap.containsKey(key)) {
             return descriptionMap.get(key);
         }
-        Description testDescription1 = Description.createTestDescription(targetClassTypeInstance.getCanonicalName(),
-                name, id);
+        Description testDescription1 = null;
+        try {
+            testDescription1 = Description.createTestDescription(
+                    Class.forName(targetClassTypeInstance.getCanonicalName()), name);
+        } catch (ClassNotFoundException e) {
+            testDescription1 = Description.createTestDescription(targetClassTypeInstance.getCanonicalName(),
+                    name, id);
+        }
         descriptionMap.put(key, testDescription1);
         return testDescription1;
     }
