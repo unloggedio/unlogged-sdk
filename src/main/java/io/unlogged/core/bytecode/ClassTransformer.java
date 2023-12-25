@@ -38,6 +38,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashSet<String> methodList = new HashSet<>();
 	private HashMap<String, Integer> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
+	private boolean checkInterface;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -159,7 +160,12 @@ public class ClassTransformer extends ClassVisitor {
             packageName = name.substring(0, index);
             className = name.substring(index + 1);
         }
-
+		if ((access & Opcodes.ACC_INTERFACE) != 0) {
+			this.checkInterface = true;
+		}
+		else {
+			this.checkInterface = false;
+		}
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -200,15 +206,19 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
 		MethodVisitor mv_probed;
-		if (name.equals("<clinit>")) {
-			// clinit is made before this step
-			this.hasStaticInitialiser = true;
-			mv_probed = super.visitMethod(access, name, desc, signature, exceptions);
-			mv_probed = new InitStaticTransformer(mv_probed, fullClassName, this.methodList);
-		}
-		else if (name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
+		if (this.checkInterface || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
 			mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
+		}
+		else if (name.equals("<clinit>")) {
+			// clinit is already defined
+			this.hasStaticInitialiser = true;
+			mv_probed = super.visitMethod(access, name, desc, signature, exceptions);
+
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, "map_store", "Ljava/util/HashMap;", null, null);
+			fieldVisitor.visitEnd();
+
+			mv_probed = new InitStaticTransformer(mv_probed, fullClassName, this.methodList);
 		}
 		else {
 			this.methodList.add(name);
@@ -228,12 +238,13 @@ public class ClassTransformer extends ClassVisitor {
 			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
-		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
+		boolean isStatic = (access & Opcodes.ACC_STATIC) != 0;
+		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name) || this.checkInterface || isStatic) {
 			return mv_probed;
 		}
 
 		int classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
+		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
 		return new CustomMethodVisitor(mv_unprobed, mv_probed);
     }
@@ -241,8 +252,12 @@ public class ClassTransformer extends ClassVisitor {
 	@Override
     public void visitEnd() {
 		
-		if (!this.hasStaticInitialiser) {	
+		if ((!this.hasStaticInitialiser) && (!this.checkInterface)) {	
 			// staticInitialiser is not defined, define one
+
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, "map_store", "Ljava/util/HashMap;", null, null);
+			fieldVisitor.visitEnd();
+
 			this.hasStaticInitialiser = true;
 			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
 			staticNew.visitCode();
