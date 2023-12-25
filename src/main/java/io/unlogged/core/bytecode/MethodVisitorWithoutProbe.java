@@ -62,7 +62,6 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		}
     }
 
-	// TODO: change divisor to long 
 	private long getDivisor(){
 		long divisor = this.defaultCounter;
 
