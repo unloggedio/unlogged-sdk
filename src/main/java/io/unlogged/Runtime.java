@@ -262,19 +262,27 @@ public class Runtime {
         return bytesToIntList(probeToRecordBytes);
     }
 
-	public static boolean probeCounter(int methodCounter, int divisor, Object... arguments) {
-		System.out.println("--------");
-		for (Object localArgument : arguments) {
-            System.out.println(localArgument);
-        }
-		System.out.println("--------");
-		
+	private static boolean frequencyLogging (long methodCounter, long divisor) {
 		if (methodCounter % divisor == 0){
 			return true;
 		}
 		else {
 			return false;
 		}
+	}
+
+	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
+		System.out.println("--------");
+		for (Object localArgument : arguments) {
+            System.out.println(localArgument);
+        }
+		System.out.println("--------");
+		
+		return frequencyLogging(methodCounter, divisor);
+	}
+
+	public static boolean probeCounter(long methodCounter, long divisor) {
+		return frequencyLogging(methodCounter, divisor);
 	}
 
     /**
