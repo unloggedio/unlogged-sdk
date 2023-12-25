@@ -14,7 +14,6 @@ import org.objectweb.asm.commons.TryCatchBlockSorter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -39,7 +38,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashSet<String> methodList = new HashSet<>();
 	private HashMap<String, Integer> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
-	private boolean checkInterface;
+	private boolean alwaysProbe = false;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -161,12 +160,21 @@ public class ClassTransformer extends ClassVisitor {
             packageName = name.substring(0, index);
             className = name.substring(index + 1);
         }
+
+		// check for always probe
 		if ((access & Opcodes.ACC_INTERFACE) != 0) {
-			this.checkInterface = true;
+			// is the class an interface
+			this.alwaysProbe = true;
 		}
-		else {
-			this.checkInterface = false;
+		else if ((access & Opcodes.ACC_ENUM) != 0) {
+			// is the class enum
+			this.alwaysProbe = true;
 		}
+		else if ((access & Opcodes.ACC_STATIC) != 0) {
+			// is the class static
+			this.alwaysProbe = true;
+		}
+
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -207,7 +215,7 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
 		MethodVisitor methodVisitorProbed;
-		if (this.checkInterface || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
+		if (this.alwaysProbe || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
 			methodVisitorProbed = super.visitMethod(access, name , desc, signature, exceptions);
 		}
@@ -239,8 +247,7 @@ public class ClassTransformer extends ClassVisitor {
 			methodVisitorProbed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
-		boolean isStatic = (access & Opcodes.ACC_STATIC) != 0;
-		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name) || this.checkInterface || isStatic) {
+		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name) || this.alwaysProbe) {
 			return methodVisitorProbed;
 		}
 
@@ -253,7 +260,7 @@ public class ClassTransformer extends ClassVisitor {
 	@Override
     public void visitEnd() {
 		
-		if ((!this.hasStaticInitialiser) && (!this.checkInterface)) {	
+		if ((!this.hasStaticInitialiser) && (!this.alwaysProbe)) {	
 			// staticInitialiser is not defined, define one
 
 			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
