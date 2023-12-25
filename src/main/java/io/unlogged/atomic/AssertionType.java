@@ -145,7 +145,7 @@ public enum AssertionType {
                             if (actualValue.toString().equals("0") || actualValue.toString().equals("false")) {
                                 return false;
                             }
-                        } else {
+                        } else  {
                             if (actualValue.toString().equals("1") || actualValue.toString().equals("true")) {
                                 return false;
                             }
@@ -192,34 +192,34 @@ public enum AssertionType {
                 case NOT_NULL:
                     return !actualValue.isNull();
                 case MATCHES_REGEX:
-                    return Pattern.compile(expectedValue.asText()).matcher(actualValue.asText()).matches();
+                    return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
                 case NOT_MATCHES_REGEX:
-                    return !Pattern.compile(expectedValue.asText()).matcher(actualValue.asText()).matches();
+                    return !Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
                 case CONTAINS_KEY:
-                    return actualValue.has(expectedValue.asText());
+                    return actualValue.has(expectedValue.toString());
                 case NOT_CONTAINS_KEY:
-                    return !actualValue.has(expectedValue.asText());
+                    return !actualValue.has(expectedValue.toString());
                 case CONTAINS_ITEM:
                     return arrayNodeContains((ArrayNode) actualValue, expectedValue);
                 case NOT_CONTAINS_ITEM:
                     return !arrayNodeContains((ArrayNode) actualValue, expectedValue);
                 case CONTAINS_STRING:
-                    return actualValue.asText().contains(expectedValue.asText());
+                    return actualValue.toString().contains(expectedValue.toString());
                 case NOT_CONTAINS_STRING:
-                    return !actualValue.asText().contains(expectedValue.asText());
+                    return !actualValue.toString().contains(expectedValue.toString());
 
                 case ENDS_WITH:
-                    return actualValue.asText().endsWith(expectedValue.asText());
+                    return actualValue.toString().endsWith(expectedValue.toString());
 
                 case NOT_ENDS_WITH:
-                    return !actualValue.asText().endsWith(expectedValue.asText());
+                    return !actualValue.toString().endsWith(expectedValue.toString());
 
 
                 case STARTS_WITH:
-                    return actualValue.asText().startsWith(expectedValue.asText());
+                    return actualValue.toString().startsWith(expectedValue.toString());
 
                 case NOT_STARTS_WITH:
-                    return !actualValue.asText().startsWith(expectedValue.asText());
+                    return !actualValue.toString().startsWith(expectedValue.toString());
 
             }
             return false;
