@@ -1,5 +1,6 @@
 package io.unlogged.core.bytecode;
 
+import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
@@ -205,48 +206,48 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
-		MethodVisitor mv_probed;
+		MethodVisitor methodVisitorProbed;
 		if (this.checkInterface || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
-			mv_probed = super.visitMethod(access, name , desc, signature, exceptions);
+			methodVisitorProbed = super.visitMethod(access, name , desc, signature, exceptions);
 		}
 		else if (name.equals("<clinit>")) {
 			// clinit is already defined
 			this.hasStaticInitialiser = true;
-			mv_probed = super.visitMethod(access, name, desc, signature, exceptions);
+			methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, "map_store", "Ljava/util/HashMap;", null, null);
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();
 
-			mv_probed = new InitStaticTransformer(mv_probed, fullClassName, this.methodList);
+			methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
 		}
 		else {
 			this.methodList.add(name);
 			String name_probed = name + "_PROBED";
-			mv_probed = super.visitMethod(access, name_probed , desc, signature, exceptions);
+			methodVisitorProbed = super.visitMethod(access, name_probed , desc, signature, exceptions);
 		}
 
 		// add probe
-		if (mv_probed != null) {
-			mv_probed = new TryCatchBlockSorter(mv_probed, access, name, desc, signature, exceptions);
+		if (methodVisitorProbed != null) {
+			methodVisitorProbed = new TryCatchBlockSorter(methodVisitorProbed, access, name, desc, signature, exceptions);
 			MethodTransformer transformer_probed = new MethodTransformer(
 					weavingInfo, config, sourceFileName,
 					fullClassName, outerClassName, access,
-					name, desc, signature, exceptions, mv_probed
+					name, desc, signature, exceptions, methodVisitorProbed
 			);
 
-			mv_probed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
+			methodVisitorProbed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
 		}
 		
 		boolean isStatic = (access & Opcodes.ACC_STATIC) != 0;
 		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name) || this.checkInterface || isStatic) {
-			return mv_probed;
+			return methodVisitorProbed;
 		}
 
 		int classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe mv_unprobed = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
+		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
-		return new CustomMethodVisitor(mv_unprobed, mv_probed);
+		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
     }
 
 	@Override
@@ -255,7 +256,7 @@ public class ClassTransformer extends ClassVisitor {
 		if ((!this.hasStaticInitialiser) && (!this.checkInterface)) {	
 			// staticInitialiser is not defined, define one
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, "map_store", "Ljava/util/HashMap;", null, null);
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();
 
 			this.hasStaticInitialiser = true;
@@ -273,11 +274,11 @@ public class ClassTransformer extends ClassVisitor {
 				false
 			);
 
-			// Store the instance in the static field map_store
+			// Store the instance in the static field mapStore
 			staticNew.visitFieldInsn(
 				Opcodes.PUTSTATIC,
 				fullClassName,
-				"map_store",
+				Constants.mapStoreCompileValue,
 				Type.getDescriptor(java.util.HashMap.class)
 			);
 
@@ -285,7 +286,7 @@ public class ClassTransformer extends ClassVisitor {
 				staticNew.visitFieldInsn(
 					Opcodes.GETSTATIC,
 					this.fullClassName,
-					"map_store",
+					Constants.mapStoreCompileValue,
 					"Ljava/util/HashMap;"
 				);
 	

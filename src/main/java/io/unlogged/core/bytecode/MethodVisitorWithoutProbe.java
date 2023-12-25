@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.objectweb.asm.*;
 
+import io.unlogged.Constants;
 import io.unlogged.core.processor.UnloggedProcessor;
 import io.unlogged.util.ClassTypeUtil;
 
@@ -80,32 +81,32 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: map_store.put(method_name, map_store.get(method_name) + 1);
+		// Start of block-A. This adds the line: mapStore.put(method_name, mapStore.get(method_name) + 1);
 
-		// load map_store
+		// load mapStore
 		mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			"map_store",
+			Constants.mapStoreCompileValue,
 			"Ljava/util/HashMap;"
 		);
 
-		// load string for map_store
+		// load string for mapStore
 		mv.visitLdcInsn(this.methodName);
 
-		// Start of block-B. This adds the logic for  map_store.get("method_name") + 1 and loads the value to stack
-		// load map_store
+		// Start of block-B. This adds the logic for  mapStore.get("method_name") + 1 and loads the value to stack
+		// load mapStore
         mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			"map_store",
+			Constants.mapStoreCompileValue,
 			"Ljava/util/HashMap;"
         );
 		
 		// load method name 
 		mv.visitLdcInsn(this.methodName);
 
-		// invoke get of map_store for method name
+		// invoke get of mapStore for method name
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
@@ -125,7 +126,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		);
 
 
-		// increment the map_store counter 
+		// increment the mapStore counter 
 		mv.visitLdcInsn(1L);
 		mv.visitInsn(Opcodes.LADD);
 		// End of Block-B
@@ -161,14 +162,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			"map_store",
+			Constants.mapStoreCompileValue,
 			"Ljava/util/HashMap;"
         );
 
 		// load the method name 
 		mv.visitLdcInsn(this.methodName);
 
-		// this is logic for: map_store.get("method_name") + 1
+		// this is logic for: mapStore.get("method_name") + 1
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
