@@ -194,20 +194,6 @@ public class StoredCandidate implements Comparable<StoredCandidate> {
     }
 
 
-    public void copyFrom(StoredCandidate candidate) {
-        this.setCandidateId(candidate.getCandidateId());
-        this.setName(candidate.getName());
-        this.setDescription(candidate.getDescription());
-        this.setReturnValue(candidate.getReturnValue());
-        this.setSessionIdentifier(candidate.getSessionIdentifier());
-        this.setEntryProbeIndex(candidate.getEntryProbeIndex());
-        this.setProbSerializedValue(candidate.getProbSerializedValue());
-        this.setException(candidate.isException());
-        this.setReturnValueClassname(candidate.getReturnValueClassname());
-        this.setLineNumbers(candidate.getLineNumbers());
-        this.setTestAssertions(candidate.getTestAssertions());
-    }
-
     public AtomicAssertion getTestAssertions() {
         return testAssertions;
     }

@@ -5,24 +5,30 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.unlogged.mocking.construction.JsonDeserializer;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.*;
 import org.objenesis.Objenesis;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 
 public class MockHandler {
-    private final List<DeclaredMock> declaredMocks = new ArrayList<>();
     private final ObjectMapper objectMapper;
+
+
+    private final List<DeclaredMock> declaredMocks = new ArrayList<>();
     private final ByteBuddy byteBuddy;
     private final Objenesis objenesis;
     private final Object originalImplementation;
@@ -31,6 +37,8 @@ public class MockHandler {
     private final ClassLoader targetClassLoader;
     private final Field field;
 
+    private final JsonDeserializer jsonDeserializer;
+
     public MockHandler(
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
@@ -38,6 +46,7 @@ public class MockHandler {
             Objenesis objenesis, Object originalImplementation,
             Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
         this.objectMapper = objectMapper;
+        this.jsonDeserializer = new JsonDeserializer(objectMapper);
         this.byteBuddy = byteBuddy;
         this.objenesis = objenesis;
         this.originalImplementation = originalImplementation;
@@ -59,6 +68,7 @@ public class MockHandler {
         }
         return typeFactory.constructFromCanonical(classNameToBeConstructed);
     }
+
 
     public Field getField() {
         return field;
@@ -105,43 +115,13 @@ public class MockHandler {
                         return null;
                     }
                     ReturnValue returnParameter = thenParameter.getReturnParameter();
+                    ClassLoader classLoader = thisInstance.getClass().getClassLoader();
                     switch (returnParameter.getReturnValueType()) {
                         case REAL:
                             try {
-                                if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
-                                    if (returnParameter.getValue() != null && returnParameter.getValue().length() > 0) {
-
-                                        TypeFactory typeFactory = objectMapper.getTypeFactory()
-                                                .withClassLoader(thisInstance.getClass().getClassLoader());
-
-
-                                        JavaType typeReference;
-                                        try {
-                                            String classNameToBeConstructed = returnParameter.getClassName();
-                                            typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
-                                        } catch (Exception e) {
-                                            // failed to construct from the canonical name,
-                                            // happens when this is a generic type
-                                            // so we try to construct using type from the method param class
-                                            typeReference = typeFactory.constructType(invokedMethod.getReturnType());
-                                        }
-
-                                        returnValueInstance = objectMapper.readValue(returnParameter.getValue(),
-                                                typeReference);
-                                    }
-                                } else {
-                                    // this is an instance of exception class
-                                    Class<?> exceptionClassType = thisInstance.getClass().getClassLoader()
-                                            .loadClass(returnParameter.getClassName());
-                                    try {
-                                        Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(
-                                                String.class);
-                                        returnValueInstance =
-                                                constructorWithMessage.newInstance(returnParameter.getValue());
-                                    } catch (Exception e) {
-                                        returnValueInstance = exceptionClassType.getConstructor().newInstance();
-                                    }
-                                }
+                                returnValueInstance = createReturnValueInstance(thenParameter,
+                                        invokedMethod, classLoader, returnParameter.getClassName(),
+                                        returnParameter.getValue());
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 System.err.println("Failed to create instance of class [" +
@@ -157,7 +137,7 @@ public class MockHandler {
                                     .subclass(fieldType)
                                     .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
                                     .make()
-                                    .load(thisInstance.getClass().getClassLoader());
+                                    .load(classLoader);
 
                             returnValueInstance = objenesis.newInstance(loadedMockedField.getLoaded());
                             break;
@@ -183,18 +163,79 @@ public class MockHandler {
 //                .getCanonicalName() + "] with args [" + Arrays.asList(methodArguments)
 //                + "] on " + superInstance.getClass().getCanonicalName() + " from " + thisInstance.getClass().getCanonicalName());
 
-        if (originalImplementation == null) {
-            if (field != null) {
-                System.err.println(
-                        "originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
-            } else {
-                System.err.println("originalImplementation is null");
+//        if (originalImplementation == null) {
+//            if (field != null) {
+//                System.err.println(
+//                        "originalImplementation is null " + field.getType().getCanonicalName() + " " + field.getName());
+//            } else {
+//                System.err.println("originalImplementation is null");
+//            }
+//        }
+//        Method realMethod = originalImplementation.getClass()
+//                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
+        return invokedMethod.invoke(originalImplementation, methodArguments);
+    }
+
+    private Object createReturnValueInstance(ThenParameter thenParameter, Method invokedMethod, ClassLoader classLoader, String classNameToBeConstructed, String returnValueSerialized)
+            throws Exception {
+        Object returnValueInstance = null;
+        TypeFactory typeFactory = objectMapper.getTypeFactory().withClassLoader(classLoader);
+
+        if (thenParameter.getMethodExitType() == MethodExitType.NORMAL) {
+            if (returnValueSerialized != null && returnValueSerialized.length() > 0) {
+                JavaType typeReference;
+                try {
+                    if (classNameToBeConstructed.startsWith("java.util.concurrent.CompletableFuture<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util.concurrent" +
+                                ".CompletableFuture<").length(), classNameToBeConstructed.length() - 1);
+//                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = createReturnValueInstance(thenParameter, invokedMethod, classLoader,
+                                futureClassName, returnValueSerialized);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return CompletableFuture.supplyAsync(() -> finalReturnValueInstance);
+                    }
+                    if (classNameToBeConstructed.startsWith("java.util.Optional<")) {
+                        String futureClassName = classNameToBeConstructed.substring(("java.util" +
+                                ".Optional<").length(), classNameToBeConstructed.length() - 1);
+//                        typeReference = getTypeReference(typeFactory, futureClassName);
+                        returnValueInstance = createReturnValueInstance(thenParameter, invokedMethod, classLoader,
+                                futureClassName, returnValueSerialized);
+                        Object finalReturnValueInstance = returnValueInstance;
+                        return Optional.of(finalReturnValueInstance);
+                    }
+                    typeReference = getTypeReference(typeFactory, classNameToBeConstructed);
+                } catch (Exception e) {
+                    // failed to construct from the canonical name,
+                    // happens when this is a generic type
+                    // so we try to construct using type from the method param class
+                    typeReference = typeFactory.constructType(invokedMethod.getReturnType());
+                }
+
+                if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Mono")) {
+                    returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
+                            typeReference.containedType(0)));
+                } else if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Flux")) {
+                    returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnValueSerialized,
+                            typeFactory.constructArrayType(typeReference.containedType(0))));
+                } else {
+                    returnValueInstance = jsonDeserializer.createInstance(returnValueSerialized, typeReference);
+                }
+
+            }
+
+        } else {
+            // this is an instance of exception class
+            Class<?> exceptionClassType = classLoader.loadClass(classNameToBeConstructed);
+            try {
+                Constructor<?> constructorWithMessage = exceptionClassType.getConstructor(String.class);
+                returnValueInstance = constructorWithMessage.newInstance(returnValueSerialized);
+            } catch (Exception e) {
+                returnValueInstance = exceptionClassType.getConstructor().newInstance();
             }
         }
-        Method realMethod = originalImplementation.getClass()
-                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
-        return realMethod.invoke(originalImplementation, methodArguments);
+        return returnValueInstance;
     }
+
 
     private boolean isParameterMatched(ParameterMatcher parameterMatcher, Object argument) {
         boolean mockMatched = true;
@@ -342,4 +383,5 @@ public class MockHandler {
     public void removeDeclaredMock(List<DeclaredMock> mocksToRemove) {
         this.declaredMocks.removeAll(mocksToRemove);
     }
+
 }

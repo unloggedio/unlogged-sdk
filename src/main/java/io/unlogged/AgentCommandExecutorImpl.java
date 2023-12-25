@@ -413,7 +413,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 closeHibernateSessionIfPossible(sessionInstance);
             }
         } catch (Throwable exception) {
-            exception.printStackTrace();
+//            exception.printStackTrace();
             Throwable exceptionCause = exception.getCause() != null ? exception.getCause() : exception;
             agentCommandResponse.setMessage(exceptionCause.getMessage());
             try {
@@ -712,10 +712,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 continue;
                             }
                         }
-                        if (Modifier.isFinal(field.getModifiers())) {
-                            continue;
+//                        if (Modifier.isFinal(field.getModifiers())) {
+//                            continue;
+//                        }
+                        try {
+                            field.set(extendedClassInstance, fieldValue);
+                        } catch (Throwable e) {
+                            //
                         }
-                        field.set(extendedClassInstance, fieldValue);
                     } else {
 
                         String key = targetClassName + "#" + field.getName();
@@ -1147,7 +1151,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             noArgsConstructor = loadedClass.getConstructor();
             try {
                 newInstance = noArgsConstructor.newInstance();
-            } catch (InvocationTargetException e) {
+            } catch (InvocationTargetException | InstantiationException e) {
 //                throw new RuntimeException(e);
             }
         } catch (NoSuchMethodException e) {
@@ -1172,7 +1176,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (newInstance == null) {
             try {
                 newInstance = objenesis.newInstance(loadedClass);
-            } catch (java.lang.InstantiationError e) {
+            } catch (java.lang.InstantiationError | IllegalAccessError e) {
                 // failed to create using objenesis
             }
         }
@@ -1227,7 +1231,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     if (value == null) {
                         continue;
                     }
-                    buildMap.put(className, value);
+                    buildMap.put(fieldTypeName, value);
                 }
                 try {
                     field.set(newInstance, value);

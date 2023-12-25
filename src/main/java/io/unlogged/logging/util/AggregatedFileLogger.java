@@ -6,8 +6,6 @@ import java.io.IOException;
 public interface AggregatedFileLogger {
     void writeNewObjectType(long id, long typeId);
 
-    void writeNewString(long id, String stringObject);
-
     void writeEvent(int id, long value);
 
 

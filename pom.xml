@@ -349,10 +349,10 @@
                             <pattern>net.bytebuddy</pattern>
                             <shadedPattern>selogger.net.bytebuddy</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>net.openhft</pattern>
-                            <shadedPattern>selogger.net.openhft</shadedPattern>
-                        </relocation>
+<!--                        <relocation>-->
+<!--                            <pattern>net.openhft</pattern>-->
+<!--                            <shadedPattern>selogger.net.openhft</shadedPattern>-->
+<!--                        </relocation>-->
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>selogger.com.fasterxml.jackson</shadedPattern>

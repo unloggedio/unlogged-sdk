@@ -79,8 +79,10 @@ public class AtomicRecordService {
 //            return new TreeMap<>();
 //        }
         for (File file : files) {
-            System.out.println("Load resource file: " + file.getPath());
             AtomicRecord record = getAtomicRecordFromFile(file);
+            logger.info("Loaded " + (int) record.getStoredCandidateMap().values()
+                    .stream().flatMap(Collection::stream).count()
+                    + " candidates from resource file: " + file.getPath());
             if (record != null) {
                 String classname = record.getClassname();
                 recordsMap.put(classname, record);
