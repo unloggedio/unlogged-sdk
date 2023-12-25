@@ -41,13 +41,38 @@ public class InitStaticTransformer extends MethodVisitor {
 		);
 
 		for (String localMethod: this.methodList) { 
+			mv.visitFieldInsn(
+				Opcodes.GETSTATIC,
+				this.fullClassName,
+				"map_store",
+				"Ljava/util/HashMap;"
+			);
+
 			mv.visitLdcInsn(localMethod);
-			mv.visitLdcInsn(0);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "map_store", "put", "(Ljava/lang/String;I)V", false);
+			mv.visitLdcInsn(0L);
+
+			// cast long_object to long_primitive
+			mv.visitMethodInsn(
+				Opcodes.INVOKESTATIC,
+				Type.getInternalName(Long.class),
+				"valueOf",
+				"(J)Ljava/lang/Long;",
+				false
+			);
+
+			mv.visitMethodInsn(
+				Opcodes.INVOKEVIRTUAL,
+				Type.getInternalName(java.util.HashMap.class),
+				"put",
+				"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+				false
+			);
+
+			mv.visitInsn(Opcodes.POP);
 		}
 
 		mv.visitInsn(Opcodes.RETURN);
-		mv.visitMaxs(2, 0);
+		mv.visitMaxs(0, 0);
 		mv.visitEnd();
 	}
 }
