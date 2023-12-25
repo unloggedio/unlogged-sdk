@@ -73,7 +73,6 @@ public class InitStaticTransformer extends MethodVisitor {
 			mv.visitInsn(Opcodes.POP);
 		}
 
-		mv.visitInsn(Opcodes.RETURN);
 		mv.visitMaxs(0, 0);
 		mv.visitEnd();
 	}
