@@ -274,12 +274,13 @@ public class Runtime {
 	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
 		System.out.println("--------");
 		for (Object localArgument : arguments) {
-            System.out.println(localArgument);
-        }
+			System.out.println(localArgument);
+		}
 		System.out.println("--------");
 		
 		return frequencyLogging(methodCounter, divisor);
 	}
+	
 
 	public static boolean probeCounter(long methodCounter, long divisor) {
 		return frequencyLogging(methodCounter, divisor);

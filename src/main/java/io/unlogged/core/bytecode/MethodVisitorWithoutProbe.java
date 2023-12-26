@@ -214,17 +214,20 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		long divisor = getDivisor();
 		mv.visitLdcInsn(divisor);
 
-		// load arguments of method in stack and define the desc of calling method
-		pushArgument(mv, true);
-		int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
 		String descParsedString = "";
-		for (int i=0;i<=descSize-2;i++) {
-			descParsedString = descParsedString + "Ljava/lang/Object;";
+		if (System.getenv("UNLOGGED_SDK_ARGSEND_FLAG").toString().equals("TRUE")) {
+			// load arguments of method in stack and define the desc of calling method
+			pushArgument(mv, true);
+			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
+			
+			for (int i=0;i<=descSize-2;i++) {
+				descParsedString = descParsedString + "Ljava/lang/Object;";
 
+			}
 		}
-		String probeCounterDesc = "(JJ" + descParsedString + ")Z";
-		
+
 		// call the probeCounter method
+		String probeCounterDesc = "(JJ" + descParsedString + ")Z";
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
 		
 		// add the exit jump
