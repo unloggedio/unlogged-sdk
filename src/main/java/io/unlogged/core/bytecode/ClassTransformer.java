@@ -179,6 +179,9 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc,
                                      String signature, String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
+        if (name.equals("equals") || name.equals("hashCode")) {
+            return mv;
+        }
         if (mv != null) {
             mv = new TryCatchBlockSorter(mv, access, name, desc, signature, exceptions);
             MethodTransformer trans = new MethodTransformer(
