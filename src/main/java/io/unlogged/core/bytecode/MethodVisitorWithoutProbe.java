@@ -31,34 +31,56 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.defaultCounter = UnloggedProcessor.getDefaultCounter();
 	}
 
-	private void pushArgument(MethodVisitor mvs) {
+	private void pushArgument(MethodVisitor mv, boolean boxing) {
 
 		Type[] argumentTypes = Type.getArgumentTypes(this.desc);
+		int argIndex = 1;
+
 		for (int i = 0; i <= argumentTypes.length-1; i++) {
-			
-			int argIndex = i+1;
 			Type argType = argumentTypes[i];
-			
+			int loadOpcode;
+			String boxingType;
+
 			// Determine the opcode based on the argument type
-			int opcode;
 			if (argType.equals(Type.INT_TYPE) || argType.equals(Type.BOOLEAN_TYPE) || argType.equals(Type.CHAR_TYPE) || argType.equals(Type.SHORT_TYPE) || argType.equals(Type.BYTE_TYPE)) {
-				opcode = Opcodes.ILOAD;
+				loadOpcode = Opcodes.ILOAD;
+				boxingType = "java/lang/Integer";
 			} else if (argType.equals(Type.FLOAT_TYPE)) {
-				opcode = Opcodes.FLOAD;
+				loadOpcode = Opcodes.FLOAD;
+				boxingType = "java/lang/Float";
 			} else if (argType.equals(Type.LONG_TYPE)) {
-				opcode = Opcodes.LLOAD;
+				loadOpcode = Opcodes.LLOAD;
+				boxingType = "java/lang/Long";
 			} else if (argType.equals(Type.DOUBLE_TYPE)) {
-				opcode = Opcodes.DLOAD;
+				loadOpcode = Opcodes.DLOAD;
+				boxingType = "java/lang/Double";
 			} else {
-				opcode = Opcodes.ALOAD;
+				loadOpcode = Opcodes.ALOAD;
+				boxingType = "java/lang/Object";
 			}
 
 			// Load the argument onto the stack
-			mv.visitVarInsn(opcode, argIndex);
+			mv.visitVarInsn(loadOpcode, argIndex);
+
+			// Box the primitive type if necessary
+			if (boxing && !argType.equals(Type.OBJECT)) {
+				String typeDescriptor = argType.getDescriptor();
+				String boxingDescriptor = "L" + boxingType + ";";
+				mv.visitMethodInsn(
+						Opcodes.INVOKESTATIC,
+						boxingType,
+						"valueOf",
+						"(" + typeDescriptor + ")" + boxingDescriptor,
+						false
+				);
+			}
 			
-			// If the argument type is double or long, increment the index again
+			// If the argument type is double or long, increment the index by 2
 			if (argType.equals(Type.LONG_TYPE) || argType.equals(Type.DOUBLE_TYPE)) {
-				argIndex++;
+				argIndex += 2;
+			}
+			else {
+				argIndex += 1;
 			}
 		}
     }
@@ -193,11 +215,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitLdcInsn(divisor);
 
 		// load arguments of method in stack and define the desc of calling method
-		pushArgument(mv);
-		List<String> descParsed = ClassTypeUtil.splitMethodDesc(this.desc);
+		pushArgument(mv, true);
+		int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
 		String descParsedString = "";
-		for (int i=0;i<=descParsed.size()-2;i++) {
-			descParsedString = descParsedString + descParsed.get(i);
+		for (int i=0;i<=descSize-2;i++) {
+			descParsedString = descParsedString + "Ljava/lang/Object;";
+
 		}
 		String probeCounterDesc = "(JJ" + descParsedString + ")Z";
 		
@@ -207,14 +230,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// add the exit jump
 		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 
-		// call the line for invoking the unprobed method
+		// call the line for invoking the probed method
 		boolean isStatic = (this.access & Opcodes.ACC_STATIC) != 0;
 		if (isStatic) {
 			mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
 		}
 		else{
 			visitVarInsn(Opcodes.ALOAD, 0);
-			pushArgument(mv);
+			pushArgument(mv, false);
 			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
 		}
 		
