@@ -215,6 +215,10 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
 		MethodVisitor methodVisitorProbed;
+		if (name.equals("equals") || name.equals("hashCode")) {
+			MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
+            return mv;
+        }
 		if (this.alwaysProbe || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
 			// constructor method
 			methodVisitorProbed = super.visitMethod(access, name , desc, signature, exceptions);
