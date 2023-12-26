@@ -36,7 +36,7 @@ public class ClassTransformer extends ClassVisitor {
     private byte[] weaveResult;
     private String classLoaderIdentifier;
 	private HashSet<String> methodList = new HashSet<>();
-	private HashMap<String, Integer> classCounterMap = new HashMap<>();
+	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
 	private boolean alwaysProbe = false;
 
@@ -91,8 +91,8 @@ public class ClassTransformer extends ClassVisitor {
 				public void visit(String key, Object value) {
 					// check for key string
 					if ("loggingFrequency".equals(key)) {
-						Integer valueInteger = Integer.parseInt((String)value);
-						classCounterMap.put(className, valueInteger);
+						long valueLong = Long.parseLong((String)value);
+						classCounterMap.put(className, valueLong);
 					}
 					super.visit(key, value);
 				}
@@ -251,7 +251,7 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 
-		int classCounter = getCounter(this.classCounterMap, className);
+		long classCounter = getCounter(this.classCounterMap, className);
 		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
 		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
@@ -329,9 +329,9 @@ public class ClassTransformer extends ClassVisitor {
     }
 
 
-	private int getCounter (HashMap<String, Integer> mapCounter, String key) {
+	private long getCounter (HashMap<String, Long> mapCounter, String key) {
 		if (mapCounter.get(key) == null) {
-			return 0;
+			return (long)0;
 		}
 		else {
 			return mapCounter.get(key);

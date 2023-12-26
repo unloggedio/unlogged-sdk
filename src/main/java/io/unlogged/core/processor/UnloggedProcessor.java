@@ -49,7 +49,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
-	private static int defaultCounter;
+	private static long defaultCounter;
 
     public UnloggedProcessor() {
 //        System.out.println("HelloUnloggedProcessor");
@@ -362,7 +362,7 @@ public class UnloggedProcessor extends AbstractProcessor {
         }
     }
 
-	public static int getDefaultCounter() {
+	public static long getDefaultCounter() {
 		return defaultCounter;
 	}
 
@@ -374,7 +374,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
 			Unlogged unlogged = element.getAnnotation(Unlogged.class);
-			defaultCounter = Integer.parseInt(unlogged.loggingFrequency());
+			defaultCounter = Long.parseLong(unlogged.loggingFrequency());
 		}
 
         if (roundEnv.processingOver()) {

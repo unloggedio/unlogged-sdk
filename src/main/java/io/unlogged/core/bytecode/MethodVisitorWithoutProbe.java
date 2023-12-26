@@ -1,7 +1,6 @@
 package io.unlogged.core.bytecode;
 
 import java.util.HashMap;
-import java.util.List;
 
 import org.objectweb.asm.*;
 
@@ -15,12 +14,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String fullClassName;
 	private String desc;
 	private String nameProbed;
-	private int classCounter;
-	private int defaultCounter;
-	private HashMap<String, Integer> methodCounter = new HashMap<String, Integer>();
+	private long classCounter;
+	private long defaultCounter;
+	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, int access, String desc, int classCounter, MethodVisitor mv) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
@@ -89,13 +88,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		long divisor = this.defaultCounter;
 
 		// write classCounter if defined 
-		if (this.classCounter != 0) {
-			divisor = (long)this.classCounter;
+		if (this.classCounter != (long)0) {
+			divisor = this.classCounter;
 		}
 
 		// write methodCounter if defined
 		if (this.methodCounter.get(this.methodName) != null) {
-			divisor = (long)this.methodCounter.get(this.methodName);
+			divisor = this.methodCounter.get(this.methodName);
 		}
 
 		return divisor;
@@ -176,7 +175,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// End of Block-A
 
 		// Start of block-C
-		// This adds the line for if (probecounter)
+		// This adds the line for if (probecounter(methodCounter, divisor, argument_list))
 		// add the if condition
 		Label exitLabel = new Label();
 
@@ -191,7 +190,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// load the method name 
 		mv.visitLdcInsn(this.methodName);
 
-		// this is logic for: mapStore.get("method_name") + 1
+		// this is logic for: mapStore.get("method_name")
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
@@ -286,8 +285,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 				public void visit(String key, Object value) {
 					// check for key string
 					if ("loggingFrequency".equals(key)) {
-						Integer valueInteger = Integer.parseInt((String)value);
-						methodCounter.put(methodName, valueInteger);
+						long valueLong = Long.parseLong((String)value);
+						methodCounter.put(methodName, valueLong);
 					}
 					super.visit(key, value);
 				}
