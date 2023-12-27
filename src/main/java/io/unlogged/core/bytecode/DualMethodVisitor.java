@@ -13,10 +13,9 @@ public class DualMethodVisitor extends MethodVisitor {
 		this.methodVisitorProbed = methodVisitorProbed;
 	}
 
-	@Override
-	public MethodVisitor getDelegate() {
-		return methodVisitorWithoutProbe;
-	}
+	/*
+	 * unimplemented method: getDelegate
+	 */
 
 	@Override
 	public AnnotationVisitor visitAnnotationDefault() {
