@@ -4,18 +4,6 @@ import org.objectweb.asm.*;
 
 public class DualMethodVisitor extends MethodVisitor {
 
-	/*
-	 * unimplemented methods on MethodVisitor:
-	 * getDelegate
-	 * visitAnnotationDefault
-	 * visitAnnotation
-	 * visitTypeAnnotation
-	 * visitParameterAnnotation
-	 * visitInsnAnnotation
-	 * visitTryCatchAnnotation
-	 * visitLocalVariableAnnotation
-	 */
-
 	private final MethodVisitorWithoutProbe methodVisitorWithoutProbe;
 	private final MethodVisitor methodVisitorProbed;
 
@@ -23,6 +11,92 @@ public class DualMethodVisitor extends MethodVisitor {
 		super(Opcodes.ASM7);
 		this.methodVisitorWithoutProbe = methodVisitorWithoutProbe;
 		this.methodVisitorProbed = methodVisitorProbed;
+	}
+
+	@Override
+	public MethodVisitor getDelegate() {
+		return methodVisitorWithoutProbe;
+	}
+
+	@Override
+	public AnnotationVisitor visitAnnotationDefault() {
+		if (methodVisitorWithoutProbe != null) {
+			return methodVisitorWithoutProbe.visitAnnotationDefault();
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+			return methodVisitorWithoutProbe.visitAnnotation(descriptor, visible);
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitTypeAnnotation(final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+		return methodVisitorWithoutProbe.visitTypeAnnotation(typeRef, typePath, descriptor, visible);
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitParameterAnnotation(
+    final int parameter, final String descriptor, final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+		return methodVisitorWithoutProbe.visitParameterAnnotation(parameter, descriptor, visible);
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitInsnAnnotation(
+    final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+		return methodVisitorWithoutProbe.visitInsnAnnotation(typeRef, typePath, descriptor, visible);
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitTryCatchAnnotation(
+	final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+		return methodVisitorWithoutProbe.visitTryCatchAnnotation(typeRef, typePath, descriptor, visible);
+		}
+		else {
+			return null;
+		}
+	}
+
+	@Override
+	public AnnotationVisitor visitLocalVariableAnnotation(
+		final int typeRef,
+		final TypePath typePath,
+		final Label[] start,
+		final Label[] end,
+		final int[] index,
+		final String descriptor,
+		final boolean visible) {
+		if (methodVisitorWithoutProbe != null) {
+		return methodVisitorWithoutProbe.visitLocalVariableAnnotation(
+		typeRef, typePath, start, end, index, descriptor, visible);
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override
