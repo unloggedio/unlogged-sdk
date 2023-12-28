@@ -23,4 +23,6 @@ public @interface Unlogged {
     boolean enable() default true;
 
 	String loggingFrequency() default "1";
+
+	ExperimentalSDKFlagType argumentSend() default ExperimentalSDKFlagType.DISABLED;
 }

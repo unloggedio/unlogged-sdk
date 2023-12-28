@@ -5,6 +5,7 @@ import java.util.HashMap;
 import org.objectweb.asm.*;
 
 import io.unlogged.Constants;
+import io.unlogged.ExperimentalSDKFlagType;
 import io.unlogged.core.processor.UnloggedProcessor;
 import io.unlogged.util.ClassTypeUtil;
 
@@ -16,6 +17,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String nameProbed;
 	private long classCounter;
 	private long defaultCounter;
+	private ExperimentalSDKFlagType argumentSend;
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
 
@@ -28,6 +30,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.classCounter = classCounter;
 		this.nameProbed = this.methodName + "_PROBED";
 		this.defaultCounter = UnloggedProcessor.getDefaultCounter();
+		this.argumentSend = UnloggedProcessor.getArgumentSend();
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
@@ -214,14 +217,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitLdcInsn(divisor);
 
 		String descParsedString = "";
-		if (System.getenv("UNLOGGED_SDK_ARGSEND_FLAG").toString().equals("TRUE")) {
+		if (this.argumentSend == ExperimentalSDKFlagType.ENABLED) {
 			// load arguments of method in stack and define the desc of calling method
 			pushArgument(mv, true);
 			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
 			
 			for (int i=0;i<=descSize-2;i++) {
 				descParsedString = descParsedString + "Ljava/lang/Object;";
-
 			}
 		}
 

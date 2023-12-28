@@ -8,6 +8,8 @@ import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
+
+import io.unlogged.ExperimentalSDKFlagType;
 import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
@@ -50,6 +52,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
 	private static long defaultCounter;
+	private static ExperimentalSDKFlagType argumentSend;
 
     public UnloggedProcessor() {
 //        System.out.println("HelloUnloggedProcessor");
@@ -366,6 +369,10 @@ public class UnloggedProcessor extends AbstractProcessor {
 		return defaultCounter;
 	}
 
+	public static ExperimentalSDKFlagType getArgumentSend() {
+		return argumentSend;
+	}
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
@@ -375,6 +382,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
 			Unlogged unlogged = element.getAnnotation(Unlogged.class);
 			defaultCounter = Long.parseLong(unlogged.loggingFrequency());
+			argumentSend = unlogged.argumentSend();
 		}
 
         if (roundEnv.processingOver()) {
