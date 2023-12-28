@@ -473,7 +473,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             } else if (className.contains("$")) {
                 className = className.substring(0, className.indexOf('$'));
             }
-            if (!(originalClassName.contains("$EnhancerBySpringCGLIB") && objectMap.containsKey(className))) {
+            if (!objectMap.containsKey(className)) {
+                objectMap.put(className, new WeakReference<>(value));
+            } else if (originalClassName.contains("$EnhancerBySpringCGLIB")) {
+                objectMap.put(className, new WeakReference<>(value));
+            } else if (originalClassName.contains("$SpringCGLIB")) {
                 objectMap.put(className, new WeakReference<>(value));
             }
             if (targetClassLoader == null && value != null) {
@@ -484,7 +488,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
         long objectId = objectIdMap.getId(value);
 
-        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(objectId)) {
+        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(
+                objectId)) {
 
             if (DEBUG && value != null) {
                 System.out.println("record serialized value for probe [" + dataId + "] -> " + value.getClass());
