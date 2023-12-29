@@ -4,7 +4,7 @@ import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
-import io.unlogged.util.ClassTypeUtil;
+import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -38,7 +38,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashSet<String> methodList = new HashSet<>();
 	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
-	private boolean alwaysProbe = false;
+	private boolean alwaysProbeClassFlag = false;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -81,6 +81,21 @@ public class ClassTransformer extends ClassVisitor {
         this.config = config;
         this.classWriter = cw;
     }
+
+	private MethodVisitor addProbe (MethodVisitor methodVisitorProbed, int access, String name, String desc, String[] exceptions) {
+		if (methodVisitorProbed != null) {
+			methodVisitorProbed = new TryCatchBlockSorter(methodVisitorProbed, access, name, desc, signature, exceptions);
+			MethodTransformer transformer_probed = new MethodTransformer(
+					weavingInfo, config, sourceFileName,
+					fullClassName, outerClassName, access,
+					name, desc, signature, exceptions, methodVisitorProbed
+			);
+
+			methodVisitorProbed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
+		}
+		return methodVisitorProbed;
+	}
+
 
     @Override
     public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
@@ -161,24 +176,11 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
-		// check for always probe
-		if ((access & Opcodes.ACC_INTERFACE) != 0) {
-			// is the class an interface
-			this.alwaysProbe = true;
-		}
-		else if ((access & Opcodes.ACC_ENUM) != 0) {
-			// is the class enum
-			this.alwaysProbe = true;
-		}
-		else if ((access & Opcodes.ACC_STATIC) != 0) {
-			// is the class static
-			this.alwaysProbe = true;
-		}
-
+		this.alwaysProbeClassFlag = ProbeFlagUtil.getalwaysProbeClassFlag(access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
-    /**
+	/**
      * A call back from the ClassVisitor.
      * Record the source file name.
      */
@@ -214,47 +216,41 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
-		MethodVisitor methodVisitorProbed;
-		if (name.equals("equals") || name.equals("hashCode")) {
-			MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-            return mv;
-        }
-		if (this.alwaysProbe || name.equals("<init>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name)) {
-			// constructor method
-			methodVisitorProbed = super.visitMethod(access, name , desc, signature, exceptions);
-		}
-		else if (name.equals("<clinit>")) {
-			// clinit is already defined
+		// calcuclate probe flag at method level 
+		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
+		Boolean neverProbeMethodFlag = ProbeFlagUtil.getneverProbeMethodFlag(name);
+
+		// early exit for clinit. It is already defined in class with initial method
+		if (name.equals("<clinit>")) {
 			this.hasStaticInitialiser = true;
-			methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
+			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
 			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();
 
 			methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
-		}
-		else {
-			this.methodList.add(name);
-			String name_probed = name + "_PROBED";
-			methodVisitorProbed = super.visitMethod(access, name_probed , desc, signature, exceptions);
-		}
-
-		// add probe
-		if (methodVisitorProbed != null) {
-			methodVisitorProbed = new TryCatchBlockSorter(methodVisitorProbed, access, name, desc, signature, exceptions);
-			MethodTransformer transformer_probed = new MethodTransformer(
-					weavingInfo, config, sourceFileName,
-					fullClassName, outerClassName, access,
-					name, desc, signature, exceptions, methodVisitorProbed
-			);
-
-			methodVisitorProbed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
-		}
-		
-		if (name.equals("<init>") || name.equals("<clinit>") || ClassTypeUtil.checkIfStartingMethod(access, desc, name) || this.alwaysProbe) {
+			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
 			return methodVisitorProbed;
 		}
 
+		// early exit got method that are never probed
+		if (neverProbeMethodFlag) {
+			MethodVisitor methodVisitorUnModified = cv.visitMethod(access, name, desc, signature, exceptions);
+            return methodVisitorUnModified;
+        }
+		
+		// early exit for method that are always probed
+		if (alwaysProbeMethodFlag) {
+			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
+			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
+			return methodVisitorProbed;
+		}
+
+		this.methodList.add(name);
+		String name_probed = name + "_PROBED";
+		MethodVisitor methodVisitorProbed = super.visitMethod(access, name_probed , desc, signature, exceptions);
+		methodVisitorProbed = addProbe(methodVisitorProbed, access, name_probed, desc, exceptions);
+		
 		long classCounter = getCounter(this.classCounterMap, className);
 		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
 
@@ -264,8 +260,8 @@ public class ClassTransformer extends ClassVisitor {
 	@Override
     public void visitEnd() {
 		
-		if ((!this.hasStaticInitialiser) && (!this.alwaysProbe)) {	
-			// staticInitialiser is not defined, define one
+		if ((!this.hasStaticInitialiser) && (!this.alwaysProbeClassFlag)) {	
+			// staticInitialiser is not defined and needed, define one
 
 			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();

@@ -393,7 +393,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             } catch (Throwable exception) {
                 if (exception instanceof InvocationTargetException) {
                     agentCommandResponse.setResponseType(ResponseType.EXCEPTION);
-//                    exception.getCause().printStackTrace();
+                    exception.getCause().printStackTrace();
                 } else {
                     agentCommandResponse.setResponseType(ResponseType.FAILED);
 //                    exception.printStackTrace();
@@ -662,34 +662,40 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 .collect(Collectors.groupingBy(DeclaredMock::getFieldName,
                         Collectors.toList()));
 
-        DynamicType.Unloaded<? extends Object> extendedClass = byteBuddyInstance
-                .subclass(targetClassType)
-                .make();
 
-        ClassLoadingStrategy<ClassLoader> strategy;
-        if (ClassInjector.UsingLookup.isAvailable()) {
-            Class<?> methodHandles = null;
-            try {
-                methodHandles = targetClassLoader.loadClass("java.lang.invoke.MethodHandles");
-                Object lookup = methodHandles.getMethod("lookup").invoke(null);
-                Method privateLookupIn = methodHandles.getMethod("privateLookupIn",
-                        Class.class,
-                        targetClassLoader.loadClass("java.lang.invoke.MethodHandles$Lookup"));
-                Object privateLookup = privateLookupIn.invoke(null, targetClassType, lookup);
-                strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
-            } catch (Exception e) {
-                // should never happen
-                throw new RuntimeException(e);
-            }
-        } else if (ClassInjector.UsingReflection.isAvailable()) {
-            strategy = ClassLoadingStrategy.Default.INJECTION;
+        Object extendedClassInstance;
+        if (Modifier.isFinal(targetClassType.getModifiers())) {
+            extendedClassInstance = objectInstanceByClass;
         } else {
-            throw new IllegalStateException("No code generation strategy available");
+            DynamicType.Unloaded<? extends Object> extendedClass = byteBuddyInstance
+                    .subclass(targetClassType)
+                    .make();
+
+            ClassLoadingStrategy<ClassLoader> strategy;
+            if (ClassInjector.UsingLookup.isAvailable()) {
+                Class<?> methodHandles = null;
+                try {
+                    methodHandles = targetClassLoader.loadClass("java.lang.invoke.MethodHandles");
+                    Object lookup = methodHandles.getMethod("lookup").invoke(null);
+                    Method privateLookupIn = methodHandles.getMethod("privateLookupIn",
+                            Class.class,
+                            targetClassLoader.loadClass("java.lang.invoke.MethodHandles$Lookup"));
+                    Object privateLookup = privateLookupIn.invoke(null, targetClassType, lookup);
+                    strategy = ClassLoadingStrategy.UsingLookup.of(privateLookup);
+                } catch (Exception e) {
+                    // should never happen
+                    throw new RuntimeException(e);
+                }
+            } else if (ClassInjector.UsingReflection.isAvailable()) {
+                strategy = ClassLoadingStrategy.Default.INJECTION;
+            } else {
+                throw new IllegalStateException("No code generation strategy available");
+            }
+
+            DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader, strategy);
+
+            extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
         }
-
-        DynamicType.Loaded<? extends Object> extendedClassLoaded = extendedClass.load(targetClassLoader, strategy);
-
-        Object extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
 
 
         Class<?> fieldCopyForClass = targetClassType;
@@ -739,9 +745,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                         field.getType()
                                 );
                             }
-
+                            String fieldTypeName = declaredMocksForField.get(0).getFieldTypeName();
+                            Class<?> classTypeToBeMocked = Class.forName(fieldTypeName);
                             existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
-                                    field, declaredMocksForField, fieldValue, field.getType());
+                                    field, declaredMocksForField, fieldValue, classTypeToBeMocked);
                             mockInstanceMap.put(key, existingMockInstance);
 
                         } else {
