@@ -258,7 +258,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
         Type returnType = Type.getReturnType(descriptor);
 
         if (returnType.getSort() == Type.VOID) {
-            throw new IllegalArgumentException("Descriptor represents a void return type");
+			return Opcodes.RETURN;
         } else if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
             return Opcodes.ARETURN;
         } else if (returnType.getSort() == Type.BOOLEAN
