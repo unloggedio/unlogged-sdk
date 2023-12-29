@@ -212,11 +212,21 @@ public class MockHandler {
                 }
 
                 if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Mono")) {
-                    returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
-                            typeReference.containedType(0)));
+                    if (returnValueSerialized.startsWith("[")) {
+                        returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
+                                typeFactory.constructArrayType(typeReference.containedType(0))));
+                    } else  {
+                        returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
+                                typeReference.containedType(0)));
+                    }
                 } else if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Flux")) {
-                    returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnValueSerialized,
-                            typeFactory.constructArrayType(typeReference.containedType(0))));
+                    if (returnValueSerialized.startsWith("[")) {
+                        returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnValueSerialized,
+                                typeFactory.constructArrayType(typeReference.containedType(0))));
+                    } else {
+                        returnValueInstance = Flux.just(jsonDeserializer.createInstance(returnValueSerialized,
+                                typeReference.containedType(0)));
+                    }
                 } else {
                     returnValueInstance = jsonDeserializer.createInstance(returnValueSerialized, typeReference);
                 }
