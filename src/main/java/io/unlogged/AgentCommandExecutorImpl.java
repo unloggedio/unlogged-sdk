@@ -26,7 +26,6 @@ import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.transaction.TransactionManager;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
@@ -162,7 +161,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 Object objectInstanceByClass = null;
 
                 String targetClassName = agentCommandRequest.getClassName();
-                objectInstanceByClass = logger.getObjectByClassName(targetClassName);
+                if (applicationContext != null && getBeanMethod != null) {
+                    objectInstanceByClass = getBeanMethod.invoke(applicationContext, Class.forName(targetClassName));
+                }
+                if (objectInstanceByClass == null) {
+                    objectInstanceByClass = logger.getObjectByClassName(targetClassName);
+                }
+
                 List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
                 if (objectInstanceByClass == null && alternateClassNames != null && alternateClassNames.size() > 0) {
                     for (String alternateClassName : alternateClassNames) {
@@ -1267,8 +1272,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             Class<?> transactionManagerClass = Class.forName("org.springframework.transaction" +
                     ".TransactionManager");
             Object transactionManager = getBeanMethod.invoke(applicationContext, transactionManagerClass);
-            transactionManagerClass.getMethod("begin");
-        } catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+            transactionManagerClass.getMethod("getTransaction");
+        } catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException |
+                 NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
         return null;
