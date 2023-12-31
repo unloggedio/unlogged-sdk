@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Stream;
 
 
 /**
@@ -515,11 +516,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
                                 || className.contains("java.lang.reflect")
                                 || (className.startsWith("org.glassfish")
-                                && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                                   && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                                 || (className.startsWith("org.springframework")
-                                && (!className.startsWith("org.springframework.http")
-                                && !className.startsWith("org.springframework.data.domain")))
+                                   && (!className.startsWith("org.springframework.http")
+                                   && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
+                                || value instanceof Stream
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
                     probesToRecord.remove(dataId);
