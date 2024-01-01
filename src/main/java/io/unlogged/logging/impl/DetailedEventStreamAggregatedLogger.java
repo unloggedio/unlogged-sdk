@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Stream;
 
 
 /**
@@ -473,7 +474,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             } else if (className.contains("$")) {
                 className = className.substring(0, className.indexOf('$'));
             }
-            if (!(originalClassName.contains("$EnhancerBySpringCGLIB") && objectMap.containsKey(className))) {
+            if (!objectMap.containsKey(className)) {
+                objectMap.put(className, new WeakReference<>(value));
+            } else if (originalClassName.contains("$EnhancerBySpringCGLIB")) {
+                objectMap.put(className, new WeakReference<>(value));
+            } else if (originalClassName.contains("$SpringCGLIB")) {
                 objectMap.put(className, new WeakReference<>(value));
             }
             if (targetClassLoader == null && value != null) {
@@ -484,7 +489,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
         long objectId = objectIdMap.getId(value);
 
-        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(objectId)) {
+        if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(
+                objectId)) {
 
             if (DEBUG && value != null) {
                 System.out.println("record serialized value for probe [" + dataId + "] -> " + value.getClass());
@@ -510,11 +516,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
                                 || className.contains("java.lang.reflect")
                                 || (className.startsWith("org.glassfish")
-                                && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                                   && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                                 || (className.startsWith("org.springframework")
-                                && (!className.startsWith("org.springframework.http")
-                                && !className.startsWith("org.springframework.data.domain")))
+                                   && (!className.startsWith("org.springframework.http")
+                                   && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
+                                || value instanceof Stream
                 ) {
 //                    System.err.println("Removing probe: " + dataId);
                     probesToRecord.remove(dataId);

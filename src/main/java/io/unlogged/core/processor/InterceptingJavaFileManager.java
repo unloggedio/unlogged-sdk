@@ -6,6 +6,9 @@ import io.unlogged.weaver.DataInfoProvider;
 import javax.tools.*;
 import javax.tools.JavaFileObject.Kind;
 import java.io.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
     private final DiagnosticsReceiver diagnostics;
@@ -73,7 +76,12 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
             int methodId = 0;
             int probeId = 0;
 
-            idsInfoOutputFile = new File(actualClassesPath + "unlogged.ids.dat");
+            Path pathname = FileSystems.getDefault().getPath(System.getProperty("user.home"), ".unlogged", "unlogged" +
+                    ".ids.dat");
+            idsInfoOutputFile = pathname.toFile();
+            if (!idsInfoOutputFile.getParentFile().exists()) {
+                idsInfoOutputFile.getParentFile().mkdirs();
+            }
             if (idsInfoOutputFile.exists()) {
                 try {
                     DataInputStream idsInfoReader = new DataInputStream(new FileInputStream(idsInfoOutputFile));

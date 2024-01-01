@@ -47,6 +47,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     private Object springTestContextManager;
     private boolean isSpringPresent;
     private Method getBeanMethod;
+    private Object springBeanFactory;
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -131,6 +132,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
                 logger.setRecording(true);
             }
+
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+                        ".reactive.context" +
+                        ".AnnotationConfigReactiveWebServerApplicationContext");
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
+
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName(
+                        "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+                );
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
+
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
 //            TestExecutionListener reactorContextTestExecutionListener = new ReactorContextTestExecutionListener();
 //            reactorContextTestExecutionListener.beforeTestMethod(null);
@@ -145,7 +161,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 Object objectInstanceByClass = null;
 
                 String targetClassName = agentCommandRequest.getClassName();
-                objectInstanceByClass = logger.getObjectByClassName(targetClassName);
+                if (applicationContext != null && getBeanMethod != null) {
+                    objectInstanceByClass = getBeanMethod.invoke(applicationContext, Class.forName(targetClassName));
+                }
+                if (objectInstanceByClass == null) {
+                    objectInstanceByClass = logger.getObjectByClassName(targetClassName);
+                }
+
                 List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
                 if (objectInstanceByClass == null && alternateClassNames != null && alternateClassNames.size() > 0) {
                     for (String alternateClassName : alternateClassNames) {
@@ -200,19 +222,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     // spring is present
                     // so either have applicationContext or testApplicationContext
                     // instance of SpringApplicationContext
-
-
-                    if (this.springTestContextManager == null) {
-                        this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-                                ".reactive.context" +
-                                ".AnnotationConfigReactiveWebServerApplicationContext");
-                    }
-
-                    if (this.springTestContextManager == null) {
-                        this.springTestContextManager = logger.getObjectByClassName(
-                                "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-                        );
-                    }
 
 
                     if (this.springTestContextManager == null) {
@@ -1258,8 +1267,30 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
+    private Object trySpringTransaction() {
+        try {
+            Class<?> transactionManagerClass = Class.forName("org.springframework.transaction" +
+                    ".TransactionManager");
+            Object transactionManager = getBeanMethod.invoke(applicationContext, transactionManagerClass);
+            transactionManagerClass.getMethod("getTransaction");
+        } catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException |
+                 NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
     private Object tryOpenHibernateSessionIfHibernateExists() {
         Object hibernateSessionFactory = logger.getObjectByClassName("org.hibernate.internal.SessionFactoryImpl");
+        if (hibernateSessionFactory == null) {
+            try {
+                hibernateSessionFactory = getBeanMethod.invoke(applicationContext,
+                        Class.forName("org.hibernate.SessionFactory"));
+            } catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException e) {
+                // hibernate not present on class path
+                return null;
+            }
+        }
         Object sessionInstance = null;
         if (hibernateSessionFactory != null) {
             try {
@@ -1321,18 +1352,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
             Method getApplicationContextMethod = testContextClass.getMethod("getApplicationContext");
 
-            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
-                    "getAutowireCapableBeanFactory");
 
             Class<?> pspcClass = Class.forName(
                     "org.springframework.context.support.PropertySourcesPlaceholderConfigurer");
 
             Object propertySourcesPlaceholderConfigurer = pspcClass.getConstructor().newInstance();
 
-            Method pspcProcessBeanFactoryMethod = pspcClass.getMethod("postProcessBeanFactory",
-                    Class.forName("org.springframework.beans.factory.config.ConfigurableListableBeanFactory"));
 
             Class<?> propertiesClass = Class.forName("java.util.Properties");
             Method pspcClassSetPropertiesMethod = pspcClass.getMethod("setProperties", propertiesClass);
@@ -1360,10 +1385,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
             Object testContext = getTestContextMethod.invoke(this.springTestContextManager);
             Object applicationContext = getApplicationContextMethod.invoke(testContext);
-            this.applicationContext = applicationContext;
 
-            Object factory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
-                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+            Object factory = setSpringApplicationContextAndLoadBeanFactory(applicationContext);
+
+            Method pspcProcessBeanFactoryMethod = pspcClass.getMethod("postProcessBeanFactory",
+                    Class.forName("org.springframework.beans.factory.config.ConfigurableListableBeanFactory"));
 
             pspcProcessBeanFactoryMethod.invoke(propertySourcesPlaceholderConfigurer, factory);
 
@@ -1374,6 +1400,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             // failed to start spring application context
             throw new RuntimeException("Failed to create spring application context", e);
         }
+    }
+
+    private Object setSpringApplicationContextAndLoadBeanFactory(Object applicationContext) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        if (applicationContext == null) {
+            return null;
+        }
+        this.applicationContext = applicationContext;
+
+        Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+        getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+        Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod("getAutowireCapableBeanFactory");
+
+        springBeanFactory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
+                .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+        return springBeanFactory;
     }
 
 
