@@ -247,7 +247,7 @@ public class ClassTransformer extends ClassVisitor {
 		}
 
 		this.methodList.add(name);
-		String name_probed = name + "_PROBED";
+		String name_probed = name + Constants.probedValue;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, name_probed , desc, signature, exceptions);
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, name_probed, desc, exceptions);
 		

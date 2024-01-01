@@ -28,7 +28,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
-		this.nameProbed = this.methodName + "_PROBED";
+		this.nameProbed = this.methodName + Constants.probedValue;
 		this.defaultCounter = UnloggedProcessor.getDefaultCounter();
 		this.argumentSend = UnloggedProcessor.getArgumentSend();
 	}
