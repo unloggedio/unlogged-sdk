@@ -109,7 +109,7 @@ public class ClassTransformer extends ClassVisitor {
 				@Override
 				public void visit(String key, Object value) {
 					// check for key string
-					if ("loggingFrequency".equals(key)) {
+					if ("counter".equals(key)) {
 						long valueLong = Long.parseLong((String)value);
 						classCounterMap.put(className, valueLong);
 					}

@@ -284,7 +284,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 				@Override
 				public void visit(String key, Object value) {
 					// check for key string
-					if ("loggingFrequency".equals(key)) {
+					if ("counter".equals(key)) {
 						long valueLong = Long.parseLong((String)value);
 						methodCounter.put(methodName, valueLong);
 					}

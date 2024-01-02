@@ -22,7 +22,7 @@ public @interface Unlogged {
 
     boolean enable() default true;
 
-	String loggingFrequency() default "1";
+	String counter() default "1";
 
-	UnloggedLoggingLevel unloggedLoggingLevel() default UnloggedLoggingLevel.UNSET;
+	UnloggedLoggingLevel unloggedLoggingLevel() default UnloggedLoggingLevel.COUNTER;
 }
