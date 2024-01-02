@@ -14,6 +14,7 @@ import org.objectweb.asm.commons.TryCatchBlockSorter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 /**
  * This class weaves logging code into a Java class file.
