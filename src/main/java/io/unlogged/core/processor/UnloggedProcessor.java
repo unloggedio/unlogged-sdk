@@ -375,9 +375,9 @@ public class UnloggedProcessor extends AbstractProcessor {
 			
 			// setup unloggedProcessorConfig
 			long defaultCounter = Long.parseLong(unlogged.loggingFrequency());
-			UnloggedLoggingLevel argumentSend = unlogged.argumentSend();
+			UnloggedLoggingLevel unloggedLoggingLevel = unlogged.unloggedLoggingLevel();
 			this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
-			this.unloggedProcessorConfig.setUnloggedLoggingLevel(argumentSend);
+			this.unloggedProcessorConfig.setUnloggedLoggingLevel(unloggedLoggingLevel);
 		}
 
         if (roundEnv.processingOver()) {
