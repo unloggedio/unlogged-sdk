@@ -53,7 +53,7 @@ public class InitStaticTransformer extends MethodVisitor {
 			mv.visitLdcInsn(localMethod);
 			mv.visitLdcInsn(0L);
 
-			// cast long_object to long_primitive
+			// cast long object to long primitive
 			mv.visitMethodInsn(
 				Opcodes.INVOKESTATIC,
 				Type.getInternalName(Long.class),

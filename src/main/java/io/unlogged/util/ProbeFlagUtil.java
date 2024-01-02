@@ -3,7 +3,7 @@ package io.unlogged.util;
 import org.objectweb.asm.Opcodes;
 
 public class ProbeFlagUtil {
-	public static boolean getalwaysProbeClassFlag (int access) {
+	public static boolean getAlwaysProbeClassFlag (int access) {
 		if ((access & Opcodes.ACC_INTERFACE) != 0) {
 			// class is an interface
 			return true;
@@ -43,7 +43,7 @@ public class ProbeFlagUtil {
 		return false;
 	}
 
-	public static Boolean getneverProbeMethodFlag(String methodName) {
+	public static Boolean getNeverProbeMethodFlag (String methodName) {
 		if (methodName.equals("equals")) {
 			return true;
 		}

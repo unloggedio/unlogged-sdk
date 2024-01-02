@@ -105,7 +105,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: mapStore.put(method_name, mapStore.get(method_name) + 1);
+		// Start of block-A. This adds the line: mapStore.put(methodName, mapStore.get(methodName) + 1);
 
 		// load mapStore
 		mv.visitFieldInsn(
@@ -118,7 +118,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// load string for mapStore
 		mv.visitLdcInsn(this.methodName);
 
-		// Start of block-B. This adds the logic for  mapStore.get("method_name") + 1 and loads the value to stack
+		// Start of block-B. This adds the logic for  mapStore.get("methodName") + 1 and loads the value to stack
 		// load mapStore
         mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
@@ -139,7 +139,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 			false
         );
 
-		// cast long_object to long_primitive
+		// cast long object to long primitive
 		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
 		mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
@@ -155,7 +155,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitInsn(Opcodes.LADD);
 		// End of Block-B
 
-		// cast long_primitive to long_object
+		// cast long primitive to long object
 		mv.visitMethodInsn(
 			Opcodes.INVOKESTATIC,
 			Type.getInternalName(Long.class),
@@ -178,7 +178,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// End of Block-A
 
 		// Start of block-C
-		// This adds the line for if (probecounter(methodCounter, divisor, argument_list))
+		// This adds the line for if (probecounter(methodCounter, divisor, argument list))
 		// add the if condition
 		Label exitLabel = new Label();
 
@@ -193,7 +193,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// load the method name 
 		mv.visitLdcInsn(this.methodName);
 
-		// this is logic for: mapStore.get("method_name")
+		// this is logic for: mapStore.get("methodName")
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
@@ -202,7 +202,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 			false
         );
 
-		// cast long_object to long_primitive
+		// cast long object to long primitive
 		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
 		mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,

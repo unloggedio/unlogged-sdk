@@ -85,13 +85,13 @@ public class ClassTransformer extends ClassVisitor {
 	private MethodVisitor addProbe (MethodVisitor methodVisitorProbed, int access, String name, String desc, String[] exceptions) {
 		if (methodVisitorProbed != null) {
 			methodVisitorProbed = new TryCatchBlockSorter(methodVisitorProbed, access, name, desc, signature, exceptions);
-			MethodTransformer transformer_probed = new MethodTransformer(
+			MethodTransformer transformerProbed = new MethodTransformer(
 					weavingInfo, config, sourceFileName,
 					fullClassName, outerClassName, access,
 					name, desc, signature, exceptions, methodVisitorProbed
 			);
 
-			methodVisitorProbed = new JSRInliner(transformer_probed, access, name, desc, signature, exceptions);
+			methodVisitorProbed = new JSRInliner(transformerProbed, access, name, desc, signature, exceptions);
 		}
 		return methodVisitorProbed;
 	}
@@ -176,7 +176,7 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
-		this.alwaysProbeClassFlag = ProbeFlagUtil.getalwaysProbeClassFlag(access);
+		this.alwaysProbeClassFlag = ProbeFlagUtil.getAlwaysProbeClassFlag(access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -218,7 +218,7 @@ public class ClassTransformer extends ClassVisitor {
 		
 		// calcuclate probe flag at method level 
 		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
-		Boolean neverProbeMethodFlag = ProbeFlagUtil.getneverProbeMethodFlag(name);
+		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
 
 		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {
@@ -247,9 +247,9 @@ public class ClassTransformer extends ClassVisitor {
 		}
 
 		this.methodList.add(name);
-		String name_probed = name + Constants.probedValue;
-		MethodVisitor methodVisitorProbed = super.visitMethod(access, name_probed , desc, signature, exceptions);
-		methodVisitorProbed = addProbe(methodVisitorProbed, access, name_probed, desc, exceptions);
+		String nameProbed = name + Constants.probedValue;
+		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
+		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
 		
 		long classCounter = getCounter(this.classCounterMap, className);
 		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
@@ -300,7 +300,7 @@ public class ClassTransformer extends ClassVisitor {
 				staticNew.visitLdcInsn(localMethod);
 				staticNew.visitLdcInsn(0L);
 
-				// cast long_object to long_primitive
+				// cast long object to long primitive
 				staticNew.visitMethodInsn(
 					Opcodes.INVOKESTATIC,
 					Type.getInternalName(Long.class),
