@@ -51,8 +51,8 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
-	private static long defaultCounter;
-	private static ExperimentalSDKFlagType argumentSend;
+	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(-1, ExperimentalSDKFlagType.DEFAULT);
+
 
     public UnloggedProcessor() {
 //        System.out.println("HelloUnloggedProcessor");
@@ -250,8 +250,7 @@ public class UnloggedProcessor extends AbstractProcessor {
             if (!(originalFiler instanceof InterceptingJavaFileManager)) {
                 final Messager messager = processingEnv.getMessager();
                 DiagnosticsReceiver receiver = new MessagerDiagnosticsReceiver(messager);
-
-                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver);
+                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver, unloggedProcessorConfig);
                 ht.put(key, newFilerManager);
                 Field filerFileManagerField = Permit.getField(JavacFiler.class, "fileManager");
                 filerFileManagerField.set(javacFiler, newFilerManager);
@@ -365,14 +364,6 @@ public class UnloggedProcessor extends AbstractProcessor {
         }
     }
 
-	public static long getDefaultCounter() {
-		return defaultCounter;
-	}
-
-	public static ExperimentalSDKFlagType getArgumentSend() {
-		return argumentSend;
-	}
-
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
@@ -381,8 +372,12 @@ public class UnloggedProcessor extends AbstractProcessor {
 
 		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
 			Unlogged unlogged = element.getAnnotation(Unlogged.class);
-			defaultCounter = Long.parseLong(unlogged.loggingFrequency());
-			argumentSend = unlogged.argumentSend();
+			
+			// setup unloggedProcessorConfig
+			long defaultCounter = Long.parseLong(unlogged.loggingFrequency());
+			ExperimentalSDKFlagType argumentSend = unlogged.argumentSend();
+			this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
+			this.unloggedProcessorConfig.setExperimentalSDKFlagType(argumentSend);
 		}
 
         if (roundEnv.processingOver()) {

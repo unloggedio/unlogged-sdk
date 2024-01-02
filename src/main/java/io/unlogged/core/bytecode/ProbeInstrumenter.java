@@ -25,6 +25,7 @@ import io.unlogged.command.AgentCommand;
 import io.unlogged.command.AgentCommandRequest;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.PostCompilerTransformation;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ByteTools;
 import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
@@ -51,9 +52,9 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
 //            .readTimeout(Duration.of(5, ChronoUnit.SECONDS))
 //            .connectTimeout(Duration.of(200, ChronoUnit.MILLIS)).build();
 
-    public ProbeInstrumenter(TypeHierarchy typeHierarchy) throws IOException {
+    public ProbeInstrumenter(TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) throws IOException {
         this.typeHierarchy = typeHierarchy;
-        weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy);
+        weaver = new Weaver(new WeaveConfig(new RuntimeWeaverParameters("")), typeHierarchy, unloggedProcessorConfig);
     }
 
     private static List<String> splitString(String text, int maxLength) {

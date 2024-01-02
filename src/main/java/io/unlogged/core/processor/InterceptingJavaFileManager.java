@@ -19,11 +19,13 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
     private final FileOutputStream probesToCaptureOutputStream;
     private final File idsInfoOutputFile;
     private final DataInfoProvider dataInfoProvider;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
-    InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics) {
+    InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics, UnloggedProcessorConfig unloggedProcessorConfig) {
         super(original);
         this.compiler = UnloggedFileObjects.getCompiler(original);
         this.diagnostics = diagnostics;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
         try {
             // we need to make sure that we get a direct fileoutputstream created here for our class weave dat file
             // and not a buffered or proxy via BAOS since it will lead to OOM on big code bases
@@ -112,7 +114,7 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 
         return UnloggedFileObjects.createIntercepting(
                 compiler, fileObject, className, diagnostics,
-                classWeaveOutputStream, dataInfoProvider);
+                classWeaveOutputStream, dataInfoProvider, this.unloggedProcessorConfig);
     }
 
     @Override

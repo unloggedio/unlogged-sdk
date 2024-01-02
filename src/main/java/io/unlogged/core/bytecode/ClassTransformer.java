@@ -3,6 +3,7 @@ package io.unlogged.core.bytecode;
 import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.weaver.TypeHierarchy;
@@ -40,6 +41,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
 	private boolean alwaysProbeClassFlag = false;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -49,8 +51,8 @@ public class ClassTransformer extends ClassVisitor {
      * @param inputClass specifies a byte array containing the target class.
      * @throws IOException may be thrown if an error occurs during the weaving.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass, TypeHierarchy typeHierarchy) throws IOException {
-        this(weaver, config, new ClassReader(inputClass), typeHierarchy);
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) throws IOException {
+        this(weaver, config, new ClassReader(inputClass), typeHierarchy, unloggedProcessorConfig);
     }
 
     /**
@@ -60,9 +62,9 @@ public class ClassTransformer extends ClassVisitor {
      * @param config specifies the configuration.
      * @param reader specifies a class reader to read the target class.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy) {
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) {
         // Create a writer for the target class
-        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy));
+        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy), unloggedProcessorConfig);
         // Start weaving, and store the result to a byte array
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();
@@ -76,11 +78,12 @@ public class ClassTransformer extends ClassVisitor {
      * @param config specifies the configuration.
      * @param cw     specifies the class writer (MetracerClassWriter).
      */
-    protected ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassWriter cw) {
+    protected ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassWriter cw, UnloggedProcessorConfig unloggedProcessorConfig) {
         super(Opcodes.ASM9, cw);
         this.weavingInfo = weaver;
         this.config = config;
         this.classWriter = cw;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
     }
 
 	private MethodVisitor addProbe (MethodVisitor methodVisitorProbed, int access, String name, String desc, String[] exceptions) {
@@ -253,7 +256,7 @@ public class ClassTransformer extends ClassVisitor {
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
 		
 		long classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions));
+		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
 
 		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
     }

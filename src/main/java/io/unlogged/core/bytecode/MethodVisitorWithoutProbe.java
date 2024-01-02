@@ -6,7 +6,7 @@ import org.objectweb.asm.*;
 
 import io.unlogged.Constants;
 import io.unlogged.ExperimentalSDKFlagType;
-import io.unlogged.core.processor.UnloggedProcessor;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
 
 class MethodVisitorWithoutProbe extends MethodVisitor {
@@ -16,12 +16,11 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String desc;
 	private String nameProbed;
 	private long classCounter;
-	private long defaultCounter;
-	private ExperimentalSDKFlagType argumentSend;
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
@@ -29,8 +28,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = this.methodName + Constants.probedValue;
-		this.defaultCounter = UnloggedProcessor.getDefaultCounter();
-		this.argumentSend = UnloggedProcessor.getArgumentSend();
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
@@ -88,7 +86,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
     }
 
 	private long getDivisor(){
-		long divisor = this.defaultCounter;
+		long divisor = this.unloggedProcessorConfig.getDefaultCounter();
 
 		// write classCounter if defined 
 		if (this.classCounter != (long)0) {
@@ -217,7 +215,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitLdcInsn(divisor);
 
 		String descParsedString = "";
-		if (this.argumentSend == ExperimentalSDKFlagType.ENABLED) {
+		if (this.unloggedProcessorConfig.getExperimentalSDKFlagType() == ExperimentalSDKFlagType.ENABLED) {
 			// load arguments of method in stack and define the desc of calling method
 			pushArgument(mv, true);
 			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
