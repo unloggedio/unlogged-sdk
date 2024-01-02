@@ -263,7 +263,7 @@ public class Runtime {
     }
 
 	private static boolean frequencyLogging (long methodCounter, long divisor) {
-		if (methodCounter % divisor == 0){
+		if ((methodCounter-1) % divisor == 0){
 			return true;
 		}
 		else {
