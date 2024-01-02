@@ -24,5 +24,5 @@ public @interface Unlogged {
 
 	String loggingFrequency() default "1";
 
-	UnloggedLoggingLevel argumentSend() default UnloggedLoggingLevel.UNSET;
+	UnloggedLoggingLevel unloggedLoggingLevel() default UnloggedLoggingLevel.UNSET;
 }
