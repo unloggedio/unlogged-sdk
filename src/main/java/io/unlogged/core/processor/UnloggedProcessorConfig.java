@@ -1,15 +1,15 @@
 package io.unlogged.core.processor;
 
-import io.unlogged.ExperimentalSDKFlagType;
+import io.unlogged.UnloggedLoggingLevel;
 
 public class UnloggedProcessorConfig {
 
 	private long defaultCounter;
-	private ExperimentalSDKFlagType experimentalSDKFlagType;
+	private UnloggedLoggingLevel unloggedLoggingLevel;
 
-	public UnloggedProcessorConfig (long defaultCounter, ExperimentalSDKFlagType experimentalSDKFlagType) {
+	public UnloggedProcessorConfig (long defaultCounter, UnloggedLoggingLevel unloggedLoggingLevel) {
 		this.defaultCounter = defaultCounter;
-		this.experimentalSDKFlagType = experimentalSDKFlagType;
+		this.unloggedLoggingLevel = unloggedLoggingLevel;
 	}
 
 	public void setDefaultCounter (long defautlCounter) {
@@ -20,11 +20,11 @@ public class UnloggedProcessorConfig {
 		return this.defaultCounter;
 	}
 
-	public void setExperimentalSDKFlagType (ExperimentalSDKFlagType experimentalSDKFlagType) {
-		this.experimentalSDKFlagType = experimentalSDKFlagType;
+	public void setUnloggedLoggingLevel (UnloggedLoggingLevel unloggedLoggingLevel) {
+		this.unloggedLoggingLevel = unloggedLoggingLevel;
 	}
 
-	public ExperimentalSDKFlagType getExperimentalSDKFlagType() {
-		return this.experimentalSDKFlagType;
+	public UnloggedLoggingLevel getUnloggedLoggingLevel() {
+		return this.unloggedLoggingLevel;
 	}
 }

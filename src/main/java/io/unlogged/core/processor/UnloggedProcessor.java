@@ -9,7 +9,7 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 
-import io.unlogged.ExperimentalSDKFlagType;
+import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
@@ -51,7 +51,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
-	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(-1, ExperimentalSDKFlagType.DEFAULT);
+	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(-1, UnloggedLoggingLevel.UNSET);
 
 
     public UnloggedProcessor() {
@@ -375,9 +375,9 @@ public class UnloggedProcessor extends AbstractProcessor {
 			
 			// setup unloggedProcessorConfig
 			long defaultCounter = Long.parseLong(unlogged.loggingFrequency());
-			ExperimentalSDKFlagType argumentSend = unlogged.argumentSend();
+			UnloggedLoggingLevel argumentSend = unlogged.argumentSend();
 			this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
-			this.unloggedProcessorConfig.setExperimentalSDKFlagType(argumentSend);
+			this.unloggedProcessorConfig.setUnloggedLoggingLevel(argumentSend);
 		}
 
         if (roundEnv.processingOver()) {

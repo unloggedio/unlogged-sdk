@@ -5,7 +5,7 @@ import java.util.HashMap;
 import org.objectweb.asm.*;
 
 import io.unlogged.Constants;
-import io.unlogged.ExperimentalSDKFlagType;
+import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
 
@@ -215,7 +215,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitLdcInsn(divisor);
 
 		String descParsedString = "";
-		if (this.unloggedProcessorConfig.getExperimentalSDKFlagType() == ExperimentalSDKFlagType.ENABLED) {
+		if (this.unloggedProcessorConfig.getUnloggedLoggingLevel() == UnloggedLoggingLevel.ARGUMENT) {
 			// load arguments of method in stack and define the desc of calling method
 			pushArgument(mv, true);
 			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();

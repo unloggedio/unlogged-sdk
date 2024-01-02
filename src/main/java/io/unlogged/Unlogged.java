@@ -24,5 +24,5 @@ public @interface Unlogged {
 
 	String loggingFrequency() default "1";
 
-	ExperimentalSDKFlagType argumentSend() default ExperimentalSDKFlagType.DISABLED;
+	UnloggedLoggingLevel argumentSend() default UnloggedLoggingLevel.UNSET;
 }
