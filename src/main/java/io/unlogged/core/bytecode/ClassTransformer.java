@@ -14,7 +14,6 @@ import org.objectweb.asm.commons.TryCatchBlockSorter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -37,7 +36,7 @@ public class ClassTransformer extends ClassVisitor {
     private byte[] weaveResult;
     private String classLoaderIdentifier;
 	private HashSet<String> methodList = new HashSet<>();
-	private Map<String, Long> classCounterMap = new HashMap<>();
+	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
 	private boolean alwaysProbeClassFlag = false;
 
@@ -330,7 +329,7 @@ public class ClassTransformer extends ClassVisitor {
     }
 
 
-	private long getCounter (HashMap<String, Long> mapCounter, String key) {
+	private long getCounter (Map<String, Long> mapCounter, String key) {
 		if (mapCounter.get(key) == null) {
 			return (long)0;
 		}
