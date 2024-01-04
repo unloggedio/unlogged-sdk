@@ -162,7 +162,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 String targetClassName = agentCommandRequest.getClassName();
                 if (applicationContext != null && getBeanMethod != null) {
-                    objectInstanceByClass = getBeanMethod.invoke(applicationContext, Class.forName(targetClassName));
+					try {
+						objectInstanceByClass = getBeanMethod.invoke(applicationContext, Class.forName(targetClassName));
+					} catch (Exception e) {
+
+					}
                 }
                 if (objectInstanceByClass == null) {
                     objectInstanceByClass = logger.getObjectByClassName(targetClassName);
