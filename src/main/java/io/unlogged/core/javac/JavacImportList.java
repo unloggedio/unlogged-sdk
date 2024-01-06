@@ -49,7 +49,12 @@ public class JavacImportList implements ImportList {
 	@Override public String getFullyQualifiedNameForSimpleNameNoAliasing(String unqualified) {
 		for (JCTree def : defs) {
 			if (!(def instanceof JCImport)) continue;
-			JCTree qual = ((JCImport) def).qualid;
+			JCTree qual = null;
+			try {
+				qual = (JCTree) def.getClass().getField("qualid").get(def);
+			} catch (IllegalAccessException | NoSuchFieldException e) {
+				throw new RuntimeException(e);
+			}
 			if (!(qual instanceof JCFieldAccess)) continue;
 			String simpleName = ((JCFieldAccess) qual).name.toString();
 			if (simpleName.equals(unqualified)) {
