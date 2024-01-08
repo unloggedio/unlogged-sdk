@@ -43,8 +43,11 @@ public class MockHandler {
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
             ByteBuddy byteBuddy,
-            Objenesis objenesis, Object originalImplementation,
-            Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
+            Objenesis objenesis,
+			Object originalImplementation,
+            Object originalFieldParent,
+			ClassLoader targetClassLoader,
+			Field field) {
         this.objectMapper = objectMapper;
         this.jsonDeserializer = new JsonDeserializer(objectMapper);
         this.byteBuddy = byteBuddy;
