@@ -1070,8 +1070,16 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                     if (methodName.startsWith("get") || methodName.startsWith("is")) {
                         ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
-                        ReturnValue returnParameter = new ReturnValue(providedValue.toString(),
-                                valueType.getCanonicalName(), ReturnValueType.MOCK);
+				
+						ReturnValue returnParameter;
+						if (checkCanClassBeExtended(valueType)) {
+							returnParameter = new ReturnValue(
+								providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
+						}
+						else {
+							returnParameter = new ReturnValue(
+								providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
+						}
 
                         DeclaredMock returnParamCallMock = new DeclaredMock();
                         returnParameter.addDeclaredMock(returnParamCallMock);
@@ -1103,6 +1111,19 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject.getMockedFieldInstance();
     }
 
+	private boolean checkCanClassBeExtended(Class<?> fieldType) {
+		if (fieldType.isPrimitive()) {
+			return false;
+		}
+		if (fieldType.isArray()) {
+			return false;
+		}
+		if ((fieldType.getModifiers() & java.lang.reflect.Modifier.FINAL) != 0) {
+			return false;
+		}
+		
+		return true;
+	}
 
     private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
         Object valueToSet = null;
