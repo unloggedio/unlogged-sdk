@@ -1112,7 +1112,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 	private boolean checkForSubClass(Class<?> fieldType) {
-		System.out.println("fieldType = " + fieldType);
 		if (fieldType.isPrimitive()) {
 			return false;
 		}
