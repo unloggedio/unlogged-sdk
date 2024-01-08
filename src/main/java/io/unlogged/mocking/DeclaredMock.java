@@ -15,6 +15,7 @@ public class DeclaredMock {
     private List<ParameterMatcher> whenParameter;
     private List<ThenParameter> thenParameter;
     public DeclaredMock() {
+		this.methodName = "default value";
     }
     public DeclaredMock(DeclaredMock declaredMock) {
         this.name = declaredMock.name;
