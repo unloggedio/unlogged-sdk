@@ -17,18 +17,24 @@ public class DeclaredMock {
     public DeclaredMock() {
 		this.methodName = "default value";
     }
+
     public DeclaredMock(DeclaredMock declaredMock) {
         this.name = declaredMock.name;
         this.id = declaredMock.id;
         this.fieldTypeName = declaredMock.fieldTypeName;
         this.sourceClassName = declaredMock.sourceClassName;
         this.fieldName = declaredMock.fieldName;
-        this.methodName = declaredMock.methodName;
         this.whenParameter = declaredMock.whenParameter.stream()
                 .map(ParameterMatcher::new).collect(Collectors.toList());
         this.thenParameter = declaredMock.thenParameter
                 .stream().map(ThenParameter::new).collect(Collectors.toList());
 
+		if (declaredMock.methodName == null) {
+			this.methodName = "default value";
+		}
+		else {
+			this.methodName = declaredMock.methodName;
+		}
     }
 
     public DeclaredMock(String name, String fieldTypeName, String fieldName, String methodName,
