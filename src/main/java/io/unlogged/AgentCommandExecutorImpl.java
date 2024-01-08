@@ -1072,7 +1072,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
 				
 						ReturnValue returnParameter;
-						if (checkForSubClass(valueType)) {
+						if (checkCanClassBeExtended(valueType)) {
 							returnParameter = new ReturnValue(
 								providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
 						}
@@ -1111,7 +1111,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject.getMockedFieldInstance();
     }
 
-	private boolean checkForSubClass(Class<?> fieldType) {
+	private boolean checkCanClassBeExtended(Class<?> fieldType) {
 		if (fieldType.isPrimitive()) {
 			return false;
 		}
