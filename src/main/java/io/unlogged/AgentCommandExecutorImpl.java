@@ -1286,7 +1286,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     private Object tryOpenHibernateSessionIfHibernateExists() {
         Object hibernateSessionFactory = logger.getObjectByClassName("org.hibernate.internal.SessionFactoryImpl");
-        if (hibernateSessionFactory == null) {
+        if (hibernateSessionFactory == null && getBeanMethod != null && applicationContext != null) {
             try {
                 hibernateSessionFactory = getBeanMethod.invoke(applicationContext,
                         Class.forName("org.hibernate.SessionFactory"));
@@ -1327,7 +1327,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         // spring loader
         // if spring exists
         try {
-            Class.forName("org.springframework.security.core.context.SecurityContext");
+            Class.forName("org.springframework.boot.SpringApplication");
             isSpringPresent = true;
 
 

@@ -136,7 +136,9 @@ public class RawFileCollector implements Runnable {
             return;
         }
         try {
+            errorLogger.log("wait for log file");
             UploadFile logFile = fileList.poll(1, TimeUnit.SECONDS);
+            errorLogger.log("got log file");
             if (logFile == null) {
                 if (fileCount > 0 || shutdown) {
                     errorLogger.log(
@@ -157,6 +159,7 @@ public class RawFileCollector implements Runnable {
                 File fileToAddToArchive = new File(file.path);
                 archivedIndexWriter.writeFileEntry(file);
                 fileCount++;
+                errorLogger.log("delete [" + file.path + "]");
                 fileToAddToArchive.delete();
             }
         } catch (IOException e) {
