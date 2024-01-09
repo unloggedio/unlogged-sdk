@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import io.unlogged.Constants;
+
 public class DeclaredMock {
 
     private String id;
@@ -15,19 +17,26 @@ public class DeclaredMock {
     private List<ParameterMatcher> whenParameter;
     private List<ThenParameter> thenParameter;
     public DeclaredMock() {
+		this.methodName = Constants.METHOD_DEFAULT_NAME;
     }
+
     public DeclaredMock(DeclaredMock declaredMock) {
         this.name = declaredMock.name;
         this.id = declaredMock.id;
         this.fieldTypeName = declaredMock.fieldTypeName;
         this.sourceClassName = declaredMock.sourceClassName;
         this.fieldName = declaredMock.fieldName;
-        this.methodName = declaredMock.methodName;
         this.whenParameter = declaredMock.whenParameter.stream()
                 .map(ParameterMatcher::new).collect(Collectors.toList());
         this.thenParameter = declaredMock.thenParameter
                 .stream().map(ThenParameter::new).collect(Collectors.toList());
 
+		if (declaredMock.methodName == null) {
+			this.methodName = Constants.METHOD_DEFAULT_NAME;
+		}
+		else {
+			this.methodName = declaredMock.methodName;
+		}
     }
 
     public DeclaredMock(String name, String fieldTypeName, String fieldName, String methodName,
