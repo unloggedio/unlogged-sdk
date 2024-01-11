@@ -15,8 +15,9 @@
   <a href="https://plugins.jetbrains.com/plugin/18529-unlogged"><strong>IntelliJ Plugin</strong></a>
 </p>
 <p align="center">
-  <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk"><img src="https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fvideo%2Fbug%2Funlogged-sdk%2Fmaven-metadata.xml" /></a>
-  <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk"><img src="https://img.shields.io/jetbrains/plugin/v/18529-unlogged" /></a>
+  <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk"><img src="https://img.shields.io/maven-central/v/video.bug/unlogged-sdk?style=for-the-badge" /></a>
+  <a href="https://plugins.jetbrains.com/plugin/18529-unlogged"><img src="https://img.shields.io/jetbrains/plugin/v/18529-unlogged?style=for-the-badge" /></a>
+
 
   
 </p>
