@@ -200,7 +200,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 						agentCommandResponse.setMethodReturnValue(null);
 						agentCommandResponse.setResponseClassName(null);
 						agentCommandResponse.setResponseType(ResponseType.FAILED);
-						agentCommandResponse.setMessage("targetClassName is not found for: [" + targetClassName + "]");
+						agentCommandResponse.setMessage(e.getMessage());
 						
 						agentCommandRawResponse.setResponseObject(null);
 						return agentCommandRawResponse;
