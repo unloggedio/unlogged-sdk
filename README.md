@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Record. Replay. Test.
+  Record. Replay. Test. <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk"><img src="https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fvideo%2Fbug%2Funlogged-sdk%2Fmaven-metadata.xml" /></a>
 </p>
 
 <p align="center">
