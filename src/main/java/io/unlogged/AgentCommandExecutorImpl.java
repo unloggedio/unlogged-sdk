@@ -554,16 +554,16 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> fieldType) {
+    private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> classType) {
         ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
         DynamicType.Loaded<?> loadedMockedField;
-        if (fieldType.isInterface()) {
-            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
+        if (classType.isInterface()) {
+            Class<?>[] implementedInterfaces = getAllInterfaces(classType);
             Set<String> implementedClasses = new HashSet<>();
-            implementedClasses.add(fieldType.getCanonicalName());
+            implementedClasses.add(classType.getCanonicalName());
 
             List<Class<?>> pendingImplementations = new ArrayList<>();
-            pendingImplementations.add(fieldType);
+            pendingImplementations.add(classType);
             for (Class<?> implementedInterface : implementedInterfaces) {
                 if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
                     continue;
@@ -574,6 +574,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
             loadedMockedField = byteBuddyInstance
                     .subclass(Object.class)
+                    .name(classType.getCanonicalName() + "$UnloggedFakeInterfaceImpl")
                     .implement(pendingImplementations)
                     .intercept(MethodDelegation.to(mockHandler))
                     .make()
@@ -581,8 +582,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
         } else {
             loadedMockedField = byteBuddyInstance
-                    .subclass(fieldType)
-                    .method(isDeclaredBy(fieldType))
+                    .subclass(classType)
+                    .name(classType.getCanonicalName() + "$UnloggedFakeImpl")
+                    .method(isDeclaredBy(classType))
                     .intercept(MethodDelegation.to(mockHandler))
                     .make()
                     .load(targetClassLoader, strategy);
@@ -843,12 +845,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                       Class<?>[] expectedMethodArgumentTypes)
             throws NoSuchMethodException {
 
-        String className = objectClass.getCanonicalName();
+        StringBuilder className = new StringBuilder();
 
         Method methodToExecute = null;
         List<String> methodNamesList = new ArrayList<>();
         while (objectClass != null && !objectClass.equals(Object.class)) {
 
+            className.append(objectClass.getCanonicalName()).append(", ");
             try {
                 methodToExecute = objectClass
                         .getDeclaredMethod(expectedMethodName, expectedMethodArgumentTypes);
