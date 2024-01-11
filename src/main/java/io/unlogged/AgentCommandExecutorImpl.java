@@ -1425,7 +1425,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 //                            .getAutowireCapableBeanFactory());
         } catch (Throwable e) {
             // failed to start spring application context
-            throw new RuntimeException("Failed to create spring application context", e);
+            e.printStackTrace();
+            return;
         }
     }
 
