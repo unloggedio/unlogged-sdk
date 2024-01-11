@@ -75,6 +75,7 @@ public class UnloggedTestRunner extends Runner {
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
+    private final Class<?> testClass;
     private boolean isSpringPresent;
     private Method getBeanMethod;
     private Object applicationContext;
@@ -99,9 +100,11 @@ public class UnloggedTestRunner extends Runner {
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
+        this.testClass = testClass;
         this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
         this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
+        commandExecutor.enableSpringIntegration(this.testClass);
         collectTests();
         Runtime.getInstance("format=discard");
     }
@@ -373,6 +376,10 @@ public class UnloggedTestRunner extends Runner {
                 Map<String, List<StoredCandidate>> storedCandidateMap = classRecords.getStoredCandidateMap();
 //                System.err.println("running the tests from unlogged: " + classFileResource);
 
+                int candidateCount = storedCandidateMap.values().stream().mapToInt(Collection::size).sum();
+                if (candidateCount < 1) {
+                    continue;
+                }
                 Description suiteDescription = Description.createSuiteDescription(Class.forName(className));
 //                    System.err.println(className );
                 testDescription.addChild(suiteDescription);
@@ -392,6 +399,7 @@ public class UnloggedTestRunner extends Runner {
 
                         Description testDescription = getTestDescription(targetClassTypeInstance, candidateId,
                                 candidate.getCandidateId());
+
                         suiteDescription.addChild(testDescription);
 //                        this.testDescription.addChild(testDescription);
                         descriptionStoredCandidateMap.put(testDescription, candidate);

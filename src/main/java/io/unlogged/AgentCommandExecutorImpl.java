@@ -15,7 +15,6 @@ import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
 import net.bytebuddy.description.annotation.AnnotationDescription;
-import net.bytebuddy.description.type.TypeDefinition;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -162,11 +161,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 String targetClassName = agentCommandRequest.getClassName();
                 if (applicationContext != null && getBeanMethod != null) {
-					try {
-						objectInstanceByClass = getBeanMethod.invoke(applicationContext, Class.forName(targetClassName));
-					} catch (Exception e) {
+                    try {
+                        objectInstanceByClass = getBeanMethod.invoke(applicationContext,
+                                Class.forName(targetClassName));
+                    } catch (Exception e) {
 
-					}
+                    }
                 }
                 if (objectInstanceByClass == null) {
                     objectInstanceByClass = logger.getObjectByClassName(targetClassName);
@@ -227,33 +227,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     // so either have applicationContext or testApplicationContext
                     // instance of SpringApplicationContext
 
-
-                    if (this.springTestContextManager == null) {
-
-
-                        TestBaseImplementation baseImplementation = new TestBaseImplementation();
-
-                        DynamicType.Builder<Object> builder = byteBuddyInstance
-                                .subclass(Object.class)
-                                .name("UnloggedTestAnnotationCarrierClass");
-                        try {
-                            AnnotationDescription withSecurityContextAnnotation = getAnnotationDescription(
-                                    "org.springframework.security.test.context.support.WithSecurityContext");
-                            builder = builder.annotateType(withSecurityContextAnnotation);
-                        } catch (Exception e) {
-
-                        }
-                        DynamicType.Unloaded<Object> dynamicallyCreatedTestClassMaker = builder
-                                .defineMethod("basicTest", Void.class)
-                                .withParameters(new ArrayList<TypeDefinition>())
-                                .intercept(MethodDelegation.to(baseImplementation))
-                                .make();
-
-                        DynamicType.Loaded<Object> dynamicallyCreatedTestClassInstance = dynamicallyCreatedTestClassMaker.load(
-                                targetClassLoader);
-
-                        trySpringIntegration(dynamicallyCreatedTestClassInstance.getLoaded());
-                    }
 
                     if (this.springTestContextManager != null) {
                         RequestAuthentication authRequest = requestAuthentication;
@@ -1070,16 +1043,15 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                     if (methodName.startsWith("get") || methodName.startsWith("is")) {
                         ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
-				
-						ReturnValue returnParameter;
-						if (checkCanClassBeExtended(valueType)) {
-							returnParameter = new ReturnValue(
-								providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
-						}
-						else {
-							returnParameter = new ReturnValue(
-								providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
-						}
+
+                        ReturnValue returnParameter;
+                        if (checkCanClassBeExtended(valueType)) {
+                            returnParameter = new ReturnValue(
+                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
+                        } else {
+                            returnParameter = new ReturnValue(
+                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
+                        }
 
                         DeclaredMock returnParamCallMock = new DeclaredMock();
                         returnParameter.addDeclaredMock(returnParamCallMock);
@@ -1111,19 +1083,19 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return parameterObject.getMockedFieldInstance();
     }
 
-	private boolean checkCanClassBeExtended(Class<?> fieldType) {
-		if (fieldType.isPrimitive()) {
-			return false;
-		}
-		if (fieldType.isArray()) {
-			return false;
-		}
-		if ((fieldType.getModifiers() & java.lang.reflect.Modifier.FINAL) != 0) {
-			return false;
-		}
-		
-		return true;
-	}
+    private boolean checkCanClassBeExtended(Class<?> fieldType) {
+        if (fieldType.isPrimitive()) {
+            return false;
+        }
+        if (fieldType.isArray()) {
+            return false;
+        }
+        if ((fieldType.getModifiers() & java.lang.reflect.Modifier.FINAL) != 0) {
+            return false;
+        }
+
+        return true;
+    }
 
     private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
         Object valueToSet = null;
@@ -1443,4 +1415,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
+    public void enableSpringIntegration(Class<?> testClass) {
+        if (this.springTestContextManager == null) {
+            trySpringIntegration(testClass);
+        }
+    }
 }
