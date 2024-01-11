@@ -318,7 +318,7 @@ public class UnloggedTestRunner extends Runner {
 
     @Override
     public Description getDescription() {
-        logger.error("getDescirption: " + testDescription);
+        logger.debug("getDescription: " + testDescription);
         return testDescription;
     }
 

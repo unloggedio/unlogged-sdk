@@ -185,28 +185,26 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     objectInstanceByClass = tryObjectConstruct(targetClassName, targetClassLoader1, new HashMap<>());
                 }
 
-				if (objectInstanceByClass != null) {
-					targetClassType = objectInstanceByClass.getClass();
-				}
-				else {
-					try {
-						targetClassType = Class.forName(targetClassName, false, targetClassLoader1);
-					}
-					catch (Exception e) {
-						agentCommandResponse.setTargetClassName(targetClassName);
-						agentCommandResponse.setTargetMethodName(agentCommandRequest.getMethodName());
-						agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
-						agentCommandResponse.setTimestamp(new Date().getTime());
-						agentCommandResponse.setMethodReturnValue(null);
-						agentCommandResponse.setResponseClassName(null);
-						agentCommandResponse.setResponseType(ResponseType.FAILED);
-						agentCommandResponse.setMessage(e.getMessage());
-						
-						agentCommandRawResponse.setResponseObject(null);
-						return agentCommandRawResponse;
-					}
-				}
-			
+                if (objectInstanceByClass != null) {
+                    targetClassType = objectInstanceByClass.getClass();
+                } else {
+                    try {
+                        targetClassType = Class.forName(targetClassName, false, targetClassLoader1);
+                    } catch (Exception e) {
+                        agentCommandResponse.setTargetClassName(targetClassName);
+                        agentCommandResponse.setTargetMethodName(agentCommandRequest.getMethodName());
+                        agentCommandResponse.setTargetMethodSignature(agentCommandRequest.getMethodSignature());
+                        agentCommandResponse.setTimestamp(new Date().getTime());
+                        agentCommandResponse.setMethodReturnValue(null);
+                        agentCommandResponse.setResponseClassName(null);
+                        agentCommandResponse.setResponseType(ResponseType.FAILED);
+                        agentCommandResponse.setMessage(e.getMessage());
+
+                        agentCommandRawResponse.setResponseObject(null);
+                        return agentCommandRawResponse;
+                    }
+                }
+
                 targetClassLoader = objectInstanceByClass != null ?
                         objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
@@ -745,17 +743,19 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             }
 
                             if (fieldValue == null) {
-								try {
-									fieldValue = createObjectInstanceFromStringAndTypeInformation(
-                                        field.getType().getCanonicalName(), objectMapper.getTypeFactory(), "{}", field.getType()
-                                		);
-								}
-                                catch (Exception e) {
-									fieldValue = null;
-								}
+                                try {
+                                    fieldValue = createObjectInstanceFromStringAndTypeInformation(
+                                            field.getType().getCanonicalName(), objectMapper.getTypeFactory(), "{}",
+                                            field.getType()
+                                    );
+                                } catch (Exception e) {
+                                    fieldValue = null;
+                                }
                             }
                             String fieldTypeName = declaredMocksForField.get(0).getFieldTypeName();
-                            Class<?> classTypeToBeMocked = Class.forName(fieldTypeName);
+                            JavaType typeReference = MockHandler.getTypeReference(objectMapper.getTypeFactory(),
+                                    fieldTypeName);
+                            Class<?> classTypeToBeMocked = typeReference.getRawClass();
                             existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
                                     field, declaredMocksForField, fieldValue, classTypeToBeMocked);
                             mockInstanceMap.put(key, existingMockInstance);
@@ -958,15 +958,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         for (int i = 0; i < methodParameters.size(); i++) {
             String methodParameterStringValue = methodParameters.get(i);
             Class<?> parameterType = parameterTypesClass[i];
-            String parameterTypeName = parameterTypes.get(i); 
-			Object parameterObject;
-			try {
-				parameterObject = createObjectInstanceFromStringAndTypeInformation(parameterTypeName, typeFactory,
-                    methodParameterStringValue, parameterType);
-			}
-            catch (Exception e) {
-				parameterObject = null;
-			}
+            String parameterTypeName = parameterTypes.get(i);
+            Object parameterObject;
+            try {
+                parameterObject = createObjectInstanceFromStringAndTypeInformation(parameterTypeName, typeFactory,
+                        methodParameterStringValue, parameterType);
+            } catch (Exception e) {
+                parameterObject = null;
+            }
 
             parameters[i] = parameterObject;
         }
