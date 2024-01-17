@@ -388,6 +388,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("java.util.stream", true);
         invertedRadixTree.put("org.elasticsearch.client", true);
         invertedRadixTree.put("org.apache", true);
+        invertedRadixTree.put("com.querydsl", true);
         invertedRadixTree.put("org.hibernate", true);
         invertedRadixTree.put("org.jgrapht", true);
         invertedRadixTree.put("ch.qos", true);

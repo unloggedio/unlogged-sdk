@@ -15,10 +15,13 @@ import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
 import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.modifier.ModifierContributor;
 import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.Transformer;
 import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.jetbrains.annotations.NotNull;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
@@ -172,7 +175,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
                 List<String> alternateClassNames = agentCommandRequest.getAlternateClassNames();
-                if (objectInstanceByClass == null && alternateClassNames != null && alternateClassNames.size() > 0) {
+                if (objectInstanceByClass == null && alternateClassNames != null && !alternateClassNames.isEmpty()) {
                     for (String alternateClassName : alternateClassNames) {
                         objectInstanceByClass = logger.getObjectByClassName(alternateClassName);
                         if (objectInstanceByClass != null) {
@@ -670,9 +673,46 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (Modifier.isFinal(targetClassType.getModifiers())) {
             extendedClassInstance = objectInstanceByClass;
         } else {
-            DynamicType.Unloaded<? extends Object> extendedClass = byteBuddyInstance
+            DynamicType.Builder<?> extendedClassBuilder = byteBuddyInstance
                     .subclass(targetClassType)
-                    .make();
+                    .field(ElementMatchers.any())
+                    .transform(Transformer.ForField.withModifiers(new ModifierContributor.ForField() {
+                        @Override
+                        public int getMask() {
+                            return Modifier.FINAL;
+                        }
+
+                        @Override
+                        public int getRange() {
+                            return 0;
+                        }
+
+                        @Override
+                        public boolean isDefault() {
+                            return false;
+                        }
+                    }));
+
+
+//            Class<?> currentTargetClassType = targetClassType;
+//            Map<String, Boolean> fieldAdded = new HashMap<>();
+//            while (currentTargetClassType != null && !currentTargetClassType.equals(Object.class)) {
+//                // Iterate over fields and remove the 'final' modifier
+//                for (Field field : currentTargetClassType.getDeclaredFields()) {
+//                    String fieldName = field.getName();
+//                    if (fieldAdded.containsKey(fieldName)) {
+//                        continue;
+//                    }
+//                    fieldAdded.put(fieldName, true);
+//                    extendedClassBuilder = extendedClassBuilder
+//                            .defineField(fieldName, field.getType(), Modifier.PUBLIC)
+//                            .annotateField(field.getDeclaredAnnotations());
+//                }
+//                currentTargetClassType = currentTargetClassType.getSuperclass();
+//            }
+
+            DynamicType.Unloaded<?> extendedClass = extendedClassBuilder.make();
+
 
             ClassLoadingStrategy<ClassLoader> strategy;
             if (ClassInjector.UsingLookup.isAvailable()) {
@@ -700,6 +740,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             extendedClassInstance = objenesis.newInstance(extendedClassLoaded.getLoaded());
         }
 
+        Map<String, Field> fieldMap = getFieldMap(extendedClassInstance.getClass());
+
 
         Class<?> fieldCopyForClass = targetClassType;
         while (fieldCopyForClass != null && !fieldCopyForClass.equals(Object.class)) {
@@ -708,7 +750,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             for (Field field : declaredFields) {
                 try {
 
+                    Field fieldToSet = fieldMap.get(field.getName());
                     field.setAccessible(true);
+                    fieldToSet.setAccessible(true);
                     List<DeclaredMock> declaredMocksForField = mocksByFieldName.get(field.getName());
 
                     Object fieldValue = field.get(objectInstanceByClass);
@@ -725,7 +769,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 //                            continue;
 //                        }
                         try {
-                            field.set(extendedClassInstance, fieldValue);
+                            fieldToSet.set(extendedClassInstance, fieldValue);
                         } catch (Throwable e) {
                             //
                         }
@@ -756,6 +800,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             JavaType typeReference = MockHandler.getTypeReference(objectMapper.getTypeFactory(),
                                     fieldTypeName);
                             Class<?> classTypeToBeMocked = typeReference.getRawClass();
+//                            if (!fieldToSet.getType().isAssignableFrom(classTypeToBeMocked)) {
+//                                classTypeToBeMocked = fieldToSet.getType();
+//                            }
                             existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
                                     field, declaredMocksForField, fieldValue, classTypeToBeMocked);
                             mockInstanceMap.put(key, existingMockInstance);
@@ -765,7 +812,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         }
 
 //                        System.out.println("Setting mocked field [" + field.getName() + "] => " + existingMockInstance.getMockedFieldInstance());
-                        field.set(extendedClassInstance, existingMockInstance.getMockedFieldInstance());
+                        fieldToSet.set(extendedClassInstance, existingMockInstance.getMockedFieldInstance());
                     }
 
 
@@ -783,6 +830,24 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             fieldCopyForClass = fieldCopyForClass.getSuperclass();
         }
         return extendedClassInstance;
+    }
+
+    private Map<String, Field> getFieldMap(Class<?> extendedClassInstance) {
+
+        Map<String, Field> map = new HashMap<>();
+
+        Class<?> currentClass = extendedClassInstance;
+        while (currentClass != null && !Object.class.equals(currentClass)) {
+            Field[] fields = currentClass.getDeclaredFields();
+            for (Field field : fields) {
+                if (!map.containsKey(field.getName())) {
+                    map.put(field.getName(), field);
+                }
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+
+        return map;
     }
 
 
@@ -919,30 +984,100 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             return Double.doubleToLongBits((Double) methodReturnValue);
         } else if (methodReturnValue instanceof Float) {
             return Float.floatToIntBits((Float) methodReturnValue);
-//                    } else if (methodReturnValue instanceof Flux) {
-//                        Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-//                        agentCommandResponse.setMethodReturnValue(
-//                                objectMapper.writeValueAsString(returnedFlux.collectList().block()));
-//                    } else if (methodReturnValue instanceof Mono) {
-//                        Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-//                        agentCommandResponse.setMethodReturnValue(
-//                                objectMapper.writeValueAsString(returnedFlux.block()));
         } else if (methodReturnValue instanceof String) {
             return methodReturnValue;
         } else {
             try {
                 if (methodReturnValue instanceof Flux) {
                     Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
-                    return objectMapper.writeValueAsString(returnedFlux.collectList().block());
+
+                    CountDownLatch cdl = new CountDownLatch(1);
+                    StringBuffer returnValue = new StringBuffer();
+
+                    returnedFlux
+                            .collectList()
+                            .doOnError(e -> {
+                                try {
+                                    e.printStackTrace();
+                                    returnValue.append(objectMapper.writeValueAsString(e));
+                                } catch (JsonProcessingException ex) {
+                                    returnValue.append(e.getMessage());
+                                } finally {
+                                    cdl.countDown();
+                                }
+                            })
+                            .subscribe(e -> {
+                                try {
+                                    returnValue.append(objectMapper.writeValueAsString(e));
+                                } catch (JsonProcessingException ex) {
+                                    try {
+                                        returnValue.append(objectMapper.writeValueAsString(ex));
+                                    } catch (JsonProcessingException exc) {
+                                        returnValue.append(ex.getMessage());
+                                    }
+                                } finally {
+                                    cdl.countDown();
+                                }
+                            });
+                    cdl.await();
+                    return returnValue.toString();
+
                 } else if (methodReturnValue instanceof Mono) {
-                    Mono<?> returnedFlux = (Mono<?>) methodReturnValue;
-                    return objectMapper.writeValueAsString(returnedFlux.block());
+                    Mono<?> returnedMono = (Mono<?>) methodReturnValue;
+                    CountDownLatch cdl = new CountDownLatch(1);
+                    StringBuffer returnValue = new StringBuffer();
+
+//                    returnedMono
+//                            .log()
+//                            .elapsed()
+//                                    .map(pair -> {
+//                                        try {
+//                                            returnValue.append(objectMapper.writeValueAsString(pair.getT2()));
+//                                        } catch (JsonProcessingException e) {
+//                                            throw new RuntimeException(e);
+//                                        } finally {
+//                                            cdl.countDown();
+//                                        }
+//                                        return pair.getT2();
+//                                    }).subscribe();
+
+                    returnedMono
+                            .log()
+                            .subscribe(e -> {
+                                try {
+                                    returnValue.append(objectMapper.writeValueAsString(e));
+                                } catch (JsonProcessingException ex) {
+                                    try {
+                                        returnValue.append(objectMapper.writeValueAsString(ex));
+                                    } catch (JsonProcessingException exc) {
+                                        returnValue.append(ex.getMessage());
+                                    }
+                                } finally {
+                                    cdl.countDown();
+                                }
+                            }, e -> {
+                                try {
+                                    returnValue.append(objectMapper.writeValueAsString(e));
+                                } catch (JsonProcessingException ex) {
+                                    try {
+                                        returnValue.append(objectMapper.writeValueAsString(ex));
+                                    } catch (JsonProcessingException exc) {
+                                        returnValue.append(ex.getMessage());
+                                    }
+                                } finally {
+                                    cdl.countDown();
+                                }
+                            }, () -> {
+                                cdl.countDown();
+                            });
+                    cdl.await();
+                    return returnValue.toString();
+
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
                 return "Failed to serialize response object of " +
-                        "type: " + (methodReturnValue.getClass() != null ?
-                        methodReturnValue.getClass().getCanonicalName() : methodReturnValue);
+                        "type: " + methodReturnValue.getClass().getCanonicalName();
             }
         }
     }
@@ -964,6 +1099,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 parameterObject = createObjectInstanceFromStringAndTypeInformation(parameterTypeName, typeFactory,
                         methodParameterStringValue, parameterType);
             } catch (Exception e) {
+                System.err.println(
+                        "Failed to create paramter of type [" + parameterTypeName + "] from source " + methodParameterStringValue + " => " + e.getMessage());
+                e.printStackTrace();
                 parameterObject = null;
             }
 
@@ -984,13 +1122,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 // this should never happen
             }
         } else {
-
             JavaType typeReference = null;
             try {
                 if (stringParameterType != null) {
                     typeReference = MockHandler.getTypeReference(typeFactory, stringParameterType);
                 }
-            } catch (Throwable e) {
+            } catch (Throwable e1) {
                 // failed to construct from the canonical name,
                 // happens when this is a generic type
                 // so we try to construct using type from the method param class
@@ -1001,13 +1138,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             }
             try {
                 parameterObject = objectMapper.readValue(methodParameter, typeReference);
-            } catch (Throwable e) {
+            } catch (Throwable e2) {
                 // a complicated type (no default args constructor), or interface which jackson cannot create ?
                 try {
                     // can we try using objenesis ?
                     parameterObject = createParameterUsingObjenesis(typeReference, methodParameter, typeFactory);
                     // we might want to now construct the whole object tree deep down
-                } catch (Throwable e1) {
+                } catch (Throwable e3) {
                     // constructing using objenesis also failed
                     // lets try extending or implementing the class ?
                     parameterObject = createParameterUsingMocking(methodParameter, parameterType);
@@ -1153,7 +1290,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
     private Object tryObjectConstruct(String className, ClassLoader targetClassLoader, Map<String, Object> buildMap)
-            throws InstantiationException, IllegalAccessException {
+            throws IllegalAccessException {
         if (className.equals("java.util.List")) {
             return new ArrayList<>();
         }
