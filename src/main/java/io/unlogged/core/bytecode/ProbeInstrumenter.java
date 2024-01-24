@@ -28,7 +28,6 @@ import io.unlogged.core.PostCompilerTransformation;
 import io.unlogged.util.ByteTools;
 import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
-import okhttp3.MediaType;
 import org.objectweb.asm.*;
 
 import java.io.ByteArrayOutputStream;
@@ -40,7 +39,6 @@ import java.util.List;
 
 
 public class ProbeInstrumenter implements PostCompilerTransformation {
-    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private final Weaver weaver;
     private final TypeHierarchy typeHierarchy;
