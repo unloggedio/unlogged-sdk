@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.AgentCommandRawResponse;
 import io.unlogged.Runtime;
@@ -301,13 +300,13 @@ public class UnloggedTestRunner extends Runner {
             }
         }
 
-        try {
-            Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-            KotlinModule kotlinModule = new KotlinModule.Builder().build();
-            jacksonBuilder.addModule(kotlinModule);
-        } catch (ClassNotFoundException e) {
-            // kotlin module for jackson not present on classpath
-        }
+//        try {
+//            Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+//            KotlinModule kotlinModule = new KotlinModule.Builder().build();
+//            jacksonBuilder.addModule(kotlinModule);
+//        } catch (ClassNotFoundException e) {
+//            // kotlin module for jackson not present on classpath
+//        }
 
 
         JsonMapper objectMapperInstance = jacksonBuilder.build();

@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
@@ -30,8 +29,6 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -51,7 +48,7 @@ import java.util.stream.Stream;
  */
 public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
-    public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
+    //    public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
     public static final String FAILED_TO_RECORD_MESSAGE =
             "{\"error\": \"failed to serialize object\", \"message\":\"";
     private final List<String> JACKSON_PROPERTY_NAMES_SET_FALSE = Arrays.asList(
@@ -136,13 +133,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 }
             }
 
-            try {
-                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-                KotlinModule kotlinModule = new KotlinModule.Builder().build();
-                objectMapper1.registerModule(kotlinModule);
-            } catch (ClassNotFoundException e) {
-                // kotlin module for jackson not present on classpath
-            }
+//            try {
+//                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+//                KotlinModule kotlinModule = new KotlinModule.Builder().build();
+//                objectMapper1.registerModule(kotlinModule);
+//            } catch (ClassNotFoundException e) {
+//                // kotlin module for jackson not present on classpath
+//            }
 
 
             return objectMapper1;
@@ -338,13 +335,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 }
             }
 
-            try {
-                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-                KotlinModule kotlinModule = new KotlinModule.Builder().build();
-                jacksonBuilder.addModule(kotlinModule);
-            } catch (ClassNotFoundException e) {
-                // kotlin module for jackson not present on classpath
-            }
+//            try {
+//                Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+//                KotlinModule kotlinModule = new KotlinModule.Builder().build();
+//                jacksonBuilder.addModule(kotlinModule);
+//            } catch (ClassNotFoundException e) {
+//                // kotlin module for jackson not present on classpath
+//            }
 
 
             JsonMapper objectMapperInstance = jacksonBuilder.build();
@@ -517,10 +514,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
                                 || className.contains("java.lang.reflect")
                                 || (className.startsWith("org.glassfish")
-                                   && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
+                                && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                                 || (className.startsWith("org.springframework")
-                                   && (!className.startsWith("org.springframework.http")
-                                   && !className.startsWith("org.springframework.data.domain")))
+                                && (!className.startsWith("org.springframework.http")
+                                && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
                                 || value instanceof Stream
                 ) {
