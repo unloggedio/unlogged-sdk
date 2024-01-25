@@ -26,7 +26,7 @@ jobs:
         run: mvn -B package --file pom.xml
       - name: Get version
         run: |
-          echo "$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
 
       # Testing script
       - name: Install Python
