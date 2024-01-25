@@ -2,3 +2,4 @@ target
 dependency-reduced-pom.xml
 dependency-tree.txt
 test/venv/
+test/test_report.txt
