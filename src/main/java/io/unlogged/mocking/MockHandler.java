@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+
 import io.unlogged.mocking.construction.JsonDeserializer;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
@@ -43,8 +44,11 @@ public class MockHandler {
             List<DeclaredMock> declaredMocks,
             ObjectMapper objectMapper,
             ByteBuddy byteBuddy,
-            Objenesis objenesis, Object originalImplementation,
-            Object originalFieldParent, ClassLoader targetClassLoader, Field field) {
+            Objenesis objenesis,
+			Object originalImplementation,
+            Object originalFieldParent,
+			ClassLoader targetClassLoader,
+			Field field) {
         this.objectMapper = objectMapper;
         this.jsonDeserializer = new JsonDeserializer(objectMapper);
         this.byteBuddy = byteBuddy;
@@ -173,7 +177,12 @@ public class MockHandler {
 //        }
 //        Method realMethod = originalImplementation.getClass()
 //                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
-        return invokedMethod.invoke(originalImplementation, methodArguments);
+
+		if (originalImplementation == null){
+			return null;
+		}
+		
+		return invokedMethod.invoke(originalImplementation, methodArguments);
     }
 
     private Object createReturnValueInstance(ThenParameter thenParameter, Method invokedMethod, ClassLoader classLoader, String classNameToBeConstructed, String returnValueSerialized)

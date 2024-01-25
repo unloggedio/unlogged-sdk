@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.AgentCommandRawResponse;
 import io.unlogged.Runtime;
@@ -75,6 +74,7 @@ public class UnloggedTestRunner extends Runner {
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
+    private final Class<?> testClass;
     private boolean isSpringPresent;
     private Method getBeanMethod;
     private Object applicationContext;
@@ -99,9 +99,11 @@ public class UnloggedTestRunner extends Runner {
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
+        this.testClass = testClass;
         this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
         this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
+        commandExecutor.enableSpringIntegration(this.testClass);
         collectTests();
         Runtime.getInstance("format=discard");
     }
@@ -298,13 +300,13 @@ public class UnloggedTestRunner extends Runner {
             }
         }
 
-        try {
-            Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-            KotlinModule kotlinModule = new KotlinModule.Builder().build();
-            jacksonBuilder.addModule(kotlinModule);
-        } catch (ClassNotFoundException e) {
-            // kotlin module for jackson not present on classpath
-        }
+//        try {
+//            Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
+//            KotlinModule kotlinModule = new KotlinModule.Builder().build();
+//            jacksonBuilder.addModule(kotlinModule);
+//        } catch (ClassNotFoundException e) {
+//            // kotlin module for jackson not present on classpath
+//        }
 
 
         JsonMapper objectMapperInstance = jacksonBuilder.build();
@@ -315,7 +317,7 @@ public class UnloggedTestRunner extends Runner {
 
     @Override
     public Description getDescription() {
-        logger.error("getDescirption: " + testDescription);
+        logger.debug("getDescription: " + testDescription);
         return testDescription;
     }
 
@@ -373,6 +375,10 @@ public class UnloggedTestRunner extends Runner {
                 Map<String, List<StoredCandidate>> storedCandidateMap = classRecords.getStoredCandidateMap();
 //                System.err.println("running the tests from unlogged: " + classFileResource);
 
+                int candidateCount = storedCandidateMap.values().stream().mapToInt(Collection::size).sum();
+                if (candidateCount < 1) {
+                    continue;
+                }
                 Description suiteDescription = Description.createSuiteDescription(Class.forName(className));
 //                    System.err.println(className );
                 testDescription.addChild(suiteDescription);
@@ -392,6 +398,7 @@ public class UnloggedTestRunner extends Runner {
 
                         Description testDescription = getTestDescription(targetClassTypeInstance, candidateId,
                                 candidate.getCandidateId());
+
                         suiteDescription.addChild(testDescription);
 //                        this.testDescription.addChild(testDescription);
                         descriptionStoredCandidateMap.put(testDescription, candidate);

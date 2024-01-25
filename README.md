@@ -5,14 +5,22 @@
 </p>
 
 <p align="center">
-  Record. Replay. Test.
+  Record. Replay. Test. 
 </p>
 
-<p align="center">
+<p align="center"><sup>
   <a href="https://unloggedio.github.io/documentation/"><strong>Documentation</strong></a> ·
   <a href="https://www.unlogged.io/bug-bounty-program"><strong>Bug Bounty</strong></a> ·
   <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk/"><strong>Maven</strong></a> ·
   <a href="https://plugins.jetbrains.com/plugin/18529-unlogged"><strong>IntelliJ Plugin</strong></a>
+  </sup>
+</p>
+<p align="center">
+  <a href="https://mvnrepository.com/artifact/video.bug/unlogged-sdk"><img src="https://img.shields.io/maven-central/v/video.bug/unlogged-sdk?style=for-the-badge" /></a>
+  <a href="https://plugins.jetbrains.com/plugin/18529-unlogged"><img src="https://img.shields.io/jetbrains/plugin/v/18529-unlogged?style=for-the-badge" /></a>
+
+
+  
 </p>
 <br/>
 

@@ -1,6 +1,8 @@
 package io.unlogged.weaver;
 
-import com.insidious.common.weaver.*;
+import com.insidious.common.weaver.ClassInfo;
+import com.insidious.common.weaver.DataInfo;
+import com.insidious.common.weaver.MethodInfo;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.List;
 import io.unlogged.core.TypeLibrary;
@@ -11,6 +13,7 @@ import io.unlogged.core.javac.JavacNode;
 import io.unlogged.core.javac.JavacTreeMaker;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -90,7 +93,13 @@ public class UnloggedVisitor extends JavacASTAdapter {
     @Override
     public void visitCompilationUnit(JavacNode top, JCTree.JCCompilationUnit unit) {
         for (JCTree.JCImport anImport : unit.getImports()) {
-            typeLibrary.addType(anImport.getQualifiedIdentifier().toString());
+            try {
+                typeLibrary.addType(anImport.getClass().getMethod("getQualifiedIdentifier")
+                        .invoke(anImport).toString()
+                );
+            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
         }
 
     }
