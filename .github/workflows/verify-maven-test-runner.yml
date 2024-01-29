@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Build SDK
+name: Test SDK on maven demo project
 
 on:
   push:
