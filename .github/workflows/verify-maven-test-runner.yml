@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: make pom.xml
+      run: touch pom.xml
     - name: Set up JDK 19
       uses: actions/setup-java@v3
       with:
