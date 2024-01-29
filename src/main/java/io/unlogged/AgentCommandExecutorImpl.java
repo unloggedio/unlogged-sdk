@@ -22,7 +22,6 @@ import net.bytebuddy.dynamic.loading.ClassInjector;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.matcher.ElementMatchers;
-import org.jetbrains.annotations.NotNull;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
@@ -439,7 +438,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
     }
 
-    @NotNull
     private AnnotationDescription getAnnotationDescription(String className) throws ClassNotFoundException {
         Class<?> springBootTestAnnotationClass = Class.forName(className);
 
