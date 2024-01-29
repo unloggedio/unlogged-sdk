@@ -33,6 +33,6 @@ jobs:
     - name: clone
       run: |
         git clone https://github.com/unloggedio/unlogged-spring-gradle-demo
-        cd unlogged-spring-maven-demo
+        cd unlogged-spring-gradle-demo
         ./gradlew test
         ls build
