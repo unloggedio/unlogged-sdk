@@ -35,17 +35,27 @@ def modify_pom(pom_path, sdk_version):
 
 def modify_main(main_path):
 
+	# read file
 	with open(main_path, "r") as file:
 		file = [line.rstrip('\n') for line in file]
+
+		# check annotation
+		annotation_present = False
+		for line in file:
+			if (unlogged_annotation in line):
+				annotation_present = True
 	
-		line_count = 0
-		for index in range(len(file)):
-			if (main_method_identifier in file[index]):
-				line_count = index
-				break
+		# add annotation
+		if not annotation_present:
+			line_count = 0
+			for index in range(len(file)):
+				if (main_method_identifier in file[index]):
+					line_count = index
+					break
 
-		file.insert(line_count, unlogged_annotation)
+			file.insert(line_count, unlogged_annotation)
 
+	# write file
 	with open(main_path, "w") as file_new:
 		
 		for line in file:
@@ -66,8 +76,8 @@ if __name__=="__main__":
 		file.writelines(["compile_test artifact file"])
 		file.writelines(["sdk_version = " + sdk_version])
 
-		test_repo_url = "https://github.com/unloggedio/unlogged-spring-maven-demo"
-		test_repo_name = "unlogged-spring-maven-demo"
+		test_repo_url = "https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk"
+		test_repo_name = "unlogged-spring-maven-demo-without-sdk"
 		rel_pom_path = "/pom.xml"
 		rel_main_path = "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java"
 		
@@ -75,7 +85,7 @@ if __name__=="__main__":
 		os.system("git clone " + test_repo_url)
 		modify_pom(test_repo_name + rel_pom_path, sdk_version)
 		modify_main(test_repo_name + rel_main_path)
-		# os.system("cd " + test_repo_name + " && mvn clean compile")
-		# os.system("rm -rf " + test_repo_name)
+		os.system("cd " + test_repo_name + " && mvn clean compile")
+		os.system("rm -rf " + test_repo_name)
 
 		file.close()
