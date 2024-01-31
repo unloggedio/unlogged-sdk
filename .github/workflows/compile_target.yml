@@ -36,15 +36,15 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r ./test/requirements.txt
+          pip install -r ./src/test/python/requirements.txt
       - name: Run testing script
         run: |
-          python3 ./test/test_target.py ${{ env.RELEASE_VERSION }}
+          python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }}
 
       # report upload
       - name: Upload report
         uses: actions/upload-artifact@v3
         with:
           name: test_report
-          path: test/test_report.txt
+          path: ./src/test/python/test_report.txt
       
