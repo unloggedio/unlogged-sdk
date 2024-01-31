@@ -3,12 +3,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_pom_path, rel_main_path, artifact_file):
+	def __init__(self, test_repo_url, test_repo_name, rel_pom_path, rel_main_path):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_pom_path = rel_pom_path
 		self.rel_main_path = rel_main_path
-		self.artifact_file = artifact_file
 
 	def modify_pom(self, sdk_version):
 
@@ -79,7 +78,6 @@ def compile_target (target):
 	target.modify_pom(sdk_version)
 	target.modify_main()
 	os.system("cd " + target.test_repo_name + " && mvn clean compile")
-	# write artifact_file
 	os.system("rm -rf " + target.test_repo_name)
 
 if __name__=="__main__":
@@ -87,7 +85,6 @@ if __name__=="__main__":
 	# get constants
 	main_method_identifier = "public static void main"
 	unlogged_annotation = "@Unlogged"
-	artifact_file = "src/test/python/test_report.txt"
 	sdk_version = sys.argv[1]
 
 	target_list = [
@@ -96,29 +93,20 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			artifact_file
 		),
 		Target(
 			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
 			"unlogged-spring-maven-demo-without-sdk",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			artifact_file
 		),
 		Target(
 			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
 			"unlogged-spring-maven-demo-wouldnt-compile",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			artifact_file
 		)
 	]
-
-	with open(artifact_file, "w") as artifact_file:
-		artifact_file.writelines(["compile_test artifact file"])
-		artifact_file.writelines(["sdk_version = " + sdk_version])
 		
-		for local_target in target_list:
-			compile_target(local_target)
-
-		artifact_file.close()
+	for local_target in target_list:
+		compile_target(local_target)
