@@ -40,11 +40,3 @@ jobs:
       - name: Run testing script
         run: |
           python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }}
-
-      # report upload
-      - name: Upload report
-        uses: actions/upload-artifact@v3
-        with:
-          name: test_report
-          path: ./src/test/python/test_report.txt
-      
