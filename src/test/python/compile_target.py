@@ -72,9 +72,9 @@ if __name__=="__main__":
 	artifact_file = "src/test/python/test_report.txt"
 	sdk_version = sys.argv[1]
 
-	with open(artifact_file, "w") as file:
-		file.writelines(["compile_test artifact file"])
-		file.writelines(["sdk_version = " + sdk_version])
+	with open(artifact_file, "w") as artifact_file:
+		artifact_file.writelines(["compile_test artifact file"])
+		artifact_file.writelines(["sdk_version = " + sdk_version])
 
 		test_repo_url = "https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk"
 		test_repo_name = "unlogged-spring-maven-demo-without-sdk"
@@ -88,4 +88,4 @@ if __name__=="__main__":
 		os.system("cd " + test_repo_name + " && mvn clean compile")
 		os.system("rm -rf " + test_repo_name)
 
-		file.close()
+		artifact_file.close()
