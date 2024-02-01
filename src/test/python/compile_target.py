@@ -158,7 +158,7 @@ if __name__=="__main__":
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/Application.java",
 			build_system.MAVEN
-		)
+		),
 		#unlogged-spring-gradle-demo in github
 		Target(
 			"https://github.com/unloggedio/unlogged-spring-gradle-demo",
