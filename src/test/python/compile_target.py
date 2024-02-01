@@ -80,7 +80,14 @@ def compile_target (target):
 	os.system("git clone " + target.test_repo_url)
 	target.modify_pom(sdk_version)
 	target.modify_main()
-	subprocess.run(["cd " + target.test_repo_name + " && mvn clean compile"], check=True)
+	
+	compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+	response_code = os.system(compile_command)
+	if (response_code == 0):
+		print ("Target compiled succesfully: " +  target.test_repo_name)
+	else:
+		raise Exception("Target did not compiled: " + target.test_repo_name)
+
 	os.system("rm -rf " + target.test_repo_name)
 
 
