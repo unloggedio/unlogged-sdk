@@ -88,24 +88,34 @@ if __name__=="__main__":
 	sdk_version = sys.argv[1]
 
 	target_list = [
+		# unlogged-spring-maven-demo in github
 		Target(
 			"https://github.com/unloggedio/unlogged-spring-maven-demo",
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 		),
+		# unlogged-spring-maven-demo without sdk
 		Target(
 			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
 			"unlogged-spring-maven-demo-without-sdk",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 		),
+		# unlogged-spring-maven-demo which should not compile
 		Target(
 			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
 			"unlogged-spring-maven-demo-wouldnt-compile",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-		)
+		),
+		# appsmith
+		# Target(
+		# 	"https://github.com/appsmithorg/appsmith",
+		# 	"appsmith",
+		# 	"/app/server/appsmith-server/pom.xml",
+		# 	"/app/server/appsmith-server/src/main/java/com/appsmith/server/ServerApplication.java"
+		# )
 	]
 		
 	for local_target in target_list:
