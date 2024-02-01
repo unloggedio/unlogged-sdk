@@ -50,8 +50,40 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
-	# def modify_gradle(self, sdk_version):
-	# 	continue
+	def modify_gradle(self, sdk_version):
+
+		# read file
+		gradle_path = self.test_repo_name + self.rel_dependency_path
+		with open(gradle_path, "r") as file:
+			file = [line.rstrip('\n') for line in file]
+
+			unlogged_dependency = []
+			dependencies_index = -1
+			for index in range(len(file)):
+				# dependency block
+				if ("dependencies" in file[index]):
+					dependencies_index = index
+
+				# unlogged dependency
+				elif ("video.bug:unlogged-sdk" in file[index]):
+					unlogged_dependency.append(index)
+
+			# remove unlogged dependency if it exists
+			for i in reversed(unlogged_dependency):
+				file.pop(i)
+
+			# add unlogged dependency with latest version
+			unlogged_dependency_implementation = "implementation 'video.bug:unlogged-sdk:" + sdk_version + "'"
+			unlogged_dependency_annotation = "annotationProcessor 'video.bug:unlogged-sdk:" + sdk_version + "'"
+			file.insert(dependencies_index + 1, unlogged_dependency_implementation)
+			file.insert(dependencies_index + 2, unlogged_dependency_annotation)
+		
+		# write file
+		with open(gradle_path, "w") as file_new:
+
+			for line in file:
+				file_new.write(line)
+				file_new.write("\n")
 
 	def modify_main(self):
 
@@ -121,20 +153,20 @@ if __name__=="__main__":
 	target_list = [
 		# unlogged-spring-maven-demo in github
 		Target(
-			"https://github.com/unloggedio/unlogged-spring-maven-demo",
-			"unlogged-spring-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			build_system.MAVEN
+			"https://github.com/unloggedio/unlogged-spring-gradle-demo",
+			"unlogged-spring-gradle-demo",
+			"/build.gradle",
+			"/src/main/java/org/unlogged/demo/gradle/Application.java",
+			build_system.GRADLE
 		),
 		# unlogged-spring-maven-demo without sdk
-		Target(
-			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
-			"unlogged-spring-maven-demo-without-sdk",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			build_system.MAVEN
-		)
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
+		# 	"unlogged-spring-maven-demo-without-sdk",
+		# 	"/pom.xml",
+		# 	"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+		# 	build_system.MAVEN
+		# )
 	]
 		
 	for local_target in target_list:
