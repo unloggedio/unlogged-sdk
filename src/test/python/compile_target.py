@@ -138,7 +138,7 @@ def compile_target (target):
 		raise Exception("Target did not compiled: " + target.test_repo_name)
 
 	# delete target
-	# os.system("rm -rf " + target.test_repo_name)
+	os.system("rm -rf " + target.test_repo_name)
 
 
 
@@ -156,7 +156,7 @@ if __name__=="__main__":
 			"https://github.com/unloggedio/unlogged-spring-maven-demo",
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/Application.java",
+			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			build_system.MAVEN
 		),
 		#unlogged-spring-gradle-demo in github
