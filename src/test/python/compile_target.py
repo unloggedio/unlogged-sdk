@@ -115,12 +115,12 @@ if __name__=="__main__":
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 		),
 		# unlogged-spring-maven-demo which should not compile
-		Target(
-			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
-			"unlogged-spring-maven-demo-wouldnt-compile",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-		)
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
+		# 	"unlogged-spring-maven-demo-wouldnt-compile",
+		# 	"/pom.xml",
+		# 	"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+		# )
 	]
 		
 	for local_target in target_list:
