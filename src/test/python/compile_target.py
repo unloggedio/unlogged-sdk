@@ -25,8 +25,12 @@ class Target:
 			if (child.text == "unlogged-sdk"):
 				dependency_present = True
 
-		if not dependency_present:
-			# create dependency
+		if dependency_present:
+			# update dependency
+			os.system("cd " + self.test_repo_name + " && mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk")
+		
+		else:
+			# add dependency
 			dependency = ET.Element("dependency")
 			ET.SubElement(dependency, "groupId").text = "video.bug"
 			ET.SubElement(dependency, "artifactId").text = "unlogged-sdk"
@@ -79,6 +83,8 @@ def compile_target (target):
 	target.modify_main()
 	os.system("cd " + target.test_repo_name + " && mvn clean compile")
 	os.system("rm -rf " + target.test_repo_name)
+
+
 
 if __name__=="__main__":
 
