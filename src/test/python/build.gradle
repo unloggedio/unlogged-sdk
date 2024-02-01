@@ -1,0 +1,71 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.0'
+	id 'io.spring.dependency-management' version '1.1.4'
+	id 'jacoco'
+}
+
+group = 'org.unlogged'
+version = '0.0.1-SNAPSHOT'
+apply plugin : 'jacoco'
+def springbootVersion = '3.1.0'
+
+java {
+	sourceCompatibility = '17'
+}
+
+jacoco {
+	toolVersion = "0.8.9"
+	reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa:'+springbootVersion
+	implementation 'org.springframework.boot:spring-boot-starter-web:'+springbootVersion
+	implementation 'org.springframework.boot:spring-boot-starter-test:'+springbootVersion
+	implementation 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	implementation 'com.google.protobuf:protobuf-java:3.25.0'
+	implementation 'com.google.protobuf:protobuf-java-util:3.25.0'
+	implementation 'redis.clients:jedis:3.8.0'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate5'
+
+//	implementation files("/Users/artpar/.m2/repository/video/bug/unlogged-sdk/0.1.47/unlogged-sdk-0.1.47.jar")
+//	annotationProcessor files("/Users/artpar/.m2/repository/video/bug/unlogged-sdk/0.1.47/unlogged-sdk-0.1.47.jar")
+
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis:'+springbootVersion
+	testImplementation 'org.springframework.boot:spring-boot-starter-test:'+springbootVersion
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.2.0'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.2.0'
+	testImplementation 'junit:junit:4.12'
+	testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.2.0'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+test {
+	useJUnitPlatform()
+	testLogging.showStandardStreams = true
+	finalizedBy jacocoTestReport
+	reports {
+		junitXml.outputLocation = layout.buildDirectory.dir("junit-xml-report")
+		html.outputLocation = layout.buildDirectory.dir("junit-html-report")
+	}
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = false
+		csv.required = false
+		html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+	}
+}

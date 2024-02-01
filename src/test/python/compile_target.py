@@ -1,8 +1,9 @@
 import os
 import sys
 import xml.etree.ElementTree as ET
+from enum import Enum
 
-class BUILD_SYSTEM(Enum):
+class build_system(Enum):
 	MAVEN = 1
 	GRADLE = 2
 
@@ -49,8 +50,8 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
-	def modify_gradle(self, sdk_version):
-		continue
+	# def modify_gradle(self, sdk_version):
+	# 	continue
 
 	def modify_main(self):
 
@@ -73,7 +74,8 @@ class Target:
 						line_count = index
 						break
 
-				file.insert(line_count, unlogged_annotation)
+				file.insert(1, unlogged_import)
+				file.insert(line_count + 1, unlogged_annotation)
 
 		# write file
 		with open(main_path, "w") as file_new:
@@ -89,10 +91,10 @@ def compile_target (target):
 	
 	# modify build system file
 	target.modify_main()
-	if (target.build_system == BUILD_SYSTEM.MAVEN):
+	if (target.build_system == build_system.MAVEN):
 		target.modify_pom(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
-	elif (target.build_system == BUILD_SYSTEM.GRADLE):
+	elif (target.build_system == build_system.GRADLE):
 		target.modify_gradle(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
 	
@@ -113,6 +115,7 @@ if __name__=="__main__":
 	# get constants
 	main_method_identifier = "public static void main"
 	unlogged_annotation = "@Unlogged"
+	unlogged_import = "import io.unlogged.Unlogged;"
 	sdk_version = sys.argv[1]
 
 	target_list = [
@@ -122,7 +125,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			BUILD_SYSTEM.MAVEN
+			build_system.MAVEN
 		),
 		# unlogged-spring-maven-demo without sdk
 		Target(
@@ -130,7 +133,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo-without-sdk",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			BUILD_SYSTEM.MAVEN
+			build_system.MAVEN
 		)
 	]
 		
