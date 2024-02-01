@@ -2,16 +2,21 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 
+class BUILD_SYSTEM(Enum):
+	MAVEN = 1
+	GRADLE = 2
+
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_pom_path, rel_main_path):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, build_system):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
-		self.rel_pom_path = rel_pom_path
+		self.rel_dependency_path = rel_dependency_path
 		self.rel_main_path = rel_main_path
+		self.build_system = build_system
 
 	def modify_pom(self, sdk_version):
 
-		pom_path = self.test_repo_name + self.rel_pom_path
+		pom_path = self.test_repo_name + self.rel_dependency_path
 		# parse file
 		ET.register_namespace('', "http://maven.apache.org/POM/4.0.0")
 		ET.register_namespace('xsi', "http://www.w3.org/2001/XMLSchema-instance")
@@ -44,6 +49,8 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
+	def modify_gradle(self, sdk_version):
+		continue
 
 	def modify_main(self):
 
@@ -77,17 +84,26 @@ class Target:
 
 def compile_target (target):
 	
+	# clone target
 	os.system("git clone " + target.test_repo_url)
-	target.modify_pom(sdk_version)
-	target.modify_main()
 	
-	compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+	# modify build system file
+	target.modify_main()
+	if (target.build_system == BUILD_SYSTEM.MAVEN):
+		target.modify_pom(sdk_version)
+		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+	elif (target.build_system == BUILD_SYSTEM.GRADLE):
+		target.modify_gradle(sdk_version)
+		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
+	
+	# target compile
 	response_code = os.system(compile_command)
 	if (response_code == 0):
 		print ("Target compiled succesfully: " +  target.test_repo_name)
 	else:
 		raise Exception("Target did not compiled: " + target.test_repo_name)
 
+	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
 
@@ -106,6 +122,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+			BUILD_SYSTEM.MAVEN
 		),
 		# unlogged-spring-maven-demo without sdk
 		Target(
@@ -113,6 +130,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo-without-sdk",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+			BUILD_SYSTEM.MAVEN
 		)
 	]
 		
