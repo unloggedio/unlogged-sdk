@@ -1,14 +1,9 @@
 ghp-import==2.1.0
 Jinja2==3.1.2
-Markdown @ file:///private/tmp/python-markdown-20240110-4739-mp2a5f/Markdown-3.5.2
-MarkupSafe @ file:///private/tmp/python-markupsafe-20240119-4778-tstdmr/MarkupSafe-2.1.4
 mergedeep==1.3.4
-packaging @ file:///private/tmp/python-packaging-20231018-5368-zv724j/packaging-23.2
 pathspec==0.11.2
 platformdirs==4.0.0
-Pygments @ file:///private/tmp/pygments-20231121-5274-1rlyumb/pygments-2.17.2
 python-dateutil==2.8.2
-PyYAML @ file:///private/tmp/pyyaml-20231018-5610-1rdh755/PyYAML-6.0.1
 pyyaml_env_tag==0.1
 six==1.16.0
 watchdog==3.0.0
