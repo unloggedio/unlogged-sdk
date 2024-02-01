@@ -27,7 +27,7 @@ class Target:
 
 		if dependency_present:
 			# update dependency
-			os.system("cd " + self.test_repo_name + " && mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk")
+			os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 		
 		else:
 			# add dependency
@@ -36,14 +36,13 @@ class Target:
 			ET.SubElement(dependency, "artifactId").text = "unlogged-sdk"
 			ET.SubElement(dependency, "version").text = sdk_version
 
-			# add dependency
 			for child in root:
 				if (child.tag == "{http://maven.apache.org/POM/4.0.0}dependencies"):
 					child.append(dependency)
 
-		# write file
-		ET.indent(tree, space="\t", level=0)
-		tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
+			# write file
+			ET.indent(tree, space="\t", level=0)
+			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
 
 	def modify_main(self):
@@ -114,14 +113,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo-wouldnt-compile",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-		),
-		# appsmith
-		# Target(
-		# 	"https://github.com/appsmithorg/appsmith",
-		# 	"appsmith",
-		# 	"/app/server/appsmith-server/pom.xml",
-		# 	"/app/server/appsmith-server/src/main/java/com/appsmith/server/ServerApplication.java"
-		# )
+		)
 	]
 		
 	for local_target in target_list:
