@@ -1,17 +1,23 @@
 import os
 import sys
 import xml.etree.ElementTree as ET
+from enum import Enum
+
+class build_system(Enum):
+	MAVEN = 1
+	GRADLE = 2
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_pom_path, rel_main_path):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, build_system):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
-		self.rel_pom_path = rel_pom_path
+		self.rel_dependency_path = rel_dependency_path
 		self.rel_main_path = rel_main_path
+		self.build_system = build_system
 
 	def modify_pom(self, sdk_version):
 
-		pom_path = self.test_repo_name + self.rel_pom_path
+		pom_path = self.test_repo_name + self.rel_dependency_path
 		# parse file
 		ET.register_namespace('', "http://maven.apache.org/POM/4.0.0")
 		ET.register_namespace('xsi', "http://www.w3.org/2001/XMLSchema-instance")
@@ -44,6 +50,40 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
+	def modify_gradle(self, sdk_version):
+
+		# read file
+		gradle_path = self.test_repo_name + self.rel_dependency_path
+		with open(gradle_path, "r") as file:
+			file = [line.rstrip('\n') for line in file]
+
+			unlogged_dependency = []
+			dependencies_index = -1
+			for index in range(len(file)):
+				# dependency block
+				if ("dependencies" in file[index]):
+					dependencies_index = index
+
+				# unlogged dependency
+				elif ("video.bug:unlogged-sdk" in file[index]):
+					unlogged_dependency.append(index)
+
+			# remove unlogged dependency if it exists
+			for i in reversed(unlogged_dependency):
+				file.pop(i)
+
+			# add unlogged dependency with latest version
+			unlogged_dependency_implementation = "implementation 'video.bug:unlogged-sdk:" + sdk_version + "'"
+			unlogged_dependency_annotation = "annotationProcessor 'video.bug:unlogged-sdk:" + sdk_version + "'"
+			file.insert(dependencies_index + 1, unlogged_dependency_implementation)
+			file.insert(dependencies_index + 2, unlogged_dependency_annotation)
+		
+		# write file
+		with open(gradle_path, "w") as file_new:
+
+			for line in file:
+				file_new.write(line)
+				file_new.write("\n")
 
 	def modify_main(self):
 
@@ -66,7 +106,8 @@ class Target:
 						line_count = index
 						break
 
-				file.insert(line_count, unlogged_annotation)
+				file.insert(1, unlogged_import)
+				file.insert(line_count + 1, unlogged_annotation)
 
 		# write file
 		with open(main_path, "w") as file_new:
@@ -77,17 +118,26 @@ class Target:
 
 def compile_target (target):
 	
+	# clone target
 	os.system("git clone " + target.test_repo_url)
-	target.modify_pom(sdk_version)
-	target.modify_main()
 	
-	compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+	# modify build system file
+	target.modify_main()
+	if (target.build_system == build_system.MAVEN):
+		target.modify_pom(sdk_version)
+		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+	elif (target.build_system == build_system.GRADLE):
+		target.modify_gradle(sdk_version)
+		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
+	
+	# target compile
 	response_code = os.system(compile_command)
 	if (response_code == 0):
 		print ("Target compiled succesfully: " +  target.test_repo_name)
 	else:
 		raise Exception("Target did not compiled: " + target.test_repo_name)
 
+	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
 
@@ -97,22 +147,25 @@ if __name__=="__main__":
 	# get constants
 	main_method_identifier = "public static void main"
 	unlogged_annotation = "@Unlogged"
+	unlogged_import = "import io.unlogged.Unlogged;"
 	sdk_version = sys.argv[1]
 
 	target_list = [
-		# unlogged-spring-maven-demo in github
+		#unlogged-spring-maven-demo in github
 		Target(
 			"https://github.com/unloggedio/unlogged-spring-maven-demo",
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+			build_system.MAVEN
 		),
-		# unlogged-spring-maven-demo without sdk
+		#unlogged-spring-gradle-demo in github
 		Target(
-			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
-			"unlogged-spring-maven-demo-without-sdk",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+			"https://github.com/unloggedio/unlogged-spring-gradle-demo",
+			"unlogged-spring-gradle-demo",
+			"/build.gradle",
+			"/src/main/java/org/unlogged/demo/gradle/Application.java",
+			build_system.GRADLE
 		)
 	]
 		

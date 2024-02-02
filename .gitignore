@@ -2,3 +2,4 @@ target
 dependency-reduced-pom.xml
 dependency-tree.txt
 src/test/python/venv/
+src/test/python/.gradle/
