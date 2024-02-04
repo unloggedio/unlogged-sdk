@@ -138,7 +138,7 @@ def compile_target (target):
 		raise Exception("Target did not compiled: " + target.test_repo_name)
 
 	# delete target
-	# os.system("rm -rf " + target.test_repo_name)
+	os.system("rm -rf " + target.test_repo_name)
 
 
 
