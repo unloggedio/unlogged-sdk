@@ -159,14 +159,46 @@ if __name__=="__main__":
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			build_system.MAVEN
 		),
-		#unlogged-spring-gradle-demo in github
-		Target(
-			"https://github.com/unloggedio/unlogged-spring-gradle-demo",
-			"unlogged-spring-gradle-demo",
-			"/build.gradle",
-			"/src/main/java/org/unlogged/demo/gradle/Application.java",
-			build_system.GRADLE
-		)
+		#unlogged-spring-maven-demo without sdk
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-without-sdk",
+		# 	"unlogged-spring-maven-demo-without-sdk",
+		# 	"/pom.xml",
+		# 	"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+		# 	build_system.MAVEN
+		# ),
+		#unlogged-spring-maven-demo wouldn't compile
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
+		# 	"unlogged-spring-maven-demo-wouldnt-compile",
+		# 	"/pom.xml",
+		# 	"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+		# 	build_system.MAVEN
+		# ),
+		# unlogged-spring-gradle-demo in github
+		# Target(
+		# 	"https://github.com/unloggedio/unlogged-spring-gradle-demo",
+		# 	"unlogged-spring-gradle-demo",
+		# 	"/build.gradle",
+		# 	"/src/main/java/org/unlogged/demo/gradle/Application.java",
+		# 	build_system.GRADLE
+		# ),
+		# unlogged-spring-gradle-demo without sdk
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-gradle-demo-without-sdk",
+		# 	"unlogged-spring-gradle-demo-without-sdk",
+		# 	"/build.gradle",
+		# 	"/src/main/java/org/unlogged/demo/gradle/Application.java",
+		# 	build_system.GRADLE
+		# ),
+		# unlogged-spring-gradle-demo wouldn't compile
+		# Target(
+		# 	"https://github.com/kartikeytewari-ul/unlogged-spring-gradle-demo-wouldnt-compile",
+		# 	"unlogged-spring-gradle-demo-wouldnt-compile",
+		# 	"/build.gradle",
+		# 	"/src/main/java/org/unlogged/demo/gradle/Application.java",
+		# 	build_system.GRADLE
+		# )
 	]
 		
 	for local_target in target_list:
