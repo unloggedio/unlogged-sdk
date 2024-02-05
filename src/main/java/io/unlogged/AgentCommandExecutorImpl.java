@@ -236,8 +236,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     String principalString = String.valueOf(requestAuthentication.getPrincipal());
                     String userPrincipalClassName = requestAuthentication.getPrincipalClassName();
 
-                    Object principalObject = objectMapper.readValue(principalString,
-                            Class.forName(userPrincipalClassName));
+
+                    Object principalObject;
+                    if (userPrincipalClassName.equals("org.springframework.security.core.userdetails.User")) {
+                        principalObject = "DUMMY_USER";
+
+                    } else {
+                        principalObject = objectMapper.readValue(principalString, Class.forName(userPrincipalClassName));
+                    }
                     requestAuthentication.setPrincipal(principalObject);
 
                     // spring is present
@@ -246,7 +252,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
 
                     if (this.springTestContextManager != null) {
-                        RequestAuthentication authRequest = requestAuthentication;
 
                         Class<?> authClass = Class.forName("org.springframework.security.core.Authentication");
 
@@ -258,7 +263,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                         authInstance = springAuthImplementatorClass.getConstructor(
                                         RequestAuthentication.class)
-                                .newInstance(authRequest);
+                                .newInstance(requestAuthentication);
 
                         mockedContext = Class.forName(
                                 "org.springframework.security.core.context.SecurityContextImpl"

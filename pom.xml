@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.48</version>
+    <version>0.1.49</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -172,7 +172,7 @@
         <dependency>
             <groupId>video.bug</groupId>
             <artifactId>common</artifactId>
-            <version>1.4.5</version>
+            <version>1.4.6</version>
             <exclusions>
                 <exclusion>
                     <groupId>redis.clients</groupId>
