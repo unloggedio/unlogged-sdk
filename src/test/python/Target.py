@@ -27,7 +27,6 @@ class Target:
 		(out_stream, err_stream) = proc.communicate()
 		docker_container_id = str(out_stream)
 		docker_container_id = docker_container_id[2:][:-3]
-		print ("pipeline_log: [target] docker_container_id = " + docker_container_id)
 		return docker_container_id
 
 	def modify_pom(self, sdk_version, in_docker):
@@ -50,13 +49,9 @@ class Target:
 			# update dependency
 			if (in_docker):
 				docker_container_id = self.get_docker_container_id()
-				print ("pipeline_log: [target] docker_container_id = " + docker_container_id)
 				val_alpha = os.system("docker exec -it " + docker_container_id + " apt-get update")
-				print ("pipeline_log: [target] val_alpha = " + str(val_alpha))
 				val_beta = os.system("docker exec -it " + docker_container_id + " apt-get install -y maven")
-				print ("pipeline_log: [target] val_beta = " + str(val_beta))
 				val_gamma = os.system("docker exec -it " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + self.rel_dependency_path)
-				print ("pipeline_log: [target] val_gamma = " + str(val_gamma))
 			else:
 				os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 
@@ -173,13 +168,11 @@ class Target:
 
 		for local_test in expected_response_dict:
 			print ("--------------------------")
+			print ("Test name = " + test_name)
+			print ("Expected value = " + expected_response_dict[local_test].name)
+			print ("Actual value = " + actual_response_dict[local_test].name)
+			
 			if (expected_response_dict[local_test] == actual_response_dict[local_test]):
-				print ("Test name = " + test_name)
-				print ("Expected value = " + expected_response_dict[local_test].name)
-				print ("Actual value = " + actual_response_dict[local_test].name)
 				print ("The test executed as expected")
 			else:
-				print ("Test name = " + test_name)
-				print ("Expected value = " + expected_response_dict[local_test].name)
-				print ("Actual value = " + actual_response_dict[local_test].name)
 				raise Exception("The test did not executed as expected")

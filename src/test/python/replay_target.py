@@ -4,56 +4,36 @@ from Target import Target, ReplayTest
 from configEnum import buildSystem, TestResult
 import subprocess
 
-# TODO: add docker down 
-# TODO: check all the scripts
-# TODO: test for compile target 
-# TODO: test for replay target
 def replay_target (target):
 	
-	# clone target
+	# clone repo and start server
 	os.system("git clone " + target.test_repo_url)
+	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
+	val_1 = os.system(docker_up_cmd)
 	
 	# modify build system file
+	docker_container_id = target.get_docker_container_id()
 	if (target.buildSystem == buildSystem.MAVEN):
-		
-		# start docker 
-		docker_command = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
-		val_1 = os.system(docker_command)
-		print ("pipeline_log: [replay_target] docker is started")
-		print ("pipeline_log: [replay_target] val_1 = " + str(val_1))
-
-		# modify pom.xml
 		target.modify_pom(sdk_version, True)
-
-		# run test
-		docker_container_id = target.get_docker_container_id()
-		print ("pipeline_log: [replay_target] docker_container_id = " + docker_container_id)
-
 		test_command = "docker exec -it " + docker_container_id + " mvn test --fail-never"
-		val_2 = os.system(test_command)
-		print ("pipeline_log: [replay_target] test_command = " + test_command)
-		print ("pipeline_log: [replay_target] val_2 = " + str(val_2))
 
-		# run command and get response
-		response_code = val_1 or val_2
-
-
-	# elif (target.buildSystem == buildSystem.GRADLE):
-	# 	target.modify_gradle(sdk_version)
-	# 	test_command = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
+	elif (target.buildSystem == buildSystem.GRADLE):
+		target.modify_gradle(sdk_version)
+		test_command = "docker exec -it " + docker_container_id + " gradle test --fail-never"
 	
 	# target replay
+	val_2 = os.system(test_command)
+	response_code = val_1 or val_2
 	if (response_code == 0):
 		print ("Test for target executed successfully: " +  target.test_repo_name)
 	else:
 		raise Exception("Test for target failed execution: " + target.test_repo_name)
 
-	# surefire-report assertion
+	# assert and clean repo
 	target.check_replay()
-
-	# delete target
+	docker_down_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml down"
+	os.system(docker_down_cmd)
 	os.system("rm -rf " + target.test_repo_name)
-
 
 if __name__=="__main__":
 
