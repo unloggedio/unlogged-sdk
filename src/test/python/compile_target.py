@@ -1,7 +1,7 @@
 import os
 import sys
 from Target import Target
-from build_system import build_system
+from configEnum import buildSystem
 
 def compile_target (target):
 	
@@ -10,10 +10,10 @@ def compile_target (target):
 	
 	# modify build system file
 	target.modify_main()
-	if (target.build_system == build_system.MAVEN):
+	if (target.buildSystem == buildSystem.MAVEN):
 		target.modify_pom(sdk_version, False)
 		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
-	elif (target.build_system == build_system.GRADLE):
+	elif (target.buildSystem == buildSystem.GRADLE):
 		target.modify_gradle(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
 	
@@ -38,7 +38,7 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			build_system.MAVEN,
+			buildSystem.MAVEN,
 			[]
 		)
 	]

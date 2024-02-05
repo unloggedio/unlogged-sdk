@@ -1,6 +1,6 @@
 import os
 import xml.etree.ElementTree as ET
-from TestResult import TestResult
+from configEnum import TestResult
 import subprocess
 
 # define constants
@@ -14,13 +14,21 @@ class ReplayTest:
 		self.result_ideal = result_ideal
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, build_system, test_response):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_dependency_path = rel_dependency_path
 		self.rel_main_path = rel_main_path
-		self.build_system = build_system
+		self.buildSystem = buildSystem
 		self.test_response = test_response
+
+	def get_docker_container_id(self):
+		proc = subprocess.Popen(["docker container ls --all --quiet --filter 'name=conf-demo-app'"], stdout=subprocess.PIPE, shell=True)
+		(out_stream, err_stream) = proc.communicate()
+		docker_container_id = str(out_stream)
+		docker_container_id = docker_container_id[2:][:-3]
+		print ("pipeline_log: [target] docker_container_id = " + docker_container_id)
+		return docker_container_id
 
 	def modify_pom(self, sdk_version, in_docker):
 
@@ -41,15 +49,14 @@ class Target:
 		if dependency_present:
 			# update dependency
 			if (in_docker):
-				proc = subprocess.Popen(["docker container ls --all --quiet --filter 'name=conf-demo-app'"], stdout=subprocess.PIPE, shell=True)
-				(out_stream, err_stream) = proc.communicate()
-				docker_container_id = str(out_stream)
-				docker_container_id = docker_container_id[2:][:-3]
-				os.system("docker exec -it " + docker_container_id + " apt-get update")
-				os.system("docker exec -it " + docker_container_id + " apt-get install -y maven")
-				print ("maven installed!!!!")
-				os.system("docker exec -it " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
-				print ("maven updated dependency locally!!!!")
+				docker_container_id = self.get_docker_container_id()
+				print ("pipeline_log: [target] docker_container_id = " + docker_container_id)
+				val_alpha = os.system("docker exec -it " + docker_container_id + " apt-get update")
+				print ("pipeline_log: [target] val_alpha = " + str(val_alpha))
+				val_beta = os.system("docker exec -it " + docker_container_id + " apt-get install -y maven")
+				print ("pipeline_log: [target] val_beta = " + str(val_beta))
+				val_gamma = os.system("docker exec -it " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + self.rel_dependency_path)
+				print ("pipeline_log: [target] val_gamma = " + str(val_gamma))
 			else:
 				os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 
@@ -136,6 +143,43 @@ class Target:
 				file_new.write("\n")
 
 	def check_replay(self):
+
+		# create dictionary from configuration
+		expected_response_dict = {}
 		for local_test in self.test_response:
-			print ("test_name = " + local_test.test_name)
-			print ("result_ideal = " + local_test.result_ideal)
+			expected_response_dict[local_test.test_name] = local_test.result_ideal
+
+		# parse report
+		report_path = "replay_report.xml"
+		docker_container_id = self.get_docker_container_id()
+		os.system("docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path)
+
+		ET.register_namespace ('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+		ET.register_namespace ('noNamespaceSchemaLocation', 'https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd')
+		tree_report = ET.parse(report_path)
+		tree_root = tree_report.getroot()
+
+		actual_response_dict = {}
+		for local in tree_root:
+			if (local.tag == "testcase"):
+				test_name = local.attrib["name"]
+
+				actual_result = TestResult.PASS
+				for metadata in local:
+					if (metadata.tag == "failure"):
+						actual_result = TestResult.FAIL
+
+				actual_response_dict[test_name] = actual_result
+
+		for local_test in expected_response_dict:
+			print ("--------------------------")
+			if (expected_response_dict[local_test] == actual_response_dict[local_test]):
+				print ("Test name = " + test_name)
+				print ("Expected value = " + expected_response_dict[local_test].name)
+				print ("Actual value = " + actual_response_dict[local_test].name)
+				print ("The test executed as expected")
+			else:
+				print ("Test name = " + test_name)
+				print ("Expected value = " + expected_response_dict[local_test].name)
+				print ("Actual value = " + actual_response_dict[local_test].name)
+				raise Exception("The test did not executed as expected")

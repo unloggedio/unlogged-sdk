@@ -1,42 +1,44 @@
 import os
 import sys
 from Target import Target, ReplayTest
-from build_system import build_system
-from TestResult import TestResult
+from configEnum import buildSystem, TestResult
 import subprocess
-	
+
+# TODO: add docker down 
+# TODO: check all the scripts
+# TODO: test for compile target 
+# TODO: test for replay target
 def replay_target (target):
 	
 	# clone target
 	os.system("git clone " + target.test_repo_url)
 	
 	# modify build system file
-	if (target.build_system == build_system.MAVEN):
-		# target.modify_pom(sdk_version, True)
+	if (target.buildSystem == buildSystem.MAVEN):
 		
-		# get command for docker start
+		# start docker 
 		docker_command = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
-		
-		# get command for test
-		proc = subprocess.Popen(["docker container ls --all --quiet --filter 'name=conf-demo-app'"], stdout=subprocess.PIPE, shell=True)
-		(out_stream, err_stream) = proc.communicate()
-		docker_container_id = str(out_stream)
-		docker_container_id = docker_container_id[2:][:-3]
-		print ("docker_container_id = " + docker_container_id)
+		val_1 = os.system(docker_command)
+		print ("pipeline_log: [replay_target] docker is started")
+		print ("pipeline_log: [replay_target] val_1 = " + str(val_1))
+
+		# modify pom.xml
+		target.modify_pom(sdk_version, True)
+
+		# run test
+		docker_container_id = target.get_docker_container_id()
+		print ("pipeline_log: [replay_target] docker_container_id = " + docker_container_id)
+
 		test_command = "docker exec -it " + docker_container_id + " mvn test --fail-never"
-		print (test_command)
+		val_2 = os.system(test_command)
+		print ("pipeline_log: [replay_target] test_command = " + test_command)
+		print ("pipeline_log: [replay_target] val_2 = " + str(val_2))
 
 		# run command and get response
-		val_1 = os.system(docker_command)
-		target.modify_pom(sdk_version, True)
-		print ("val_1 = " + str(val_1))
-		val_2 = os.system(test_command)
-		print ("val_2 = " + str(val_2))
-		
 		response_code = val_1 or val_2
-		
 
-	# elif (target.build_system == build_system.GRADLE):
+
+	# elif (target.buildSystem == buildSystem.GRADLE):
 	# 	target.modify_gradle(sdk_version)
 	# 	test_command = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	
@@ -63,10 +65,10 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			build_system.MAVEN,
+			buildSystem.MAVEN,
 			[
-				ReplayTest("test_name-1", TestResult.PASS),
-				ReplayTest("test_name-2", TestResult.FAIL)
+				ReplayTest("test getAllCustomers returns expected value when", TestResult.PASS),
+				ReplayTest("test getCustomerProfile returns expected value when", TestResult.FAIL)
 			]
 		)
 	]
