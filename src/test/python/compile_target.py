@@ -11,7 +11,7 @@ def compile_target (target):
 	# modify build system file
 	target.modify_main()
 	if (target.build_system == build_system.MAVEN):
-		target.modify_pom(sdk_version)
+		target.modify_pom(sdk_version, False)
 		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
 	elif (target.build_system == build_system.GRADLE):
 		target.modify_gradle(sdk_version)
@@ -38,7 +38,8 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			build_system.MAVEN
+			build_system.MAVEN,
+			[]
 		)
 	]
 		

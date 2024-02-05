@@ -1,20 +1,28 @@
 import os
 import xml.etree.ElementTree as ET
+from TestResult import TestResult
+import subprocess
 
 # define constants
 main_method_identifier = "public static void main"
 unlogged_annotation = "@Unlogged"
 unlogged_import = "import io.unlogged.Unlogged;"
 
+class ReplayTest:
+	def __init__(self, test_name, result_ideal):
+		self.test_name = test_name
+		self.result_ideal = result_ideal
+
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, build_system):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, build_system, test_response):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_dependency_path = rel_dependency_path
 		self.rel_main_path = rel_main_path
 		self.build_system = build_system
+		self.test_response = test_response
 
-	def modify_pom(self, sdk_version):
+	def modify_pom(self, sdk_version, in_docker):
 
 		pom_path = self.test_repo_name + self.rel_dependency_path
 		# parse file
@@ -32,7 +40,19 @@ class Target:
 
 		if dependency_present:
 			# update dependency
-			os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
+			if (in_docker):
+				proc = subprocess.Popen(["docker container ls --all --quiet --filter 'name=conf-demo-app'"], stdout=subprocess.PIPE, shell=True)
+				(out_stream, err_stream) = proc.communicate()
+				docker_container_id = str(out_stream)
+				docker_container_id = docker_container_id[2:][:-3]
+				os.system("docker exec -it " + docker_container_id + " apt-get update")
+				os.system("docker exec -it " + docker_container_id + " apt-get install -y maven")
+				print ("maven installed!!!!")
+				os.system("docker exec -it " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
+				print ("maven updated dependency locally!!!!")
+			else:
+				os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
+
 		
 		else:
 			# add dependency
@@ -114,3 +134,8 @@ class Target:
 			for line in file:
 				file_new.write(line)
 				file_new.write("\n")
+
+	def check_replay(self):
+		for local_test in self.test_response:
+			print ("test_name = " + local_test.test_name)
+			print ("result_ideal = " + local_test.result_ideal)
