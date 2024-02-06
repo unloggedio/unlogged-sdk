@@ -3,8 +3,6 @@ import sys
 from Target import Target, ReplayTest
 from configEnum import buildSystem, TestResult
 import subprocess
-import time
-
 
 def replay_target (target):
 	
