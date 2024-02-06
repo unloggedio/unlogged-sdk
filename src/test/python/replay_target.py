@@ -11,9 +11,9 @@ def replay_target (target):
 	
 	# modify build
 	if (target.buildSystem == buildSystem.MAVEN):
-		target.modify_pom(sdk_version, False)
+		target.modify_pom(sdk_version)
 	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version, False)
+		target.modify_gradle(sdk_version)
 	
 	# server start
 	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
@@ -21,13 +21,13 @@ def replay_target (target):
 
 	proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
 	(out_stream, err_stream) = proc.communicate()
-	docker_container_id = "target-repo"
+	docker_container_name = "target-repo"
 
 	# target replay
 	if (target.buildSystem == buildSystem.MAVEN):
-		test_command = "docker exec " + docker_container_id + " ./mvnw surefire:test --fail-never"
+		test_command = "docker exec " + docker_container_name + " ./mvnw surefire:test --fail-never"
 	elif (target.buildSystem == buildSystem.GRADLE):
-		test_command = "docker exec " + docker_container_id + " ./gradlew test"
+		test_command = "docker exec " + docker_container_name + " ./gradlew test"
 	val_2 = os.system(test_command)
 
 	print ("--------")

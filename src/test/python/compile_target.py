@@ -11,10 +11,10 @@ def compile_target (target):
 	# modify build system file
 	target.modify_main()
 	if (target.buildSystem == buildSystem.MAVEN):
-		target.modify_pom(sdk_version, False)
+		target.modify_pom(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
 	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version, False)
+		target.modify_gradle(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
 	
 	# target compile

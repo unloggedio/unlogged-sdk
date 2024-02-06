@@ -22,14 +22,7 @@ class Target:
 		self.buildSystem = buildSystem
 		self.test_response = test_response
 
-	def get_docker_container_id(self):
-		proc = subprocess.Popen(["docker container ls --all --quiet --filter 'name=conf-demo-app'"], stdout=subprocess.PIPE, shell=True)
-		(out_stream, err_stream) = proc.communicate()
-		docker_container_id = str(out_stream)
-		docker_container_id = docker_container_id[2:][:-3]
-		return docker_container_id
-
-	def modify_pom(self, sdk_version, in_docker):
+	def modify_pom(self, sdk_version):
 
 		pom_path = self.test_repo_name + self.rel_dependency_path
 		# parse file
@@ -47,15 +40,7 @@ class Target:
 
 		if dependency_present:
 			# update dependency
-			if (in_docker):
-				print ("log-1")
-				docker_container_id = self.get_docker_container_id()
-				print ("docker_container_id = " + docker_container_id)
-				val_alpha = os.system("docker exec " + docker_container_id + " apt-get update")
-				val_beta = os.system("docker exec " + docker_container_id + " apt-get install -y maven")
-				val_gamma = os.system("docker exec " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + self.rel_dependency_path)
-			else:
-				os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
+			os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 
 		
 		else:
@@ -73,7 +58,7 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
-	def modify_gradle(self, sdk_version, in_docker):
+	def modify_gradle(self, sdk_version):
 
 		# read file
 		gradle_path = self.test_repo_name + self.rel_dependency_path
@@ -148,10 +133,10 @@ class Target:
 
 		# parse report
 		report_path = "replay_report.xml"
-		docker_container_id = "target-repo"
+		docker_container_name = "target-repo"
 
 		print ("---------------")
-		copy_cmd = "docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
+		copy_cmd = "docker cp " + docker_container_name + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
 		print ("copy_cmd = " + copy_cmd)
 		copy_cmd = subprocess.Popen([copy_cmd], stdout=subprocess.PIPE, shell=True)
 		(copy_cmd_std, copy_cmd_err) = copy_cmd.communicate()
