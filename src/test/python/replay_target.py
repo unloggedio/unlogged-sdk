@@ -27,7 +27,7 @@ def replay_target (target):
 	print ("val_1 = " + str(val_1))
 	val_2 = os.system(test_command)
 	print ("test_command = " + test_command)
-	print ("val_2 = " + val_2)
+	print ("val_2 = " + str(val_2))
 	print ("--------")
 	response_code = val_1 or val_2
 	if (response_code == 0):
