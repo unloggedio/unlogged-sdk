@@ -148,7 +148,7 @@ class Target:
 
 		# parse report
 		report_path = "replay_report.xml"
-		docker_container_id = "conf_demo-app_1"
+		docker_container_id = "target-repo"
 
 		print ("---------------")
 		copy_cmd = "docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
