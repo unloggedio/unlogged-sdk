@@ -1,0 +1,42 @@
+name: replay_target
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build: 
+    runs-on: ubuntu-latest
+
+    steps:
+      # clone the unlogged-sdk project
+      - name: checkout commit
+        uses: actions/checkout@v4
+
+      # unlogged-sdk project
+      - name: Set up JDK 19
+        uses: actions/setup-java@v3
+        with:
+          java-version: '19'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+      - name: Get version
+        run: |
+          echo "RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+
+      # Testing script
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./src/test/python/requirements.txt
+      - name: Run testing script
+        run: |
+          python3 ./src/test/python/replay_target.py ${{ env.RELEASE_VERSION }}
