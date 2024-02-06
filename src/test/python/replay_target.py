@@ -22,6 +22,10 @@ def replay_target (target):
 	
 	# target replay
 	val_1 = os.system(docker_up_cmd)
+	print ("--------")
+	print ("docker_up_cmd = " + docker_up_cmd)
+	print ("val_1 = " + val_1)
+	print ("--------")
 	val_2 = os.system(test_command)
 	response_code = val_1 or val_2
 	if (response_code == 0):
