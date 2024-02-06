@@ -150,10 +150,12 @@ class Target:
 		report_path = "replay_report.xml"
 		docker_container_id = "conf_demo-app_1"
 
-		copy_cmd = subprocess.Popen(["docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path], stdout=subprocess.PIPE, shell=True)
+		print ("---------------")
+		copy_cmd = "docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
+		print ("copy_cmd = " + copy_cmd)
+		copy_cmd = subprocess.Popen([copy_cmd], stdout=subprocess.PIPE, shell=True)
 		(copy_cmd_std, copy_cmd_err) = copy_cmd.communicate()
 
-		print ("---------------")
 		print ("copy_cmd_std = " + str(copy_cmd_std))
 		print ("copy_cmd_err = " + str(copy_cmd_err))
 		print ("---------------")
