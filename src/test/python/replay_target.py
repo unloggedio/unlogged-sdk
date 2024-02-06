@@ -20,7 +20,9 @@ def replay_target (target):
 	# server start
 	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	val_1 = os.system(docker_up_cmd)
-	time.sleep(10)
+
+	proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
+	(out_stream, err_stream) = proc.communicate()
 	docker_container_id = "conf-demo-app-1"
 
 	# target replay
@@ -31,6 +33,8 @@ def replay_target (target):
 	val_2 = os.system(test_command)
 
 	print ("--------")
+	print ("out_stream = " + out_stream)
+	print ("err_stream = " + err_stream)
 	print ("docker_up_cmd = " + docker_up_cmd)
 	print ("val_1 = " + str(val_1))
 	print ("test_command = " + test_command)
