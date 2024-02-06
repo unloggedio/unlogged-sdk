@@ -24,9 +24,11 @@ def replay_target (target):
 	val_1 = os.system(docker_up_cmd)
 	print ("--------")
 	print ("docker_up_cmd = " + docker_up_cmd)
-	print ("val_1 = " + val_1)
-	print ("--------")
+	print ("val_1 = " + str(val_1))
 	val_2 = os.system(test_command)
+	print ("test_command = " + test_command)
+	print ("val_2 = " + val_2)
+	print ("--------")
 	response_code = val_1 or val_2
 	if (response_code == 0):
 		print ("Test for target executed successfully: " +  target.test_repo_name)
