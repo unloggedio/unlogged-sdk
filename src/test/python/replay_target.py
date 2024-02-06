@@ -6,22 +6,22 @@ import subprocess
 
 def replay_target (target):
 	
-	# clone repo and start server
+	# clone repo
 	os.system("git clone " + target.test_repo_url)
-	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
-	val_1 = os.system(docker_up_cmd)
 	
 	# modify build system file
 	docker_container_id = target.get_docker_container_id()
+	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	if (target.buildSystem == buildSystem.MAVEN):
 		target.modify_pom(sdk_version, True)
 		test_command = "docker exec -it " + docker_container_id + " mvn test --fail-never"
 
 	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version)
-		test_command = "docker exec -it " + docker_container_id + " gradle test --fail-never"
+		target.modify_gradle(sdk_version, True)
+		test_command = "docker exec -it " + docker_container_id + " gradle test"
 	
 	# target replay
+	val_1 = os.system(docker_up_cmd)
 	val_2 = os.system(test_command)
 	response_code = val_1 or val_2
 	if (response_code == 0):

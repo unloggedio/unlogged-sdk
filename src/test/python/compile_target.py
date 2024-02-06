@@ -14,7 +14,7 @@ def compile_target (target):
 		target.modify_pom(sdk_version, False)
 		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
 	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version)
+		target.modify_gradle(sdk_version, False)
 		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
 	
 	# target compile
@@ -34,12 +34,11 @@ if __name__=="__main__":
 	target_list = [
 		#unlogged-spring-maven-demo
 		Target(
-			"https://github.com/unloggedio/unlogged-spring-maven-demo",
-			"unlogged-spring-maven-demo",
+			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
+			"unlogged-spring-maven-demo-wouldnt-compile",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN,
-			[]
+			buildSystem.MAVEN
 		)
 	]
 		

@@ -14,7 +14,7 @@ class ReplayTest:
 		self.result_ideal = result_ideal
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response = []):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_dependency_path = rel_dependency_path
@@ -49,9 +49,10 @@ class Target:
 			# update dependency
 			if (in_docker):
 				docker_container_id = self.get_docker_container_id()
-				val_alpha = os.system("docker exec -it " + docker_container_id + " apt-get update")
-				val_beta = os.system("docker exec -it " + docker_container_id + " apt-get install -y maven")
-				val_gamma = os.system("docker exec -it " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + self.rel_dependency_path)
+				print ("docker_container_id = " + docker_container_id)
+				val_alpha = os.system("docker exec " + docker_container_id + " apt-get update")
+				val_beta = os.system("docker exec " + docker_container_id + " apt-get install -y maven")
+				val_gamma = os.system("docker exec " + docker_container_id + " mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + self.rel_dependency_path)
 			else:
 				os.system("mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 
@@ -71,7 +72,7 @@ class Target:
 			ET.indent(tree, space="\t", level=0)
 			tree.write(pom_path, encoding="UTF-8", xml_declaration=True)
 
-	def modify_gradle(self, sdk_version):
+	def modify_gradle(self, sdk_version, in_docker):
 
 		# read file
 		gradle_path = self.test_repo_name + self.rel_dependency_path
