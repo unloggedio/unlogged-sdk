@@ -21,7 +21,7 @@ def replay_target (target):
 	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	val_1 = os.system(docker_up_cmd)
 	time.sleep(10)
-	docker_container_id = target.get_docker_container_id()
+	docker_container_id = "conf-demo-app-1"
 
 	# target replay
 	if (target.buildSystem == buildSystem.MAVEN):
