@@ -147,8 +147,8 @@ class Target:
 			expected_response_dict[local_test.test_name] = local_test.result_ideal
 
 		# parse report
-		report_path = "target/surefire-reports/TEST-UnloggedRunnerTest.xml"
-		docker_container_id = self.get_docker_container_id()
+		report_path = "replay_report.xml"
+		docker_container_id = "conf_demo-app_1"
 		os.system("docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path)
 
 		ET.register_namespace ('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
