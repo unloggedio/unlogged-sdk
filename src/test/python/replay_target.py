@@ -23,7 +23,7 @@ def replay_target (target):
 
 	proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
 	(out_stream, err_stream) = proc.communicate()
-	docker_container_id = "conf-demo-app-1"
+	docker_container_id = "conf_demo-app_1"
 
 	# target replay
 	if (target.buildSystem == buildSystem.MAVEN):
