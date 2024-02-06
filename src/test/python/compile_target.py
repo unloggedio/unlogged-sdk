@@ -34,8 +34,8 @@ if __name__=="__main__":
 	target_list = [
 		#unlogged-spring-maven-demo
 		Target(
-			"https://github.com/kartikeytewari-ul/unlogged-spring-maven-demo-wouldnt-compile",
-			"unlogged-spring-maven-demo-wouldnt-compile",
+			"https://github.com/unloggedio/unlogged-spring-maven-demo",
+			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			buildSystem.MAVEN
