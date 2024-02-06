@@ -149,12 +149,13 @@ class Target:
 		# parse report
 		report_path = "replay_report.xml"
 		docker_container_id = "conf_demo-app_1"
-		copy_cmd = "docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
-		val_alpha = os.system(copy_cmd)
+
+		copy_cmd = subprocess.Popen(["docker cp " + docker_container_id + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path], stdout=subprocess.PIPE, shell=True)
+		(copy_cmd_std, copy_cmd_err) = copy_cmd.communicate()
 
 		print ("---------------")
-		print ("copy_cmd = " + copy_cmd)
-		print ("val_alpha = " + str(val_alpha))
+		print ("copy_cmd_std = " + str(copy_cmd_std))
+		print ("copy_cmd_err = " + str(copy_cmd_err))
 		print ("---------------")
 
 		ET.register_namespace ('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
