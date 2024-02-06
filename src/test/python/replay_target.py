@@ -33,8 +33,8 @@ def replay_target (target):
 	val_2 = os.system(test_command)
 
 	print ("--------")
-	print ("out_stream = " + out_stream)
-	print ("err_stream = " + err_stream)
+	print ("out_stream = " + str(out_stream))
+	print ("err_stream = " + str(err_stream))
 	print ("docker_up_cmd = " + docker_up_cmd)
 	print ("val_1 = " + str(val_1))
 	print ("test_command = " + test_command)
