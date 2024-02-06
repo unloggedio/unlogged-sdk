@@ -48,6 +48,7 @@ class Target:
 		if dependency_present:
 			# update dependency
 			if (in_docker):
+				print ("log-1")
 				docker_container_id = self.get_docker_container_id()
 				print ("docker_container_id = " + docker_container_id)
 				val_alpha = os.system("docker exec " + docker_container_id + " apt-get update")

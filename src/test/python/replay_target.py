@@ -13,11 +13,11 @@ def replay_target (target):
 	docker_container_id = target.get_docker_container_id()
 	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	if (target.buildSystem == buildSystem.MAVEN):
-		target.modify_pom(sdk_version, True)
+		target.modify_pom(sdk_version, False)
 		test_command = "docker exec -it " + docker_container_id + " mvn test --fail-never"
 
 	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version, True)
+		target.modify_gradle(sdk_version, False)
 		test_command = "docker exec -it " + docker_container_id + " gradle test"
 	
 	# target replay

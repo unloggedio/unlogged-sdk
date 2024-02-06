@@ -1,4 +1,4 @@
-name: compile_target
+name: replay_target
 
 on:
   push:
