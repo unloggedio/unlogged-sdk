@@ -3,6 +3,7 @@ import sys
 from Target import Target, ReplayTest
 from configEnum import buildSystem, TestResult
 import subprocess
+import time
 
 
 def replay_target (target):
@@ -19,13 +20,14 @@ def replay_target (target):
 	# server start
 	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	val_1 = os.system(docker_up_cmd)
+	time.sleep(10)
 	docker_container_id = target.get_docker_container_id()
 
 	# target replay
 	if (target.buildSystem == buildSystem.MAVEN):
-		test_command = "docker exec -it " + docker_container_id + " /bin/bash ./mvnw test --fail-never"
+		test_command = "docker exec " + docker_container_id + " /bin/bash ./mvnw test --fail-never"
 	elif (target.buildSystem == buildSystem.GRADLE):
-		test_command = "docker exec -it " + docker_container_id + " /bin/bash ./gradlew test"
+		test_command = "docker exec " + docker_container_id + " /bin/bash ./gradlew test"
 	val_2 = os.system(test_command)
 
 	print ("--------")
