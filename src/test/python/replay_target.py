@@ -4,28 +4,33 @@ from Target import Target, ReplayTest
 from configEnum import buildSystem, TestResult
 import subprocess
 
+
 def replay_target (target):
 	
 	# clone repo
 	os.system("git clone " + target.test_repo_url)
 	
-	# modify build system file
-	docker_container_id = target.get_docker_container_id()
-	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
+	# modify build
 	if (target.buildSystem == buildSystem.MAVEN):
 		target.modify_pom(sdk_version, False)
-		test_command = "docker exec -it " + docker_container_id + " mvn test --fail-never"
-
 	elif (target.buildSystem == buildSystem.GRADLE):
 		target.modify_gradle(sdk_version, False)
-		test_command = "docker exec -it " + docker_container_id + " gradle test"
 	
-	# target replay
+	# server start
+	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
 	val_1 = os.system(docker_up_cmd)
+	docker_container_id = target.get_docker_container_id()
+
+	# target replay
+	if (target.buildSystem == buildSystem.MAVEN):
+		test_command = "docker exec -it " + docker_container_id + " /bin/bash ./mvnw test --fail-never"
+	elif (target.buildSystem == buildSystem.GRADLE):
+		test_command = "docker exec -it " + docker_container_id + " /bin/bash ./gradlew test"
+	val_2 = os.system(test_command)
+
 	print ("--------")
 	print ("docker_up_cmd = " + docker_up_cmd)
 	print ("val_1 = " + str(val_1))
-	val_2 = os.system(test_command)
 	print ("test_command = " + test_command)
 	print ("val_2 = " + str(val_2))
 	print ("--------")
