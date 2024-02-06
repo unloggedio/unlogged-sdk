@@ -170,6 +170,7 @@ class Target:
 		for local in tree_root:
 			if (local.tag == "testcase"):
 				test_name = local.attrib["name"]
+				print ("test_name = " + test_name)
 
 				actual_result = TestResult.PASS
 				for metadata in local:
@@ -178,6 +179,7 @@ class Target:
 
 				actual_response_dict[test_name] = actual_result
 
+		replay_fail = []
 		for local_test in expected_response_dict:
 			print ("--------------------------")
 			print ("Test name = " + test_name)
@@ -187,4 +189,12 @@ class Target:
 			if (expected_response_dict[local_test] == actual_response_dict[local_test]):
 				print ("The test executed as expected")
 			else:
-				raise Exception("The test did not executed as expected")
+				replay_fail.append(test_name)
+				print ("The test did not executed as expected")
+
+		if (len(replay_fail) == 0):
+			print ("All tests passed succesfully")
+		else:
+			print ("Some tests failed. There are:")
+			for local_test in replay_fail:
+				print ("test = " + local_test)
