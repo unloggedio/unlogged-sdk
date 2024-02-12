@@ -55,7 +55,8 @@ if __name__=="__main__":
 			buildSystem.MAVEN,
 			[
 				ReplayTest("test-pass", TestResult.PASS),
-				ReplayTest("test-fail", TestResult.FAIL)
+				ReplayTest("test-fail", TestResult.FAIL),
+				ReplayTest("get default customer unit - pass", TestResult.PASS)
 			]
 		)
 	]
