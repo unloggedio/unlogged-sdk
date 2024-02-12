@@ -54,9 +54,8 @@ if __name__=="__main__":
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			buildSystem.MAVEN,
 			[
-				ReplayTest("test getAllCustomers returns expected value when", TestResult.PASS),
-				ReplayTest("test getCustomerProfile returns expected value when", TestResult.FAIL),
-				ReplayTest("tempTest", TestResult.PASS)
+				ReplayTest("test-pass", TestResult.PASS),
+				ReplayTest("test-fail", TestResult.FAIL)
 			]
 		)
 	]

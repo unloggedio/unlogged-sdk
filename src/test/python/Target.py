@@ -136,6 +136,7 @@ class Target:
 		docker_container_name = "target-repo"
 
 		copy_cmd = "docker cp " + docker_container_name + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
+		print ("copy_cmd = " + copy_cmd)
 		copy_cmd = subprocess.Popen([copy_cmd], stdout=subprocess.PIPE, shell=True)
 		(copy_cmd_std, copy_cmd_err) = copy_cmd.communicate()
 
@@ -157,16 +158,9 @@ class Target:
 
 				actual_response_dict[test_name] = actual_result
 
-		# surefire-report does not gives result for passed tests
-		# so any test that was expected with some value is considered
-		# passing if it is not found in surefire report
-		for test_name in expected_response_dict:
-			if (test_name not in actual_response_dict):
-				actual_response_dict[test_name] = TestResult.PASS
-
 		replay_fail = []
 		for local_test in expected_response_dict:
-			print ("Test name = " + test_name)
+			print ("Test name = " + local_test)
 			print ("	Expected value = " + expected_response_dict[local_test].name)
 			print ("	Actual value = " + actual_response_dict[local_test].name)
 			
@@ -174,7 +168,7 @@ class Target:
 				print ("	The test executed as expected")
 			else:
 				replay_fail.append(test_name)
-				print ("	The test did not executed as expected")
+				print("	The test did not executed as expected")
 	
 		if (len(replay_fail) == 0):
 			print ("All tests passed succesfully")
@@ -182,3 +176,4 @@ class Target:
 			print ("Some tests failed. There are:")
 			for local_test in replay_fail:
 				print ("Test Case: " + local_test)
+			raise Exception("Replay tests have failed")
