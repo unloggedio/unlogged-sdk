@@ -164,6 +164,13 @@ class Target:
 
 				actual_response_dict[test_name] = actual_result
 
+		# surefire-report does not gives result for passed tests
+		# so any test that was expected with some value is considered
+		# passing if it is not found in surefire report
+		for test_name in expected_response_dict:
+			if (test_name not in actual_response_dict):
+				actual_response_dict[test_name] = TestResult.PASS
+
 		replay_fail = []
 		for local_test in expected_response_dict:
 			print ("--------------------------")

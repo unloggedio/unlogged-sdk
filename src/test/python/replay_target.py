@@ -25,7 +25,7 @@ def replay_target (target):
 
 	# target replay
 	if (target.buildSystem == buildSystem.MAVEN):
-		test_command = "docker exec " + docker_container_name + " ./mvnw surefire:test --fail-never"
+		test_command = "docker exec " + docker_container_name + " ./mvnw clean install surefire:test --fail-never"
 	elif (target.buildSystem == buildSystem.GRADLE):
 		test_command = "docker exec " + docker_container_name + " ./gradlew test"
 	val_2 = os.system(test_command)
