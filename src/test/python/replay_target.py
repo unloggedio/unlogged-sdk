@@ -56,7 +56,9 @@ if __name__=="__main__":
 			[
 				ReplayTest("test-pass", TestResult.PASS),
 				ReplayTest("test-fail", TestResult.FAIL),
-				ReplayTest("get default customer unit - pass", TestResult.PASS)
+				ReplayTest("get default customer unit - pass", TestResult.PASS),
+				ReplayTest("Handling characters case - a", TestResult.PASS),
+				ReplayTest("Case to test #624", TestResult.PASS)
 			]
 		)
 	]
