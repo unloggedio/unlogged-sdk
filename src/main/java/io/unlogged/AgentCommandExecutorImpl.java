@@ -242,7 +242,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         principalObject = "DUMMY_USER";
 
                     } else {
-                        principalObject = objectMapper.readValue(principalString, Class.forName(userPrincipalClassName));
+                        try {
+                            principalObject = objectMapper.readValue(principalString,
+                                    Class.forName(userPrincipalClassName));
+                        } catch (Exception classNotFoundException) {
+                            //
+                            principalObject = classNotFoundException;
+                        }
                     }
                     requestAuthentication.setPrincipal(principalObject);
 
@@ -253,21 +259,28 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                     if (this.springTestContextManager != null) {
 
-                        Class<?> authClass = Class.forName("org.springframework.security.core.Authentication");
+                        try {
+                            Class<?> authClass = Class.forName("org.springframework.security.core.Authentication");
 
-                        Class<? extends UnloggedSpringAuthentication> springAuthImplementatorClass = byteBuddyInstance
-                                .subclass(UnloggedSpringAuthentication.class)
-                                .implement(authClass)
-                                .make()
-                                .load(targetClassLoader).getLoaded();
+                            Class<? extends UnloggedSpringAuthentication> springAuthImplementatorClass = byteBuddyInstance
+                                    .subclass(UnloggedSpringAuthentication.class)
+                                    .implement(authClass)
+                                    .make()
+                                    .load(targetClassLoader).getLoaded();
 
-                        authInstance = springAuthImplementatorClass.getConstructor(
-                                        RequestAuthentication.class)
-                                .newInstance(requestAuthentication);
+                            authInstance = springAuthImplementatorClass.getConstructor(
+                                            RequestAuthentication.class)
+                                    .newInstance(requestAuthentication);
 
-                        mockedContext = Class.forName(
-                                "org.springframework.security.core.context.SecurityContextImpl"
-                        ).getConstructor(authClass).newInstance(authInstance);
+                            mockedContext = Class.forName(
+                                    "org.springframework.security.core.context.SecurityContextImpl"
+                            ).getConstructor(authClass).newInstance(authInstance);
+                        } catch (Exception e) {
+                            System.err.println("failed to set authentication for request: " + e.getMessage());
+                            e.printStackTrace();
+                            // failed to set authentication
+                        }
+
                     }
                 }
 
