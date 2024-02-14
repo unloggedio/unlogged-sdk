@@ -58,7 +58,9 @@ if __name__=="__main__":
 				ReplayTest("test-fail", TestResult.FAIL),
 				ReplayTest("get default customer unit - pass", TestResult.PASS),
 				ReplayTest("Handling characters case - a", TestResult.PASS),
-				ReplayTest("Case to test #624", TestResult.PASS)
+				ReplayTest("Case to test #624", TestResult.PASS),
+				ReplayTest("Case - 595", TestResult.PASS),
+				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS)
 			]
 		)
 	]
