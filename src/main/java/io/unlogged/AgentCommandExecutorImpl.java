@@ -276,8 +276,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     "org.springframework.security.core.context.SecurityContextImpl"
                             ).getConstructor(authClass).newInstance(authInstance);
                         } catch (Exception e) {
-                            System.err.println("failed to set authentication for request: " + e.getMessage());
-                            e.printStackTrace();
+                            System.err.println("warn: failed to set authentication for request: " + e.getMessage());
                             // failed to set authentication
                         }
 
