@@ -1,10 +1,10 @@
 package io.unlogged.mocking;
 
+import io.unlogged.Constants;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import io.unlogged.Constants;
 
 public class DeclaredMock {
 
@@ -14,12 +14,12 @@ public class DeclaredMock {
     private String fieldName;
     private String sourceClassName;
     private String methodName;
+    private String methodHashKey;
     private List<ParameterMatcher> whenParameter;
     private List<ThenParameter> thenParameter;
     public DeclaredMock() {
-		this.methodName = Constants.METHOD_DEFAULT_NAME;
+        this.methodName = Constants.METHOD_DEFAULT_NAME;
     }
-
     public DeclaredMock(DeclaredMock declaredMock) {
         this.name = declaredMock.name;
         this.id = declaredMock.id;
@@ -31,12 +31,11 @@ public class DeclaredMock {
         this.thenParameter = declaredMock.thenParameter
                 .stream().map(ThenParameter::new).collect(Collectors.toList());
 
-		if (declaredMock.methodName == null) {
-			this.methodName = Constants.METHOD_DEFAULT_NAME;
-		}
-		else {
-			this.methodName = declaredMock.methodName;
-		}
+        if (declaredMock.methodName == null) {
+            this.methodName = Constants.METHOD_DEFAULT_NAME;
+        } else {
+            this.methodName = declaredMock.methodName;
+        }
     }
 
     public DeclaredMock(String name, String fieldTypeName, String fieldName, String methodName,
@@ -49,6 +48,14 @@ public class DeclaredMock {
         this.methodName = methodName;
         this.whenParameter = whenParameterLists;
         this.thenParameter = thenParameterList;
+    }
+
+    public String getMethodHashKey() {
+        return methodHashKey;
+    }
+
+    public void setMethodHashKey(String methodHashKey) {
+        this.methodHashKey = methodHashKey;
     }
 
     public String getSourceClassName() {
