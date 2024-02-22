@@ -475,6 +475,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     @Override
     public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException {
 
+		System.out.println("sdk_log: inside of inject mocks");
         int fieldCount = 0;
         int classCount = 0;
         Map<String, List<DeclaredMock>> mocksBySourceClass = agentCommandRequest
@@ -483,34 +484,40 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
         for (String sourceClassName : mocksBySourceClass.keySet()) {
             Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
+			System.out.println("sdk_log: sourceClassName = " + sourceClassName);
+			System.out.println("sdk_log: sourceClassInstance = " + sourceClassInstance);
+
             if (sourceClassInstance == null) {
-				if (springBeanFactory != null) {
-					// inject from springBeanFactory
-					
-					// get list of bean names
-					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
-					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
-					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContextClass.newInstance());
+				System.out.println("sdk_log: sourceClassInstance is null ");
+				System.out.println("sdk_log: springBeanFactory = " + springBeanFactory);
+				
+				// inject from springBeanFactory
+				
+				// get list of bean names
+				// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+				Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+				Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
+				String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContextClass.newInstance());
 
-					// get bean from beanName
-					List<Object> applicationBean = new ArrayList<>();
-					System.out.println("-------------------------------------");
-					for (String beanName: beanNames) {
-						// reflection: Object bean = applicationContext.getBean(beanName)
-						getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-						Object bean = getBeanMethod.invoke(applicationContextClass, beanName);
-						applicationBean.add(bean);
+				// get bean from beanName
+				List<Object> applicationBean = new ArrayList<>();
+				System.out.println("-------------------------------------");
+				for (String beanName: beanNames) {
+					// reflection: Object bean = applicationContext.getBean(beanName)
+					getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+					Object bean = getBeanMethod.invoke(applicationContextClass, beanName);
+					applicationBean.add(bean);
 
-						// print values
-						System.out.println("beanName = " + beanName);
-						System.out.println("bean = " + bean.toString());
-					}
-					System.out.println("-------------------------------------");
-
-					// inject mocks
-					
+					// print values
+					System.out.println("beanName = " + beanName);
+					System.out.println("bean = " + bean.toString());
 				}
+				System.out.println("-------------------------------------");
+
+				// inject mocks
+
+
+
                 // no instance found for this class
                 // nothing to inject mocks to
                 continue;
