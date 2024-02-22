@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.51</version>
+    <version>0.1.52</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -208,7 +208,7 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
-            <version>3.4.17</version>
+            <version>3.5.4</version>
         </dependency>
 
 
