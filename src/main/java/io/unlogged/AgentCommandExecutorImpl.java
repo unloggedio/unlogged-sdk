@@ -473,7 +473,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     @Override
-    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) {
+    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException {
 
         int fieldCount = 0;
         int classCount = 0;
@@ -484,6 +484,33 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         for (String sourceClassName : mocksBySourceClass.keySet()) {
             Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
             if (sourceClassInstance == null) {
+				if (springBeanFactory != null) {
+					// inject from springBeanFactory
+					
+					// get list of bean names
+					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
+					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContextClass.newInstance());
+
+					// get bean from beanName
+					List<Object> applicationBean = new ArrayList<>();
+					System.out.println("-------------------------------------");
+					for (String beanName: beanNames) {
+						// reflection: Object bean = applicationContext.getBean(beanName)
+						getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+						Object bean = getBeanMethod.invoke(applicationContextClass, beanName);
+						applicationBean.add(bean);
+
+						// print values
+						System.out.println("beanName = " + beanName);
+						System.out.println("bean = " + bean.toString());
+					}
+					System.out.println("-------------------------------------");
+
+					// inject mocks
+					
+				}
                 // no instance found for this class
                 // nothing to inject mocks to
                 continue;
