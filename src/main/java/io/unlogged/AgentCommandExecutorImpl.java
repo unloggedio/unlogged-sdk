@@ -475,7 +475,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 	@Override
     public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException {
 
-		System.out.println("sdk_log: inside of inject mocks");
         int fieldCount = 0;
         int classCount = 0;
         Map<String, List<DeclaredMock>> mocksBySourceClass = agentCommandRequest
