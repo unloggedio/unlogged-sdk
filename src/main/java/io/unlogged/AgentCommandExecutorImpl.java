@@ -472,8 +472,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return rawResponse.getAgentCommandResponse();
     }
 
-    @Override
-    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException {
+	@Override
+    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException {
 
 		System.out.println("sdk_log: inside of inject mocks");
         int fieldCount = 0;
@@ -484,56 +484,104 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
         for (String sourceClassName : mocksBySourceClass.keySet()) {
             Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
-			System.out.println("sdk_log: sourceClassName = " + sourceClassName);
-			System.out.println("sdk_log: sourceClassInstance = " + sourceClassInstance);
-
+			
+			Class<? extends Object> classObject = null;
             if (sourceClassInstance == null) {
-				System.out.println("sdk_log: sourceClassInstance is null ");
-				System.out.println("sdk_log: springBeanFactory = " + springBeanFactory);
-				
-				// inject from springBeanFactory
-				
-				// get list of bean names
-				// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
-				Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-				Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
-				String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContextClass.newInstance());
 
-				// get bean from beanName
-				List<Object> applicationBean = new ArrayList<>();
-				System.out.println("-------------------------------------");
-				for (String beanName: beanNames) {
-					// reflection: Object bean = applicationContext.getBean(beanName)
-					getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-					Object bean = getBeanMethod.invoke(applicationContextClass, beanName);
-					applicationBean.add(bean);
-
-					// print values
-					System.out.println("beanName = " + beanName);
-					System.out.println("bean = " + bean.toString());
+				// define applicationContext and springBeanFactory
+				if (this.springTestContextManager == null) {
+					this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+							".reactive.context" +
+							".AnnotationConfigReactiveWebServerApplicationContext");
+					springBeanFactory = setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
 				}
-				System.out.println("-------------------------------------");
+	
+				if (this.springTestContextManager == null) {
+					this.springTestContextManager = logger.getObjectByClassName(
+							"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+					);
+					springBeanFactory = setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+				}
 
-				// inject mocks
+				if (applicationContext != null) {
+					// get list of bean names
+					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
+					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext);
 
+					// get bean from beanName
+					List<Object> applicationBean = new ArrayList<>();
+					for (String beanName: beanNames) {
+						// reflection: Object bean = applicationContext.getBean(beanName)
 
+						Method getBeanMethod = applicationContextClass.getMethod("getBean", String.class);
+						Object bean = getBeanMethod.invoke(applicationContext, beanName);
+						applicationBean.add(bean);
+					}
 
-                // no instance found for this class
-                // nothing to inject mocks to
-                continue;
+					// inject mocks
+					// TODO: improve search performance here
+					Class<? extends Object> classDefination = null;
+					for (Object bean: applicationBean) {
+						if (classDefination == null ) {
+							Class<? extends Object> baseBeanClass = bean.getClass();
+							Class<? extends Object> beanClass = baseBeanClass;
+
+							while (beanClass != Object.class) {
+								if (sourceClassName.equals(beanClass.getName())) {
+									classDefination = baseBeanClass;
+									break;
+								}
+								beanClass = beanClass.getSuperclass();
+							}
+						}
+					}
+					classObject = classDefination;
+
+					// get a instance for classObject class
+					Constructor<?>[] constructors = classDefination.getDeclaredConstructors();
+					// check for a zero-args constructor
+					for (Constructor<?> constructor : constructors) {
+						if (constructor.getParameterCount() == 0) {
+							constructor.setAccessible(true);
+							sourceClassInstance = constructor.newInstance();
+						}
+					}
+
+					// If there is no zero-args constructor then build an instance from first constructor
+					if (sourceClassInstance == null) {
+						if (constructors.length > 0) {
+							Constructor<?> constructor = constructors[0];
+							// Define argument for the constructor (null for reference types, 0 for primitive types)
+							Object[] argsArray = new Object[constructor.getParameterCount()];
+							constructor.setAccessible(true);
+							sourceClassInstance = constructor.newInstance(argsArray);
+						} else {
+							// The class does not have any constructor
+							continue;
+						}
+					}
+				}
+				else {
+					// no instance found for this class
+					// nothing to inject mocks to
+					continue;
+				}
             }
             List<DeclaredMock> declaredMocks = mocksBySourceClass.get(sourceClassName);
 
             Map<String, List<DeclaredMock>> mocksByField = declaredMocks.stream()
                     .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
 
-            Class<? extends Object> classObject = sourceClassInstance.getClass();
+			if (classObject == null) {
+				classObject = sourceClassInstance.getClass();
+			}
+			
             ClassLoader targetClassLoader = classObject.getClassLoader();
             String targetClassName = classObject.getCanonicalName();
 
             ClassLoadingStrategy<ClassLoader> strategy;
-
-
             while (classObject != Object.class) {
                 classCount++;
                 Field[] availableFields = classObject.getDeclaredFields();
@@ -559,7 +607,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         continue;
                     }
 
-
                     if (existingMockInstance == null) {
                         MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
                                 byteBuddyInstance, objenesis, originalFieldValue, sourceClassInstance,
@@ -568,10 +615,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                         DynamicType.Loaded<?> loadedMockedField;
                         loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
-
-
                         Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-
                         existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
                         globalFieldMockMap.put(key, existingMockInstance);
 
@@ -586,14 +630,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 e.getMessage());
                     }
                     fieldCount++;
-
                 }
-
-
                 classObject = classObject.getSuperclass();
             }
-
-
         }
 
         AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
