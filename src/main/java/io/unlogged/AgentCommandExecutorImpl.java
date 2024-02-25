@@ -134,20 +134,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 logger.setRecording(true);
             }
 
-            if (this.springTestContextManager == null) {
-                this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-                        ".reactive.context" +
-                        ".AnnotationConfigReactiveWebServerApplicationContext");
-                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-            }
-
-            if (this.springTestContextManager == null) {
-                this.springTestContextManager = logger.getObjectByClassName(
-                        "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-                );
-                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-            }
-
+            this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
 //            TestExecutionListener reactorContextTestExecutionListener = new ReactorContextTestExecutionListener();
 //            reactorContextTestExecutionListener.beforeTestMethod(null);
@@ -488,19 +475,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             if (sourceClassInstance == null) {
 
 				// define applicationContext and springBeanFactory
-				if (this.springTestContextManager == null) {
-					this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-							".reactive.context" +
-							".AnnotationConfigReactiveWebServerApplicationContext");
-					springBeanFactory = setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-				}
-	
-				if (this.springTestContextManager == null) {
-					this.springTestContextManager = logger.getObjectByClassName(
-							"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-					);
-					springBeanFactory = setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-				}
+				this.loadContext();
 
 				if (applicationContext != null) {
 					// get list of bean names
@@ -1670,6 +1645,23 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
         return springBeanFactory;
     }
+
+	private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+		if (this.springTestContextManager == null) {
+			this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+					".reactive.context" +
+					".AnnotationConfigReactiveWebServerApplicationContext");
+			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+		}
+
+		if (this.springTestContextManager == null) {
+			this.springTestContextManager = logger.getObjectByClassName(
+					"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+			);
+			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+		}
+	}
+
 
 
     public void enableSpringIntegration(Class<?> testClass) {
