@@ -474,9 +474,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 			Class<? extends Object> classObject = null;
             if (sourceClassInstance == null) {
 
-				// define applicationContext and springBeanFactory
 				this.loadContext();
-
 				if (applicationContext != null) {
 					// get list of bean names
 					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
@@ -513,32 +511,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 						}
 					}
 					classObject = classDefination;
-					System.out.println("log: classObject = " + classObject);
-					System.out.println("log: sourceClassInstance = " + sourceClassInstance);
-
-					// get a instance for classObject class
-					// Constructor<?>[] constructors = classDefination.getDeclaredConstructors();
-					// // check for a zero-args constructor
-					// for (Constructor<?> constructor : constructors) {
-					// 	if (constructor.getParameterCount() == 0) {
-					// 		constructor.setAccessible(true);
-					// 		sourceClassInstance = constructor.newInstance();
-					// 	}
-					// }
-
-					// // If there is no zero-args constructor then build an instance from first constructor
-					// if (sourceClassInstance == null) {
-					// 	if (constructors.length > 0) {
-					// 		Constructor<?> constructor = constructors[0];
-					// 		// Define argument for the constructor (null for reference types, 0 for primitive types)
-					// 		Object[] argsArray = new Object[constructor.getParameterCount()];
-					// 		constructor.setAccessible(true);
-					// 		sourceClassInstance = constructor.newInstance(argsArray);
-					// 	} else {
-					// 		// The class does not have any constructor
-					// 		continue;
-					// 	}
-					// }
 				}
 				else {
 					// no instance found for this class
