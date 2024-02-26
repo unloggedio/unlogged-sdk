@@ -134,20 +134,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 logger.setRecording(true);
             }
 
-            if (this.springTestContextManager == null) {
-                this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-                        ".reactive.context" +
-                        ".AnnotationConfigReactiveWebServerApplicationContext");
-                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-            }
-
-            if (this.springTestContextManager == null) {
-                this.springTestContextManager = logger.getObjectByClassName(
-                        "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-                );
-                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-            }
-
+            this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
 //            TestExecutionListener reactorContextTestExecutionListener = new ReactorContextTestExecutionListener();
 //            reactorContextTestExecutionListener.beforeTestMethod(null);
@@ -472,8 +459,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return rawResponse.getAgentCommandResponse();
     }
 
-    @Override
-    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) {
+	@Override
+    public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException {
 
         int fieldCount = 0;
         int classCount = 0;
@@ -483,23 +470,67 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
         for (String sourceClassName : mocksBySourceClass.keySet()) {
             Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
+			
+			Class<? extends Object> classObject = null;
             if (sourceClassInstance == null) {
-                // no instance found for this class
-                // nothing to inject mocks to
-                continue;
+
+				this.loadContext();
+				if (applicationContext != null) {
+					// get list of bean names
+					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
+					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext);
+
+					// get bean from beanName
+					List<Object> applicationBean = new ArrayList<>();
+					for (String beanName: beanNames) {
+						// reflection: Object bean = applicationContext.getBean(beanName)
+
+						Method getBeanMethod = applicationContextClass.getMethod("getBean", String.class);
+						Object bean = getBeanMethod.invoke(applicationContext, beanName);
+						applicationBean.add(bean);
+					}
+
+					// inject mocks
+					// TODO: improve search performance here
+					Class<? extends Object> classDefination = null;
+					for (Object bean: applicationBean) {
+						if (classDefination == null ) {
+							Object baseBeanObject = bean;
+							Class<? extends Object> beanClass = bean.getClass();
+
+							while (beanClass != Object.class) {
+								if (sourceClassName.equals(beanClass.getName())) {
+									sourceClassInstance = baseBeanObject;
+									classDefination = baseBeanObject.getClass();
+									break;
+								}
+								beanClass = beanClass.getSuperclass();
+							}
+						}
+					}
+					classObject = classDefination;
+				}
+				else {
+					// no instance found for this class
+					// nothing to inject mocks to
+					continue;
+				}
             }
             List<DeclaredMock> declaredMocks = mocksBySourceClass.get(sourceClassName);
 
             Map<String, List<DeclaredMock>> mocksByField = declaredMocks.stream()
                     .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
 
-            Class<? extends Object> classObject = sourceClassInstance.getClass();
+			if (classObject == null) {
+				classObject = sourceClassInstance.getClass();
+			}
+			
             ClassLoader targetClassLoader = classObject.getClassLoader();
             String targetClassName = classObject.getCanonicalName();
 
             ClassLoadingStrategy<ClassLoader> strategy;
-
-
             while (classObject != Object.class) {
                 classCount++;
                 Field[] availableFields = classObject.getDeclaredFields();
@@ -525,7 +556,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         continue;
                     }
 
-
                     if (existingMockInstance == null) {
                         MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
                                 byteBuddyInstance, objenesis, originalFieldValue, sourceClassInstance,
@@ -534,10 +564,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                         DynamicType.Loaded<?> loadedMockedField;
                         loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
-
-
                         Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-
                         existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
                         globalFieldMockMap.put(key, existingMockInstance);
 
@@ -552,14 +579,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 e.getMessage());
                     }
                     fieldCount++;
-
                 }
-
-
                 classObject = classObject.getSuperclass();
             }
-
-
         }
 
         AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
@@ -1595,6 +1617,23 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
         return springBeanFactory;
     }
+
+	private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+		if (this.springTestContextManager == null) {
+			this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+					".reactive.context" +
+					".AnnotationConfigReactiveWebServerApplicationContext");
+			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+		}
+
+		if (this.springTestContextManager == null) {
+			this.springTestContextManager = logger.getObjectByClassName(
+					"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+			);
+			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+		}
+	}
+
 
 
     public void enableSpringIntegration(Class<?> testClass) {
