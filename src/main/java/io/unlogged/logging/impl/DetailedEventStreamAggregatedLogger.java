@@ -281,7 +281,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
 
             try {
-                Class.forName("javax.persistence.ElementCollection");
+//                Class.forName("javax.persistence.ElementCollection");
                 Class<?> hibernateClassPresent = Class.forName("org.hibernate.SessionFactory");
                 Class<?> hibernateModule = Class.forName(
                         "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module");
