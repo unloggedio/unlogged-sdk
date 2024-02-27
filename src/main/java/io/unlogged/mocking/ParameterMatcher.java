@@ -60,7 +60,7 @@ public class ParameterMatcher {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ParameterMatcher that = (ParameterMatcher) o;
-        return name.equals(that.name) && type == that.type && value.equals(that.value);
+        return Objects.equals(name, that.name) && type == that.type && Objects.equals(value, that.value);
     }
 
     @Override
