@@ -29,5 +29,6 @@ import java.io.OutputStream;
 public interface PostCompilerTransformation {
 	byte[] applyTransformations(byte[] original, String fileName,
 								DiagnosticsReceiver diagnostics,
+								OutputStream classWeaveOutputStream,
                                 DataInfoProvider dataInfoProvider) throws IOException;
 }
