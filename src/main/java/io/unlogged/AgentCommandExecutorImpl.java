@@ -459,7 +459,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return rawResponse.getAgentCommandResponse();
     }
 
-	@Override
+    @Override
     public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException {
 
         int fieldCount = 0;
@@ -470,63 +470,62 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
         for (String sourceClassName : mocksBySourceClass.keySet()) {
             Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
-			
-			Class<? extends Object> classObject = null;
+
+            Class<? extends Object> classObject = null;
             if (sourceClassInstance == null) {
 
-				this.loadContext();
-				if (applicationContext != null) {
-					// get list of bean names
-					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
-					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
-					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext);
+                this.loadContext();
+                if (applicationContext != null) {
+                    // get list of bean names
+                    // reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+                    Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+                    Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
+                    String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext);
 
-					// get bean from beanName
-					List<Object> applicationBean = new ArrayList<>();
-					for (String beanName: beanNames) {
-						// reflection: Object bean = applicationContext.getBean(beanName)
+                    // get bean from beanName
+                    List<Object> applicationBean = new ArrayList<>();
+                    for (String beanName : beanNames) {
+                        // reflection: Object bean = applicationContext.getBean(beanName)
 
-						Method getBeanMethod = applicationContextClass.getMethod("getBean", String.class);
-						Object bean = getBeanMethod.invoke(applicationContext, beanName);
-						applicationBean.add(bean);
-					}
+                        Method getBeanMethod = applicationContextClass.getMethod("getBean", String.class);
+                        Object bean = getBeanMethod.invoke(applicationContext, beanName);
+                        applicationBean.add(bean);
+                    }
 
-					// inject mocks
-					// TODO: improve search performance here
-					Class<? extends Object> classDefination = null;
-					for (Object bean: applicationBean) {
-						if (classDefination == null ) {
-							Object baseBeanObject = bean;
-							Class<? extends Object> beanClass = bean.getClass();
+                    // inject mocks
+                    // TODO: improve search performance here
+                    Class<? extends Object> classDefination = null;
+                    for (Object bean : applicationBean) {
+                        if (classDefination == null) {
+                            Object baseBeanObject = bean;
+                            Class<? extends Object> beanClass = bean.getClass();
 
-							while (beanClass != Object.class) {
-								if (sourceClassName.equals(beanClass.getName())) {
-									sourceClassInstance = baseBeanObject;
-									classDefination = baseBeanObject.getClass();
-									break;
-								}
-								beanClass = beanClass.getSuperclass();
-							}
-						}
-					}
-					classObject = classDefination;
-				}
-				else {
-					// no instance found for this class
-					// nothing to inject mocks to
-					continue;
-				}
+                            while (beanClass != Object.class) {
+                                if (sourceClassName.equals(beanClass.getName())) {
+                                    sourceClassInstance = baseBeanObject;
+                                    classDefination = baseBeanObject.getClass();
+                                    break;
+                                }
+                                beanClass = beanClass.getSuperclass();
+                            }
+                        }
+                    }
+                    classObject = classDefination;
+                } else {
+                    // no instance found for this class
+                    // nothing to inject mocks to
+                    continue;
+                }
             }
             List<DeclaredMock> declaredMocks = mocksBySourceClass.get(sourceClassName);
 
             Map<String, List<DeclaredMock>> mocksByField = declaredMocks.stream()
                     .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
 
-			if (classObject == null) {
-				classObject = sourceClassInstance.getClass();
-			}
-			
+            if (classObject == null) {
+                classObject = sourceClassInstance.getClass();
+            }
+
             ClassLoader targetClassLoader = classObject.getClassLoader();
             String targetClassName = classObject.getCanonicalName();
 
@@ -1173,6 +1172,24 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             if (typeReference == null) {
                 typeReference = typeFactory.constructType(parameterType);
             }
+
+            parameterObject = objectFromTypeReference(typeFactory, methodParameter, parameterType, typeReference);
+        }
+        return parameterObject;
+    }
+
+    private Object objectFromTypeReference(TypeFactory typeFactory, String methodParameter, Class<?> parameterType, JavaType typeReference) throws JsonProcessingException {
+        Object parameterObject;
+        boolean isMono = false, isFlux = false;
+        if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Mono")) {
+            isMono = true;
+            typeReference = typeReference.containedType(0);
+            parameterObject = objectFromTypeReference(typeFactory, methodParameter, parameterType, typeReference);
+        } else if (typeReference.getRawClass().getCanonicalName().equals("reactor.core.publisher.Flux")) {
+            isFlux = true;
+            typeReference = typeReference.containedType(0);
+            parameterObject = objectFromTypeReference(typeFactory, methodParameter, parameterType, typeReference);
+        } else {
             try {
                 parameterObject = objectMapper.readValue(methodParameter, typeReference);
             } catch (Throwable e2) {
@@ -1187,6 +1204,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     parameterObject = createParameterUsingMocking(methodParameter, parameterType);
                 }
             }
+
+        }
+
+        if (isMono) {
+            parameterObject = parameterObject == null ? Mono.empty() : Mono.just(parameterObject);
+        }
+        if (isFlux) {
+            parameterObject = parameterObject == null ? Flux.empty() : Flux.just(parameterObject);
         }
         return parameterObject;
     }
@@ -1618,22 +1643,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return springBeanFactory;
     }
 
-	private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-		if (this.springTestContextManager == null) {
-			this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-					".reactive.context" +
-					".AnnotationConfigReactiveWebServerApplicationContext");
-			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-		}
+    private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        if (this.springTestContextManager == null) {
+            this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+                    ".reactive.context" +
+                    ".AnnotationConfigReactiveWebServerApplicationContext");
+            setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+        }
 
-		if (this.springTestContextManager == null) {
-			this.springTestContextManager = logger.getObjectByClassName(
-					"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-			);
-			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-		}
-	}
-
+        if (this.springTestContextManager == null) {
+            this.springTestContextManager = logger.getObjectByClassName(
+                    "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+            );
+            setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+        }
+    }
 
 
     public void enableSpringIntegration(Class<?> testClass) {
