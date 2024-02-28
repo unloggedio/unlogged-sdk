@@ -68,8 +68,7 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
     @Override
     public byte[] applyTransformations(byte[] original, String fileName,
                                        DiagnosticsReceiver diagnostics,
-                                       OutputStream classWeaveOutputStream,
-                                       DataInfoProvider dataInfoProvider) throws IOException {
+                                       DataInfoProvider dataInfoProvider) {
 
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
         InstrumentedClass instrumentedClassBytes;
@@ -78,10 +77,10 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
         ByteArrayOutputStream probesToRecordOutputStream = new ByteArrayOutputStream();
         try {
 
-            dataInfoProvider.setProbeOutputStream(probesToRecordOutputStream);
+//            dataInfoProvider.setProbeOutputStream(probesToRecordOutputStream);
             weaver.setDataInfoProvider(dataInfoProvider);
             instrumentedClassBytes = weaver.weave(fileName, className, original);
-            dataInfoProvider.flushIdInformation();
+//            dataInfoProvider.flushIdInformation();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
