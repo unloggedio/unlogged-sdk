@@ -5,18 +5,20 @@ import io.unlogged.weaver.DataInfoProvider;
 
 import javax.tools.*;
 import javax.tools.JavaFileObject.Kind;
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFileManager> {
     private final DiagnosticsReceiver diagnostics;
     private final UnloggedFileObjects.Compiler compiler;
     //    private final FileObject classWeaveDat;
-    private final OutputStream classWeaveOutputStream;
+//    private final OutputStream classWeaveOutputStream;
     //    private final FileObject probesToCaptureDat;
-    private final FileOutputStream probesToCaptureOutputStream;
+//    private final FileOutputStream probesToCaptureOutputStream;
     private final File idsInfoOutputFile;
     private final DataInfoProvider dataInfoProvider;
 
@@ -64,12 +66,12 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
                 }
             }
 
-            File weaveOutputFile = new File(classesPath + "class.weave.dat");
-            classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
+//            File weaveOutputFile = new File(classesPath + "class.weave.dat");
+//            classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
 
 
             File probesToCaptureOutputFile = new File(classesPath + "probes.dat");
-            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile, true);
+//            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile, true);
 
 
             int classId = 0;
@@ -95,7 +97,7 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 
             dataInfoProvider = new DataInfoProvider(classId, methodId, probeId);
             dataInfoProvider.setIdsInfoFile(idsInfoOutputFile);
-            dataInfoProvider.setProbeOutputStream(probesToCaptureOutputStream);
+//            dataInfoProvider.setProbeOutputStream(probesToCaptureOutputStream);
 
 //            probesToCaptureOutputStream = new FileOutputStream(probesToCaptureOutputFile, true);
 
@@ -111,16 +113,13 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
         if (kind != Kind.CLASS) return fileObject;
 
         return UnloggedFileObjects.createIntercepting(
-                compiler, fileObject, className, diagnostics,
-                classWeaveOutputStream, dataInfoProvider);
+                compiler, fileObject, className, diagnostics, dataInfoProvider);
     }
 
     @Override
     public void close() throws IOException {
-        classWeaveOutputStream.flush();
-        classWeaveOutputStream.close();
-        probesToCaptureOutputStream.flush();
-        probesToCaptureOutputStream.close();
+//        probesToCaptureOutputStream.flush();
+//        probesToCaptureOutputStream.close();
         super.close();
     }
 }

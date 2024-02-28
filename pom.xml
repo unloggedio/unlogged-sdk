@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.1.56</version>
+    <version>0.1.57</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -230,12 +230,12 @@
             <version>${jackson.version}</version>
             <scope>${jackson.scope}</scope>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-hibernate5</artifactId>
-            <version>${jackson.version}</version>
-            <scope>${jackson.scope}</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.fasterxml.jackson.datatype</groupId>-->
+<!--            <artifactId>jackson-datatype-hibernate5</artifactId>-->
+<!--            <version>${jackson.version}</version>-->
+<!--            <scope>${jackson.scope}</scope>-->
+<!--        </dependency>-->
         <!--        <dependency>-->
         <!--            <groupId>com.fasterxml.jackson.datatype</groupId>-->
         <!--            <artifactId>jackson-datatype-hibernate4</artifactId>-->
