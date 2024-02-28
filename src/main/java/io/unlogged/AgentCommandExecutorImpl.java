@@ -1388,16 +1388,33 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             }
         }
         Constructor<?> noArgsConstructor = null;
-        try {
-            noArgsConstructor = loadedClass.getConstructor();
-            try {
-                newInstance = noArgsConstructor.newInstance();
-            } catch (InvocationTargetException | InstantiationException e) {
-//                throw new RuntimeException(e);
-            }
-        } catch (NoSuchMethodException e) {
-            //
+        noArgsConstructor = null;
+        Constructor<?>[] declaredConstructors = loadedClass.getDeclaredConstructors();
+        if (declaredConstructors.length > 0) {
+            noArgsConstructor = declaredConstructors[0];
         }
+        for (Constructor<?> declaredConstructor : declaredConstructors) {
+            if (declaredConstructor.getParameterCount() == 0) {
+                noArgsConstructor = declaredConstructor;
+                break;
+            }
+        }
+        try {
+            noArgsConstructor.setAccessible(true);
+
+            int paramCount = noArgsConstructor.getParameterCount();
+            Class<?>[] paramTypes = noArgsConstructor.getParameterTypes();
+            Object[] parameters = new Object[paramCount];
+            for (int i = 0; i < paramCount; i++) {
+                Object paramValue = tryObjectConstruct(paramTypes[i].getCanonicalName(), targetClassLoader, buildMap);
+                parameters[i] = paramValue;
+            }
+
+            newInstance = noArgsConstructor.newInstance(parameters);
+        } catch (Throwable e) {
+        }
+
+
         if (newInstance == null) {
             Method[] methods = loadedClass.getMethods();
             // try to get the instance of the class using Singleton.getInstance
