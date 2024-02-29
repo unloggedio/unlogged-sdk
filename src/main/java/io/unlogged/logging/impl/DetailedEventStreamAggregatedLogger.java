@@ -2,6 +2,7 @@ package io.unlogged.logging.impl;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -18,6 +19,7 @@ import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
+import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -30,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 
 
@@ -402,8 +405,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("net.openhft", true);
         invertedRadixTree.put("com.intellij", true);
         invertedRadixTree.put("java.lang.Class", true);
-        invertedRadixTree.put("reactor.core", true);
-        invertedRadixTree.put("reactor.core.publisher.MonoNext", true);
+//        invertedRadixTree.put("reactor.core", true);
+        invertedRadixTree.put("reactor.core.publisher.Flux", true);
         invertedRadixTree.put("io.undertow", true);
         invertedRadixTree.put("org.thymeleaf", true);
         invertedRadixTree.put("tech.jhipster", true);
@@ -529,7 +532,26 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    objectMapper.writeValue(outputStream, value);
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
-                    bytes = objectMapper.get().writeValueAsBytes(value);
+                    if (className.startsWith("reactor.core.publisher.Mono")) {
+                        CountDownLatch cdl = new CountDownLatch(1);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream(10240);
+                        ((Mono<?>) value).subscribe((e) -> {
+                            try {
+                                byte[] bytes1 = objectMapper.get().writeValueAsBytes(e);
+                                baos.write(bytes1);
+                            } catch (JsonProcessingException ex) {
+                                //
+
+                            } catch (IOException ex) {
+//                                throw new RuntimeException(ex);
+                            }
+                            cdl.countDown();
+                        });
+                        cdl.await();
+                        bytes = baos.toByteArray();
+                    } else {
+                        bytes = objectMapper.get().writeValueAsBytes(value);
+                    }
                     if (DEBUG) {
                         System.err.println(
                                 "[" + dataId + "] record serialized value for probe [" + value.getClass() + "] [" + objectId + "] ->" +
