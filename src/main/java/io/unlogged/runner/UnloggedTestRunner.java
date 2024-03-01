@@ -553,7 +553,8 @@ public class UnloggedTestRunner extends Runner {
 //                    "[" + candidate.getCandidateId() + "]" +
 //                    "[" + candidate.getName() + "]");
             AssertionFailedError thrownException = new AssertionFailedError(
-                    "Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
+                    "Expected "+ atomicAssertion.getExpression()  +"([" + atomicAssertion.getExpectedValue() + "]) " +
+                            atomicAssertion.getAssertionType().toString() + "  actual " +
                             "[" + expressedValue + "]\n\t when the return value from method " +
                             "[" + methodUnderTest.getName() + "]()\n\t value " +
                             "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
