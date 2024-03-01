@@ -43,6 +43,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     private final ByteBuddy byteBuddyInstance = new ByteBuddy()
             .with(new NamingStrategy.SuffixingRandom("Unlogged"));
     private final Map<String, MockInstance> globalFieldMockMap = new HashMap<>();
+    private final Map<String, Object> ourOwnObjects = new HashMap<>();
     Objenesis objenesis = new ObjenesisStd();
     private Object applicationContext;
     private Object springTestContextManager;
@@ -51,7 +52,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     private Method getBeanByBeanNameMethod;
     private Object springBeanFactory;
     private Method getBeanDefinitionNamesMethod;
-    private final Map<String, Object> ourOwnObjects = new HashMap<>();
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
@@ -208,13 +208,15 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 List<String> methodParameters = agentCommandRequest.getMethodParameters();
 
-                Class<?>[] expectedMethodArgumentTypes = new Class[methodSignatureParts.size()];
+                JavaType[] expectedMethodArgumentTypes = new JavaType[methodSignatureParts.size()];
 
+                TypeFactory typeFactory = objectMapper.getTypeFactory();
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    expectedMethodArgumentTypes[i] =
-                            ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
+                    JavaType typeReference = ClassTypeUtil
+                            .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    expectedMethodArgumentTypes[i] = typeReference;
                 }
 
                 UnloggedSpringAuthentication authInstance = null;
@@ -502,7 +504,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     //  throw new RuntimeException(e);
                     continue;
                 }
-
 
 
             }
@@ -964,7 +965,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     private Method getMethodToExecute(Class<?> objectClass, String expectedMethodName,
-                                      Class<?>[] expectedMethodArgumentTypes)
+                                      JavaType[] expectedMethodArgumentTypes)
             throws NoSuchMethodException {
 
         StringBuilder className = new StringBuilder();
@@ -974,16 +975,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         while (objectClass != null && !objectClass.equals(Object.class)) {
 
             className.append(objectClass.getCanonicalName()).append(", ");
+            int argsCount = expectedMethodArgumentTypes.length;
             try {
-                methodToExecute = objectClass
-                        .getDeclaredMethod(expectedMethodName, expectedMethodArgumentTypes);
-            } catch (NoSuchMethodException ignored) {
-
-            }
-
-            try {
-                methodToExecute = objectClass
-                        .getMethod(expectedMethodName, expectedMethodArgumentTypes);
+                Class<?>[] paramClassNames = new Class[argsCount];
+                for (int i = 0; i < argsCount; i++) {
+                    Class<?> rawClass = expectedMethodArgumentTypes[i].getRawClass();
+                    paramClassNames[i] = rawClass;
+                }
+                methodToExecute = objectClass.getDeclaredMethod(expectedMethodName, paramClassNames);
             } catch (NoSuchMethodException ignored) {
 
             }
@@ -994,13 +993,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     String methodName = method.getName();
                     methodNamesList.add(methodName);
                     if (methodName.equals(expectedMethodName)
-                            && method.getParameterCount() == expectedMethodArgumentTypes.length) {
+                            && method.getParameterCount() == argsCount) {
 
                         Class<?>[] actualParameterTypes = method.getParameterTypes();
 
                         boolean match = true;
-                        for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
-                            Class<?> methodParameterType = expectedMethodArgumentTypes[i];
+                        for (int i = 0; i < argsCount; i++) {
+                            Class<?> methodParameterType = expectedMethodArgumentTypes[i].getRawClass();
                             Class<?> actualParamType = actualParameterTypes[i];
                             if (!actualParamType.getCanonicalName()
                                     .equals(methodParameterType.getCanonicalName())) {

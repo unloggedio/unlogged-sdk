@@ -159,6 +159,9 @@ public enum AssertionType {
                             }
                         }
                     }
+                    if (actualValue instanceof TextNode || expectedValue instanceof TextNode) {
+                        return Objects.equals(actualValueString, expectedValueString);
+                    }
                     return Objects.equals(actualValue, expectedValue);
                 case EQUAL_IGNORE_CASE:
                     return Objects.equals(actualValueString.toLowerCase(), expectedValueString.toLowerCase());
