@@ -96,7 +96,7 @@ public class ClassTypeUtil {
         if (descriptor.startsWith("char")) {
             return typeFactory.constructSimpleType(char.class, null);
         }
-        return null;
+        return typeFactory.constructFromCanonical(descriptor);
 
     }
 
