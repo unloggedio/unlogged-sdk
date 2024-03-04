@@ -219,6 +219,31 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     expectedMethodArgumentTypes[i] = typeReference;
                 }
 
+
+                try {
+                    Class<?> rch = Class.forName("org.springframework.web.context.request.RequestContextHolder");
+                    String className = "org.springframework.web.context.request.RequestAttributes";
+                    Class<?> requestAttributesClass = Class.forName(
+                            className);
+
+                    Method setRequestAttributesMethod = rch.getMethod("setRequestAttributes", requestAttributesClass,
+                            boolean.class);
+
+
+                    String attributesClassName = "org.springframework.web.context.request.ServletRequestAttributes";
+                    Class<?> attributesClass = Class.forName(
+                            attributesClassName);
+                    Object requestAttributes = createObjectInstanceFromStringAndTypeInformation(
+                            attributesClassName, objectMapper.getTypeFactory(), "{\"getRequest\": {\"getRequestURL\":" +
+                                    " " +
+                                    "\"https://localhost:8080/api\"}}", attributesClass
+                    );
+                    setRequestAttributesMethod.invoke(null, requestAttributes, true);
+
+                } catch (Throwable e) {
+
+                }
+
                 UnloggedSpringAuthentication authInstance = null;
                 UnloggedSpringAuthentication usa = null;
                 Object mockedContext = null;
