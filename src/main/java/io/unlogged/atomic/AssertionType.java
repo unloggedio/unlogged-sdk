@@ -166,30 +166,56 @@ public enum AssertionType {
                 case EQUAL_IGNORE_CASE:
                     return Objects.equals(actualValueString.toLowerCase(), expectedValueString.toLowerCase());
                 case NOT_EQUAL:
+                    if (actualValue.isBoolean()) {
+                        if (actualValue.booleanValue()) {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
+                                return false;
+                            }
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
+                                return true;
+                            }
+                        } else {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
+                                return true;
+                            }
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
+                                return false;
+                            }
+                        }
+                    }
+                    if (expectedValue.isBoolean()) {
+
+                        if (expectedValue.booleanValue()) {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
+                                return false;
+                            }
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
+                                return true;
+                            }
+                        } else {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
+                                return true;
+                            }
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
+                                return false;
+                            }
+                        }
+                    }
+                    if (actualValue instanceof TextNode || expectedValue instanceof TextNode) {
+                        return !Objects.equals(actualValueString, expectedValueString);
+                    }
                     return !Objects.equals(actualValue, expectedValue);
                 case FALSE:
                     return Objects.equals(actualValue.asBoolean(), false);
                 case TRUE:
                     return Objects.equals(actualValue.asBoolean(), true);
                 case LESS_THAN:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() < expectedValue.asDouble();
                 case GREATER_THAN:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() > expectedValue.asDouble();
                 case LESS_THAN_OR_EQUAL:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() <= expectedValue.asDouble();
                 case GREATER_THAN_OR_EQUAL:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() >= expectedValue.asDouble();
                 case NULL:
                     return actualValue.isNull();
