@@ -1,5 +1,8 @@
 package io.unlogged.util;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -36,66 +39,62 @@ public class ClassTypeUtil {
     }
 
 
-    public static Class<?> getClassNameFromDescriptor(String descriptor, ClassLoader targetClassLoader) {
+    public static JavaType getClassNameFromDescriptor(String descriptor, TypeFactory typeFactory) {
 //        System.err.println("Get class for: [" + descriptor + "]");
+        typeFactory.constructSimpleType(void.class, null);
         char firstChar = descriptor.charAt(0);
         switch (firstChar) {
             case 'V':
-                return void.class;
+                return typeFactory.constructSimpleType(void.class, null);
             case 'Z':
-                return boolean.class;
+                return typeFactory.constructSimpleType(boolean.class, null);
             case 'B':
-                return byte.class;
+                return typeFactory.constructSimpleType(byte.class, null);
             case 'C':
-                return char.class;
+                return typeFactory.constructSimpleType(char.class, null);
             case 'S':
-                return short.class;
+                return typeFactory.constructSimpleType(short.class, null);
             case 'I':
-                return int.class;
+                return typeFactory.constructSimpleType(int.class, null);
             case 'J':
-                return long.class;
+                return typeFactory.constructSimpleType(long.class, null);
             case 'F':
-                return float.class;
+                return typeFactory.constructSimpleType(float.class, null);
             case 'D':
-                return double.class;
+                return typeFactory.constructSimpleType(double.class, null);
             case 'L':
-                try {
-                    return targetClassLoader.loadClass(
-                            descriptor.substring(1, descriptor.length() - 1).replace('/', '.'));
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+                String className = descriptor.substring(1, descriptor.length() - 1).replace('/', '.');
+                return typeFactory.constructFromCanonical(className);
             case '[':
-                return java.lang.reflect.Array.newInstance(
-                                ClassTypeUtil.getClassNameFromDescriptor(
-                                        descriptor.substring(1), targetClassLoader), 0).getClass();
+                String componentClassName = descriptor.substring(1);
+                return typeFactory.constructArrayType(getClassNameFromDescriptor(componentClassName, typeFactory));
         }
         if (descriptor.startsWith("byte")) {
-            return byte.class;
+            return typeFactory.constructSimpleType(byte.class, null);
         }
         if (descriptor.startsWith("boolean")) {
-            return boolean.class;
+            return typeFactory.constructSimpleType(boolean.class, null);
         }
         if (descriptor.startsWith("long")) {
-            return long.class;
+            return typeFactory.constructSimpleType(long.class, null);
         }
         if (descriptor.startsWith("float")) {
-            return float.class;
+            return typeFactory.constructSimpleType(float.class, null);
         }
         if (descriptor.startsWith("short")) {
-            return short.class;
+            return typeFactory.constructSimpleType(short.class, null);
         }
         if (descriptor.startsWith("int")) {
-            return int.class;
+            return typeFactory.constructSimpleType(int.class, null);
         }
         if (descriptor.startsWith("double")) {
-            return double.class;
+            return typeFactory.constructSimpleType(double.class, null);
         }
         if (descriptor.startsWith("void")) {
-            return void.class;
+            return typeFactory.constructSimpleType(void.class, null);
         }
         if (descriptor.startsWith("char")) {
-            return char.class;
+            return typeFactory.constructSimpleType(char.class, null);
         }
         return null;
 

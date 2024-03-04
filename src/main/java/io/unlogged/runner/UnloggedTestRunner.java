@@ -39,7 +39,6 @@ import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -554,7 +553,8 @@ public class UnloggedTestRunner extends Runner {
 //                    "[" + candidate.getCandidateId() + "]" +
 //                    "[" + candidate.getName() + "]");
             AssertionFailedError thrownException = new AssertionFailedError(
-                    "Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
+                    "Expected "+ atomicAssertion.getExpression()  +"([" + atomicAssertion.getExpectedValue() + "]) " +
+                            atomicAssertion.getAssertionType().toString() + "  actual " +
                             "[" + expressedValue + "]\n\t when the return value from method " +
                             "[" + methodUnderTest.getName() + "]()\n\t value " +
                             "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
@@ -689,6 +689,17 @@ public class UnloggedTestRunner extends Runner {
             if (methodReturnValue == null) {
                 return JsonNodeFactory.instance.nullNode();
             }
+
+            if (responseClassName.equals("char") || responseClassName.equals("C")) {
+                try {
+                    methodReturnValue =
+                            String.valueOf(objectMapper.readTree(methodReturnValue).textValue().codePointAt(0));
+                    return objectMapper.getNodeFactory().numberNode(Integer.valueOf(methodReturnValue));
+                } catch (JsonProcessingException e) {
+                    //
+                }
+            }
+
             return objectMapper.readTree(methodReturnValue);
         } catch (JsonProcessingException e) {
             // this shouldn't happen

@@ -25,6 +25,7 @@ public class DeclaredMock {
         this.id = declaredMock.id;
         this.fieldTypeName = declaredMock.fieldTypeName;
         this.sourceClassName = declaredMock.sourceClassName;
+        this.methodHashKey = declaredMock.methodHashKey;
         this.fieldName = declaredMock.fieldName;
         this.whenParameter = declaredMock.whenParameter.stream()
                 .map(ParameterMatcher::new).collect(Collectors.toList());

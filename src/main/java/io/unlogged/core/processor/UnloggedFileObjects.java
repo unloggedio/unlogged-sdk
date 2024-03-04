@@ -86,11 +86,11 @@ public final class UnloggedFileObjects {
     }
 
     static JavaFileObject createIntercepting(Compiler compiler, JavaFileObject delegate, String fileName,
-                                             DiagnosticsReceiver diagnostics, OutputStream classWeaveOutputStream,
-                                             DataInfoProvider dataInfoProvider, UnloggedProcessorConfig unloggedProcessorConfig) {
+                                             DiagnosticsReceiver diagnostics,
+                                             DataInfoProvider dataInfoProvider) {
         return compiler.wrap(
                 new InterceptingJavaFileObject(delegate, fileName,
-                        diagnostics, compiler.getDecoderMethod(), classWeaveOutputStream, dataInfoProvider, unloggedProcessorConfig));
+                        diagnostics, compiler.getDecoderMethod(), dataInfoProvider));
     }
 
     private static Compiler java9Compiler(JavaFileManager jfm) {

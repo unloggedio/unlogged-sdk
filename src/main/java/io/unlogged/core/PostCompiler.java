@@ -39,18 +39,14 @@ public final class PostCompiler {
     private PostCompiler() {/* prevent instantiation*/}
 
     public static byte[] applyTransformations(
-            byte[] original, String fileName,
-			DiagnosticsReceiver diagnostics,
-            OutputStream classWeaveOutputStream,
-			DataInfoProvider dataInfoProvider,
-			UnloggedProcessorConfig unloggedProcessorConfig) {
+            byte[] original, String fileName, DiagnosticsReceiver diagnostics, DataInfoProvider dataInfoProvider) {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
         init(diagnostics, unloggedProcessorConfig);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
             try {
                 byte[] next = transformation.applyTransformations(
-                        previous, fileName, diagnostics, classWeaveOutputStream, dataInfoProvider);
+                        previous, fileName, diagnostics, dataInfoProvider);
                 if (next != null) {
                     previous = next;
                 }
@@ -86,6 +82,7 @@ public final class PostCompiler {
             OutputStream classWeaveOutputStream, 
 			DataInfoProvider dataInfoProvider,
 			UnloggedProcessorConfig unloggedProcessorConfig) {
+            final DiagnosticsReceiver diagnostics, DataInfoProvider dataInfoProvider) {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;
 
@@ -106,7 +103,7 @@ public final class PostCompiler {
                 if (original.length > 0) {
                     try {
                         copy = applyTransformations(original,
-                                fileName, diagnostics, classWeaveOutputStream, dataInfoProvider, unloggedProcessorConfig);
+                                fileName, diagnostics, dataInfoProvider);
                     } catch (Exception e) {
                         e.printStackTrace();
                         diagnostics.addWarning(String.format(
