@@ -8,6 +8,8 @@ import com.sun.tools.javac.processing.JavacFiler;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
+
+import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.Unlogged;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
@@ -49,6 +51,8 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
+	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(-1, UnloggedLoggingLevel.COUNTER);
+
 
     public UnloggedProcessor() {
 //        System.out.println("HelloUnloggedProcessor");
@@ -246,8 +250,7 @@ public class UnloggedProcessor extends AbstractProcessor {
             if (!(originalFiler instanceof InterceptingJavaFileManager)) {
                 final Messager messager = processingEnv.getMessager();
                 DiagnosticsReceiver receiver = new MessagerDiagnosticsReceiver(messager);
-
-                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver);
+                JavaFileManager newFilerManager = new InterceptingJavaFileManager(originalFiler, receiver, unloggedProcessorConfig);
                 ht.put(key, newFilerManager);
                 Field filerFileManagerField = Permit.getField(JavacFiler.class, "fileManager");
                 filerFileManagerField.set(javacFiler, newFilerManager);
@@ -366,6 +369,16 @@ public class UnloggedProcessor extends AbstractProcessor {
 
         if (System.getProperty("unlogged.disable", null) != null) return false;
 
+
+		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
+			Unlogged unlogged = element.getAnnotation(Unlogged.class);
+			
+			// setup unloggedProcessorConfig
+			long defaultCounter = Long.parseLong(unlogged.counter());
+			UnloggedLoggingLevel unloggedLoggingLevel = unlogged.unloggedLoggingLevel();
+			this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
+			this.unloggedProcessorConfig.setUnloggedLoggingLevel(unloggedLoggingLevel);
+		}
 
         if (roundEnv.processingOver()) {
             transformer.finish(javacProcessingEnv.getContext(), cleanup);

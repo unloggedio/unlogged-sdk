@@ -23,6 +23,7 @@ package io.unlogged.core;
 
 import io.unlogged.core.bytecode.ProbeInstrumenter;
 import io.unlogged.core.javac.HandlerLibrary;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.weaver.DataInfoProvider;
 
 import java.io.*;
@@ -40,7 +41,7 @@ public final class PostCompiler {
     public static byte[] applyTransformations(
             byte[] original, String fileName, DiagnosticsReceiver diagnostics, DataInfoProvider dataInfoProvider) {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
-        init(diagnostics);
+        init(diagnostics, unloggedProcessorConfig);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
             try {
@@ -60,12 +61,12 @@ public final class PostCompiler {
         return previous;
     }
 
-    private static synchronized void init(DiagnosticsReceiver diagnostics) {
+    private static synchronized void init(DiagnosticsReceiver diagnostics, UnloggedProcessorConfig unloggedProcessorConfig) {
         if (transformations != null) return;
         try {
 //			transformations = SpiLoadUtil.readAllFromIterator(SpiLoadUtil.findServices(PostCompilerTransformation.class, PostCompilerTransformation.class.getClassLoader()));
             transformations = Collections.singletonList(
-                    new ProbeInstrumenter(HandlerLibrary.getTypeHierarchy()));
+                    new ProbeInstrumenter(HandlerLibrary.getTypeHierarchy(), unloggedProcessorConfig));
         } catch (IOException e) {
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw, true));
@@ -77,6 +78,10 @@ public final class PostCompiler {
     public static OutputStream wrapOutputStream(
             final OutputStream originalStream,
             final String fileName,
+            final DiagnosticsReceiver diagnostics,
+            OutputStream classWeaveOutputStream, 
+			DataInfoProvider dataInfoProvider,
+			UnloggedProcessorConfig unloggedProcessorConfig) {
             final DiagnosticsReceiver diagnostics, DataInfoProvider dataInfoProvider) {
 //		return originalStream;
         if (System.getProperty("unlogged.disable", null) != null) return originalStream;

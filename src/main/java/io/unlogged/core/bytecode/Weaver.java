@@ -5,6 +5,8 @@ import com.insidious.common.weaver.ClassInfo;
 import com.insidious.common.weaver.DataInfo;
 import com.insidious.common.weaver.LogLevel;
 import com.insidious.common.weaver.MethodInfo;
+
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.weaver.DataInfoProvider;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
@@ -42,6 +44,7 @@ public class Weaver {
     private Writer methodIdWriter;
     private boolean dumpOption;
     private MessageDigest digest;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
     /**
      * Set up the object to manage a weaving process.
@@ -51,12 +54,13 @@ public class Weaver {
      *
      * @param config weave configuration
      */
-    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy) {
+    public Weaver(WeaveConfig config, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) {
 //        assert outputDir.isDirectory() && outputDir.canWrite();
 
         this.typeHierarchy = typeHierarchy;
 //        this.outputDir = outputDir;
         this.config = config;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
         confirmedDataId = 0;
         confirmedMethodId = 0;
 
@@ -113,7 +117,7 @@ public class Weaver {
 //        try {
         ClassTransformer classTransformer;
         try {
-            classTransformer = new ClassTransformer(weaveLog, config, target, typeHierarchy);
+            classTransformer = new ClassTransformer(weaveLog, config, target, typeHierarchy, this.unloggedProcessorConfig);
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().startsWith("Method too large")) {
                 // Retry to generate a smaller bytecode by ignoring a large array init block
@@ -121,7 +125,7 @@ public class Weaver {
                     weaveLog = new WeaveLog(classId, dataInfoProvider);
                     level = LogLevel.IgnoreArrayInitializer;
                     WeaveConfig smallerConfig = new WeaveConfig(config, level);
-                    classTransformer = new ClassTransformer(weaveLog, smallerConfig, target, typeHierarchy);
+                    classTransformer = new ClassTransformer(weaveLog, smallerConfig, target, typeHierarchy, this.unloggedProcessorConfig);
 //                    log("LogLevel.IgnoreArrayInitializer: " + container + "/" + className);
                 } catch (RuntimeException e2) {
                     if (e.getMessage() != null && e.getMessage().startsWith("Method too large")) {
@@ -129,7 +133,7 @@ public class Weaver {
                         // Retry to generate further smaller bytecode by ignoring except for entry and exit events
                         level = LogLevel.OnlyEntryExit;
                         WeaveConfig smallestConfig = new WeaveConfig(config, level);
-                        classTransformer = new ClassTransformer(weaveLog, smallestConfig, target, typeHierarchy);
+                        classTransformer = new ClassTransformer(weaveLog, smallestConfig, target, typeHierarchy, this.unloggedProcessorConfig);
 //                        log("LogLevel.OnlyEntryExit: " + container + "/" + className);
                     } else {
                         // this jumps to catch (Throwable e) in this method

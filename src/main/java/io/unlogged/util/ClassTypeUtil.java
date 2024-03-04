@@ -10,9 +10,9 @@ import java.util.regex.Pattern;
 
 public class ClassTypeUtil {
 
-    private ClassTypeUtil() {
+    public ClassTypeUtil() {
     }
-
+	
     public static List<String> splitMethodDesc(String desc) {
         int beginIndex = desc.indexOf('(');
         int endIndex = desc.lastIndexOf(')');
@@ -99,6 +99,4 @@ public class ClassTypeUtil {
         return null;
 
     }
-
-
 }

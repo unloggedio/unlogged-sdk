@@ -2,7 +2,6 @@ name: replay_target
 
 on:
   push:
-    branches: [main]
   pull_request:
     branches: [main]
 

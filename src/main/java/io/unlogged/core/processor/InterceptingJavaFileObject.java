@@ -40,6 +40,7 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 	private final DiagnosticsReceiver diagnostics;
 	private final Method decoderMethod;
 	private final DataInfoProvider dataInfoProvider;
+	private final UnloggedProcessorConfig unloggedProcessorConfig;
 
 	public InterceptingJavaFileObject(JavaFileObject original, String fileName,
 									  DiagnosticsReceiver diagnostics,
@@ -50,6 +51,7 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 		this.diagnostics = diagnostics;
 		this.decoderMethod = decoderMethod;
 		this.dataInfoProvider = dataInfoProvider;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
 	}
 
 	@Override

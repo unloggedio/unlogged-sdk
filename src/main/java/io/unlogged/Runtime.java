@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -260,6 +261,30 @@ public class Runtime {
         byte[] probeToRecordBytes = StreamUtil.streamToBytes(probesFile);
         return bytesToIntList(probeToRecordBytes);
     }
+
+	private static boolean frequencyLogging (long methodCounter, long divisor) {
+		if ((methodCounter-1) % divisor == 0){
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
+		System.out.println("--------");
+		for (Object localArgument : arguments) {
+			System.out.println(localArgument);
+		}
+		System.out.println("--------");
+		
+		return frequencyLogging(methodCounter, divisor);
+	}
+	
+
+	public static boolean probeCounter(long methodCounter, long divisor) {
+		return frequencyLogging(methodCounter, divisor);
+	}
 
     /**
      * Close data streams if necessary
