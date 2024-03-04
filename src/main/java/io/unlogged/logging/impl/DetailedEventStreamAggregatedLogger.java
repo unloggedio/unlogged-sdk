@@ -403,6 +403,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("com.intellij", true);
         invertedRadixTree.put("java.lang.Class", true);
         invertedRadixTree.put("reactor.core", true);
+        invertedRadixTree.put("reactor.core.publisher.MonoNext", true);
         invertedRadixTree.put("io.undertow", true);
         invertedRadixTree.put("org.thymeleaf", true);
         invertedRadixTree.put("tech.jhipster", true);

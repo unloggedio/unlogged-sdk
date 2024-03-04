@@ -39,6 +39,7 @@ import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -610,7 +611,9 @@ public class UnloggedTestRunner extends Runner {
 
 
         AgentCommandRawResponse executionResult = executeCandidate(candidate, mockList);
-
+        if (executionResult.getResponseObject() instanceof Exception) {
+            ((Exception) executionResult.getResponseObject()).printStackTrace();
+        }
         AgentCommandResponse acr = executionResult.getAgentCommandResponse();
         if (acr != null) {
             if (processReturnValueAsFloatDouble) {

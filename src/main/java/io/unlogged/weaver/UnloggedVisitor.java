@@ -11,7 +11,6 @@ import io.unlogged.core.handlers.JavacHandlerUtil;
 import io.unlogged.core.javac.JavacASTAdapter;
 import io.unlogged.core.javac.JavacNode;
 import io.unlogged.core.javac.JavacTreeMaker;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -59,7 +58,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
         super.visitType(typeNode, type);
     }
 
-    @NotNull
     private String getQualifiedTypeName(JavacNode typeNode, TypeResolver typeResolver,
                                         JCTree.JCExpression typeExpression) {
 
@@ -81,7 +79,6 @@ public class UnloggedVisitor extends JavacASTAdapter {
         return qualifiedNameFromString(typeNode, typeResolver, typeName);
     }
 
-    @NotNull
     private String qualifiedNameFromString(JavacNode typeNode, TypeResolver typeResolver, String typeName) {
         String qualifiedTypeName = typeResolver.typeRefToFullyQualifiedName(typeNode, typeLibrary, typeName);
         if (qualifiedTypeName == null) {
