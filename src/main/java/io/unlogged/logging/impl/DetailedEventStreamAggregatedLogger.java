@@ -54,6 +54,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     //    public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
     public static final String FAILED_TO_RECORD_MESSAGE =
             "{\"error\": \"failed to serialize object\", \"message\":\"";
+    public static final Duration ONE_MILLISECOND = Duration.ofMillis(1);
     private final List<String> JACKSON_PROPERTY_NAMES_SET_FALSE = Arrays.asList(
             "FAIL_ON_UNKNOWN_PROPERTIES",
             "FAIL_ON_IGNORED_PROPERTIES",
@@ -534,7 +535,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
                     if (className.startsWith("reactor.core.publisher.Mono")) {
-                        Optional<?> result = ((Mono<?>) value).blockOptional(Duration.ofMillis(1));
+                        Optional<?> result = ((Mono<?>) value).blockOptional(ONE_MILLISECOND);
                         if (result.isPresent()) {
                             bytes = objectMapper.get().writeValueAsBytes(result);
                         }

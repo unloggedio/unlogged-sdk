@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.AgentCommandRawResponse;
+import io.unlogged.MethodSignatureParser;
 import io.unlogged.Runtime;
 import io.unlogged.atomic.*;
 import io.unlogged.command.AgentCommandRequest;
@@ -584,7 +585,7 @@ public class UnloggedTestRunner extends Runner {
 
         List<String> methodArgumentValues = candidate.getMethodArguments();
         ArrayList<String> newArgumentValues = new ArrayList<>(methodArgumentValues.size());
-        List<String> methodSignatureTypes = ClassTypeUtil.splitMethodDesc(candidate.getMethod().getSignature());
+        List<String> methodSignatureTypes = MethodSignatureParser.parseMethodSignature(candidate.getMethod().getSignature());
         // remove the return type
         String methodReturnType = methodSignatureTypes.remove(methodSignatureTypes.size() - 1);
         boolean processReturnValueAsFloatDouble = Objects.equals(methodReturnType, "F")

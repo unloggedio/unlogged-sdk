@@ -200,7 +200,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 targetClassLoader = objectInstanceByClass != null ?
                         objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
-                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(
+                List<String> methodSignatureParts = MethodSignatureParser.parseMethodSignature(
                         agentCommandRequest.getMethodSignature());
 
                 // DO NOT REMOVE this transformation
