@@ -379,8 +379,15 @@ public class UnloggedTestRunner extends Runner {
                 if (candidateCount < 1) {
                     continue;
                 }
-                Description suiteDescription = Description.createSuiteDescription(Class.forName(className));
-//                    System.err.println(className );
+                Class<?> testClass1;
+                try {
+                    testClass1 = Class.forName(className);
+                } catch (ClassNotFoundException classNotFoundException) {
+                    System.err.println("Class not found: " + className);
+                    continue;
+                }
+                Description suiteDescription = Description.createSuiteDescription(testClass1);
+
                 testDescription.addChild(suiteDescription);
 
                 for (String methodHashKey : storedCandidateMap.keySet()) {
@@ -553,7 +560,7 @@ public class UnloggedTestRunner extends Runner {
 //                    "[" + candidate.getCandidateId() + "]" +
 //                    "[" + candidate.getName() + "]");
             AssertionFailedError thrownException = new AssertionFailedError(
-                    "Expected "+ atomicAssertion.getExpression()  +"([" + atomicAssertion.getExpectedValue() + "]) " +
+                    "Expected " + atomicAssertion.getExpression() + "([" + atomicAssertion.getExpectedValue() + "]) " +
                             atomicAssertion.getAssertionType().toString() + "  actual " +
                             "[" + expressedValue + "]\n\t when the return value from method " +
                             "[" + methodUnderTest.getName() + "]()\n\t value " +

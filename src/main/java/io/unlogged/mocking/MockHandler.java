@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-
 import io.unlogged.mocking.construction.JsonDeserializer;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
@@ -45,10 +44,10 @@ public class MockHandler {
             ObjectMapper objectMapper,
             ByteBuddy byteBuddy,
             Objenesis objenesis,
-			Object originalImplementation,
+            Object originalImplementation,
             Object originalFieldParent,
-			ClassLoader targetClassLoader,
-			Field field) {
+            ClassLoader targetClassLoader,
+            Field field) {
         this.objectMapper = objectMapper;
         this.jsonDeserializer = new JsonDeserializer(objectMapper);
         this.byteBuddy = byteBuddy;
@@ -69,6 +68,35 @@ public class MockHandler {
             JavaType subType = getTypeReference(typeFactory, classNameToBeConstructed.substring(0,
                     classNameToBeConstructed.length() - 2));
             return typeFactory.constructArrayType(subType);
+        }
+        switch (classNameToBeConstructed) {
+            case "J":
+            case "long":
+                return typeFactory.constructType(long.class);
+            case "Z":
+            case "boolean":
+                return typeFactory.constructType(boolean.class);
+            case "I":
+            case "integer":
+                return typeFactory.constructType(int.class);
+            case "B":
+            case "byte":
+                return typeFactory.constructType(byte.class);
+            case "C":
+            case "char":
+                return typeFactory.constructType(char.class);
+            case "F":
+            case "float":
+                return typeFactory.constructType(float.class);
+            case "S":
+            case "short":
+                return typeFactory.constructType(short.class);
+            case "D":
+            case "double":
+                return typeFactory.constructType(double.class);
+            case "V":
+            case "void":
+                return typeFactory.constructType(void.class);
         }
         return typeFactory.constructFromCanonical(classNameToBeConstructed);
     }
@@ -178,11 +206,11 @@ public class MockHandler {
 //        Method realMethod = originalImplementation.getClass()
 //                .getMethod(invokedMethod.getName(), invokedMethod.getParameterTypes());
 
-		if (originalImplementation == null){
-			return null;
-		}
-		
-		return invokedMethod.invoke(originalImplementation, methodArguments);
+        if (originalImplementation == null) {
+            return null;
+        }
+
+        return invokedMethod.invoke(originalImplementation, methodArguments);
     }
 
     private Object createReturnValueInstance(ThenParameter thenParameter, Method invokedMethod, ClassLoader classLoader, String classNameToBeConstructed, String returnValueSerialized)
@@ -224,7 +252,7 @@ public class MockHandler {
                     if (returnValueSerialized.startsWith("[")) {
                         returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
                                 typeFactory.constructArrayType(typeReference.containedType(0))));
-                    } else  {
+                    } else {
                         returnValueInstance = Mono.just(jsonDeserializer.createInstance(returnValueSerialized,
                                 typeReference.containedType(0)));
                     }
@@ -265,28 +293,28 @@ public class MockHandler {
                 JavaType expectedClassType;
                 switch (parameterMatcher.getValue()) {
                     case "int":
-                        expectedClassType = typeFactory.constructType(Integer.class);
+                        expectedClassType = typeFactory.constructType(int.class);
                         break;
                     case "short":
-                        expectedClassType = typeFactory.constructType(Short.class);
+                        expectedClassType = typeFactory.constructType(short.class);
                         break;
                     case "float":
-                        expectedClassType = typeFactory.constructType(Float.class);
+                        expectedClassType = typeFactory.constructType(float.class);
                         break;
                     case "long":
-                        expectedClassType = typeFactory.constructType(Long.class);
+                        expectedClassType = typeFactory.constructType(long.class);
                         break;
                     case "byte":
-                        expectedClassType = typeFactory.constructType(Byte.class);
+                        expectedClassType = typeFactory.constructType(byte.class);
                         break;
                     case "double":
-                        expectedClassType = typeFactory.constructType(Double.class);
+                        expectedClassType = typeFactory.constructType(double.class);
                         break;
                     case "boolean":
-                        expectedClassType = typeFactory.constructType(Boolean.class);
+                        expectedClassType = typeFactory.constructType(boolean.class);
                         break;
                     case "char":
-                        expectedClassType = typeFactory.constructType(Character.class);
+                        expectedClassType = typeFactory.constructType(char.class);
                         break;
                     default:
                         expectedClassType = getTypeReference(typeFactory, parameterMatcher.getValue());
@@ -299,7 +327,12 @@ public class MockHandler {
                 }
 
                 JavaType actualJavaType = typeFactory.constructType(argument.getClass());
-                if (!expectedClassType.getRawClass().isAssignableFrom(actualJavaType.getRawClass())) {
+
+                if (expectedClassType.isPrimitive() || actualJavaType.isPrimitive()) {
+                    Class<?> primitiveExpectedType = getPrimitiveType(expectedClassType);
+                    Class<?> primitiveActualType = getPrimitiveType(expectedClassType);
+                    mockMatched = Objects.equals(primitiveExpectedType, primitiveActualType);
+                } else if (!expectedClassType.getRawClass().isAssignableFrom(actualJavaType.getRawClass())) {
                     mockMatched = false;
                 }
                 break;
@@ -380,6 +413,41 @@ public class MockHandler {
                 throw new RuntimeException("Invalid " + parameterMatcher);
         }
         return mockMatched;
+    }
+
+    private Class<?> getPrimitiveType(JavaType expectedClassType) {
+        Class<?> rawClass = expectedClassType.getRawClass();
+        if (expectedClassType.isPrimitive()) {
+            return rawClass;
+        }
+        if (rawClass.equals(Byte.class)) {
+            return byte.class;
+        }
+        if (rawClass.equals(Integer.class)) {
+            return int.class;
+        }
+        if (rawClass.equals(Boolean.class)) {
+            return boolean.class;
+        }
+        if (rawClass.equals(Character.class)) {
+            return char.class;
+        }
+        if (rawClass.equals(Float.class)) {
+            return float.class;
+        }
+        if (rawClass.equals(Long.class)) {
+            return long.class;
+        }
+        if (rawClass.equals(Short.class)) {
+            return short.class;
+        }
+        if (rawClass.equals(Double.class)) {
+            return double.class;
+        }
+        if (rawClass.equals(Void.class)) {
+            return void.class;
+        }
+        return null;
     }
 
     public void addDeclaredMocks(List<DeclaredMock> declaredMocksForField) {

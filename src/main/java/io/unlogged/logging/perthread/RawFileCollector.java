@@ -125,10 +125,10 @@ public class RawFileCollector implements Runnable {
     }
 
 
-    public void shutdown() throws IOException {
+    public void shutdown() {
         shutdown = true;
         errorLogger.log("shutting down raw file collector");
-        EXECUTOR_SERVICE.shutdown();
+        EXECUTOR_SERVICE.shutdownNow();
     }
 
     public void upload() throws IOException {
@@ -293,6 +293,7 @@ public class RawFileCollector implements Runnable {
                     errorLogger.log("Archive closer worker was interrupted: " + e.getMessage());
                     break;
                 } catch (Exception somethingElse) {
+                    errorLogger.log("Archive closer worker was interrupted but not closing: " + somethingElse.getMessage());
                     errorLogger.log(somethingElse);
                 }
             }
