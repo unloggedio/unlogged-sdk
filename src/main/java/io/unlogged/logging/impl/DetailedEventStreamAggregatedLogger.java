@@ -2,7 +2,6 @@ package io.unlogged.logging.impl;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -31,8 +30,9 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 
@@ -417,7 +417,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("java.io", true);
         invertedRadixTree.put("java.util.regex", true);
         invertedRadixTree.put("java.util.Base64", true);
-        invertedRadixTree.put("java.util.concurrent", true);
+//        invertedRadixTree.put("java.util.concurrent", true);
         invertedRadixTree.put("com.amazon", true);
         invertedRadixTree.put("com.hubspot", true);
     }
@@ -460,10 +460,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             return;
         }
         String className;
+        Class<?> valueClass = value == null ? Object.class : value.getClass();
         if (value != null) {
-            className = value.getClass().getCanonicalName();
+            className = valueClass.getCanonicalName();
             if (className == null) {
-                className = value.getClass().getName();
+                className = valueClass.getName();
             }
         } else {
             className = "";
@@ -484,7 +485,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 objectMap.put(className, new WeakReference<>(value));
             }
             if (targetClassLoader == null && value != null) {
-                targetClassLoader = value.getClass().getClassLoader();
+                targetClassLoader = valueClass.getClassLoader();
             }
         }
 
@@ -495,7 +496,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 objectId)) {
 
             if (DEBUG && value != null) {
-                System.out.println("record serialized value for probe [" + dataId + "] -> " + value.getClass());
+                System.out.println("record serialized value for probe [" + dataId + "] -> " + valueClass);
             }
 
 
@@ -533,28 +534,19 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
                     if (className.startsWith("reactor.core.publisher.Mono")) {
-                        CountDownLatch cdl = new CountDownLatch(1);
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream(10240);
-                        ((Mono<?>) value).subscribe((e) -> {
-                            try {
-                                byte[] bytes1 = objectMapper.get().writeValueAsBytes(e);
-                                baos.write(bytes1);
-                            } catch (JsonProcessingException ex) {
-                                //
-
-                            } catch (IOException ex) {
-//                                throw new RuntimeException(ex);
-                            }
-                            cdl.countDown();
-                        });
-                        cdl.await();
-                        bytes = baos.toByteArray();
+                        Optional<?> result = ((Mono<?>) value).blockOptional(Duration.ofMillis(1));
+                        if (result.isPresent()) {
+                            bytes = objectMapper.get().writeValueAsBytes(result);
+                        }
+                    } else if (value instanceof Future) {
+                        Future<?> futureValue = (Future<?>) value;
+                        bytes = objectMapper.get().writeValueAsBytes(futureValue.get());
                     } else {
                         bytes = objectMapper.get().writeValueAsBytes(value);
                     }
                     if (DEBUG) {
                         System.err.println(
-                                "[" + dataId + "] record serialized value for probe [" + value.getClass() + "] [" + objectId + "] ->" +
+                                "[" + dataId + "] record serialized value for probe [" + valueClass + "] [" + objectId + "] ->" +
                                         " " + new String(bytes));
                     }
                     // ######################################
