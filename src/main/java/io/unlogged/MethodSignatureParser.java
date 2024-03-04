@@ -26,8 +26,8 @@ public class MethodSignatureParser {
             // Add cases for primitives here if needed
             default:
                 // Advance for primitives or unsupported types
-                index++;
-                return new ParseInfo("UnknownType", index);
+                String value = String.valueOf(signature.charAt(index));
+                return new ParseInfo(value, index + 1);
         }
     }
 
@@ -92,6 +92,13 @@ public class MethodSignatureParser {
                         "J",
                         "J",
                         "V"
+                )
+        );
+
+        signatureMap.put("([J[[J)[V", Arrays.asList(
+                        "J[]",
+                        "J[][]",
+                        "V[]"
                 )
         );
 

@@ -10,12 +10,12 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.2.2</version>
+    <version>0.2.4</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.build.sourceEncoding>UTF-8</project.build. sourceEncoding>
 
         <jackson.version>2.13.5</jackson.version>
         <jackson.scope>compile</jackson.scope>
