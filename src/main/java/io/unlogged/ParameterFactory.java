@@ -171,31 +171,25 @@ public class ParameterFactory {
         Object parameterObject;
         String rawClassCanonicalName = typeReference != null ? typeReference.getRawClass().getCanonicalName() : "java" +
                 ".util.String";
+        JavaType firstComponent = typeReference != null && typeReference.containedTypeCount() > 0 ?
+                typeReference.containedType(0) : null;
         switch (rawClassCanonicalName) {
             case "reactor.core.publisher.Mono":
 
-                parameterObject = objectFromTypeReference(methodParameter, parameterType,
-                        typeReference.containedType(0));
+                parameterObject = objectFromTypeReference(methodParameter, parameterType, firstComponent);
                 parameterObject = parameterObject == null ? Mono.empty() : Mono.just(parameterObject);
 
                 break;
             case "java.util.concurrent.CompletableFuture":
-                parameterObject = CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return objectFromTypeReference(methodParameter, parameterType, typeReference);
-                    } catch (JsonProcessingException | ClassNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                final Object finalObj = objectFromTypeReference(methodParameter, parameterType, firstComponent);
+                parameterObject = CompletableFuture.supplyAsync(() -> finalObj);
                 break;
             case "java.util.Optional":
-                parameterObject = objectFromTypeReference(methodParameter, parameterType,
-                        typeReference.containedType(0));
+                parameterObject = objectFromTypeReference(methodParameter, parameterType, firstComponent);
                 parameterObject = parameterObject == null ? Optional.empty() : Optional.of(parameterObject);
                 break;
             case "reactor.core.publisher.Flux":
-                parameterObject = objectFromTypeReference(methodParameter, parameterType,
-                        typeReference.containedType(0));
+                parameterObject = objectFromTypeReference(methodParameter, parameterType, firstComponent);
                 parameterObject = parameterObject == null ? Flux.empty() : Flux.just(parameterObject);
                 break;
             default:
@@ -263,7 +257,8 @@ public class ParameterFactory {
                                     valueType.getCanonicalName(),
                                     ReturnValueType.MOCK);
                         } else {
-                            returnParameter = new ReturnValue(providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
+                            returnParameter = new ReturnValue(providedValue.toString(), valueType.getCanonicalName(),
+                                    ReturnValueType.REAL);
                         }
 
                         DeclaredMock returnParamCallMock = new DeclaredMock();
