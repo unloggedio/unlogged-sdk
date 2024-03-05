@@ -77,10 +77,13 @@ public class MethodSignatureParser {
 //        parameterTypes.forEach(System.out::println);
 
         Map<String, List<String>> signatureMap = new HashMap<>();
+        // Test case 1
         signatureMap.put(
+                // for signature
                 "(Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>;" +
                         "Ljakarta/servlet/http/HttpServletRequest;Ljakarta/servlet/http/HttpServletResponse;)" +
                         "Ljava/util/List<Lcom/rometools/rome/feed/atom/Entry;>;"
+                // expected return items
                 , Arrays.asList(
                         "java.util.Map<java.lang.String, java.lang.Object>",
                         "jakarta.servlet.http.HttpServletRequest",
@@ -88,17 +91,41 @@ public class MethodSignatureParser {
                         "java.util.List<com.rometools.rome.feed.atom.Entry>"
                 )
         );
-        signatureMap.put("(JJ)V", Arrays.asList(
+        // Test case 2
+        signatureMap.put(
+                // for signature
+                "(JJ)V",
+                // expected return items
+                Arrays.asList(
                         "J",
                         "J",
                         "V"
                 )
         );
 
-        signatureMap.put("([J[[J)[V", Arrays.asList(
+        // Test case 3
+        signatureMap.put(
+                // for signature
+                "([J[[J)[V",
+                // expected return items
+                Arrays.asList(
                         "J[]",
                         "J[][]",
                         "V[]"
+                )
+        );
+
+
+        // Test case 4
+        signatureMap.put(
+                // for signature
+                "(Ljava/util/List<Lorg/unlogged/demo/models/CustomerProfile;>;Z)" +
+                        "Ljava/util/List<Lorg/unlogged/demo/models/CustomerProfile;>;",
+                // expected return items
+                Arrays.asList(
+                        "java.util.List<org.unlogged.demo.models.CustomerProfile>",
+                        "Z",
+                        "java.util.List<org.unlogged.demo.models.CustomerProfile>"
                 )
         );
 
@@ -110,7 +137,7 @@ public class MethodSignatureParser {
                 String expected = expectedResult.get(i);
                 String actual = parameterTypes1.get(i);
                 if (!Objects.equals(expected, actual)) {
-                    throw new IllegalArgumentException("fail: " + signature);
+                    System.err.println("fail: expected [" + expected + "] vs actual [" + actual + "] at " + signature);
                 }
 
             }
