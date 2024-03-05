@@ -22,7 +22,6 @@ import io.unlogged.command.AgentCommandResponse;
 import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
 import io.unlogged.mocking.DeclaredMock;
-import io.unlogged.util.ClassTypeUtil;
 import junit.framework.AssertionFailedError;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
@@ -559,16 +558,80 @@ public class UnloggedTestRunner extends Runner {
 //                    "] as expected in test candidate " +
 //                    "[" + candidate.getCandidateId() + "]" +
 //                    "[" + candidate.getName() + "]");
+            String className = methodUnderTest.getClassName();
+            if (className.contains(".")) {
+                className = className.substring(className.lastIndexOf(".") + 1);
+            }
+            String message = "Expected " + atomicAssertion.getExpression() + "([" + atomicAssertion.getExpectedValue() + "]) " +
+                    atomicAssertion.getAssertionType().toString() + "  actual " +
+                    "[" + expressedValue + "]\n\t when the return value from method " +
+                    "[" + className + "." + methodUnderTest.getName() + methodUnderTest.getSignature() + "]\n\t value " +
+                    "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
+                    "(" + atomicAssertion.getKey() + ")")) +
+                    "] as expected in test candidate " +
+                    "[" + candidate.getCandidateId() + "]" +
+                    "[" + candidate.getName() + "]";
+
+
+            List<String> methodParameterTypes = MethodSignatureParser.parseMethodSignature(
+                    methodUnderTest.getSignature());
+
+            List<Object> messageTemplateValues = new ArrayList<>();
+
+
+            messageTemplateValues.add(className + "." + methodUnderTest.getName());
+            messageTemplateValues.add(candidate.getCandidateId());
+            int parameterCount = methodParameterTypes.size() - 1;
+            messageTemplateValues.add(methodParameterTypes.get(parameterCount));
+            messageTemplateValues.add(candidate.getMockIds().size());
+
+            String messageTemplate = "\n\n" +
+                    "┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n" +
+                    "│ %-91s %-36s │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Returns: %-120s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Mocks: %-122s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Parameters: %-117s│\n" +
+                    "│                                                                                                                                  │\n";
+
+            messageTemplateValues.add(parameterCount);
+            for (int i = 0; i < parameterCount; i++) {
+                String paramType = methodParameterTypes.get(i);
+                messageTemplate = messageTemplate +
+                        "│   %-127s│\n";
+                messageTemplateValues.add(paramType + ": " + candidate.getMethodArguments().get(i));
+            }
+            if (parameterCount > 0) {
+                messageTemplate +=
+                        "│                                                                                                                                  │\n"
+                ;
+            }
+
+            messageTemplate = messageTemplate +
+                    "│ Failed Assertion                                                                                                                 │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│  Key: %-123s│\n" +
+                    "│  Expression: %-116s│\n" +
+                    "│  Expected Value: %-112s│\n" +
+                    "│  Actual Value: %-114s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ %-88s                UnloggedReplayTestReport │\n" +
+                    "└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘";
+
+
+            messageTemplateValues.add(atomicAssertion.getKey());
+            messageTemplateValues.add(atomicAssertion.getExpression());
+            messageTemplateValues.add(atomicAssertion.getExpectedValue());
+            messageTemplateValues.add(expressedValue);
+            messageTemplateValues.add(new Date().toString());
+
+
             AssertionFailedError thrownException = new AssertionFailedError(
-                    "Expected " + atomicAssertion.getExpression() + "([" + atomicAssertion.getExpectedValue() + "]) " +
-                            atomicAssertion.getAssertionType().toString() + "  actual " +
-                            "[" + expressedValue + "]\n\t when the return value from method " +
-                            "[" + methodUnderTest.getName() + "]()\n\t value " +
-                            "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
-                            "(" + atomicAssertion.getKey() + ")")) +
-                            "] as expected in test candidate " +
-                            "[" + candidate.getCandidateId() + "]" +
-                            "[" + candidate.getName() + "]");
+                    String.format(messageTemplate, messageTemplateValues.toArray(new Object[0]))
+            );
 //            Failure failure = new Failure(testDescription, thrownException);
 //            throw thrownException;
             return thrownException;
@@ -584,7 +647,8 @@ public class UnloggedTestRunner extends Runner {
 
         List<String> methodArgumentValues = candidate.getMethodArguments();
         ArrayList<String> newArgumentValues = new ArrayList<>(methodArgumentValues.size());
-        List<String> methodSignatureTypes = MethodSignatureParser.parseMethodSignature(candidate.getMethod().getSignature());
+        List<String> methodSignatureTypes = MethodSignatureParser.parseMethodSignature(
+                candidate.getMethod().getSignature());
         // remove the return type
         String methodReturnType = methodSignatureTypes.remove(methodSignatureTypes.size() - 1);
         boolean processReturnValueAsFloatDouble = Objects.equals(methodReturnType, "F")
@@ -659,10 +723,16 @@ public class UnloggedTestRunner extends Runner {
             assertionResult.setPassing(false);
             return assertionResult;
         }
+        String responseClassName = executionResult.getResponseClassName();
+
+        List<String> params = MethodSignatureParser.parseMethodSignature(candidate.getMethod().getSignature());
+        responseClassName = params.get(params.size() - 1);
+
+
         return AssertionEngine.executeAssertions(
                 candidate.getTestAssertions(),
                 getResponseNode(String.valueOf(executionResult.getMethodReturnValue()),
-                        executionResult.getResponseClassName()
+                        responseClassName
                 ));
     }
 

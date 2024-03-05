@@ -56,6 +56,9 @@ public class MethodSignatureParser {
             ParseInfo obj = parseType(signature, index);
             generic.append(obj.getValue());
             index = obj.getNewIndex();
+            if (signature.charAt(index) == ',') {
+                index++;
+            }
             if (signature.charAt(index) != '>') {
                 generic.append(", ");
             }
@@ -80,7 +83,7 @@ public class MethodSignatureParser {
         // Test case 1
         signatureMap.put(
                 // for signature
-                "(Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>;" +
+                "(Ljava/util/Map<Ljava/lang/String;,Ljava/lang/Object;>;" +
                         "Ljakarta/servlet/http/HttpServletRequest;Ljakarta/servlet/http/HttpServletResponse;)" +
                         "Ljava/util/List<Lcom/rometools/rome/feed/atom/Entry;>;"
                 // expected return items
@@ -128,6 +131,17 @@ public class MethodSignatureParser {
                         "java.util.List<org.unlogged.demo.models.CustomerProfile>"
                 )
         );
+
+        // Test case 5
+        signatureMap.put(
+                // for signature
+                "()Lorg/springframework/data/redis/core/ReactiveRedisOperations<Ljava/lang/String;,Lorg/unlogged/demo/models/Student;>;",
+                // expected return items
+                Arrays.asList(
+                        "org.springframework.data.redis.core.ReactiveRedisOperations<java.lang.String,org.unlogged.demo.models.Student>"
+                )
+        );
+
 
         for (String signature : signatureMap.keySet()) {
             List<String> parameterTypes1 = parseMethodSignature(signature);
