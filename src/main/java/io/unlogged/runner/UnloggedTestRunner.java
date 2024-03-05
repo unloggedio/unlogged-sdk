@@ -579,7 +579,7 @@ public class UnloggedTestRunner extends Runner {
             List<Object> messageTemplateValues = new ArrayList<>();
 
 
-            messageTemplateValues.add(className + "." + methodUnderTest.getName());
+            messageTemplateValues.add(className + "." + methodUnderTest.getName() + "()");
             messageTemplateValues.add(candidate.getCandidateId());
             int parameterCount = methodParameterTypes.size() - 1;
             messageTemplateValues.add(methodParameterTypes.get(parameterCount));
@@ -612,10 +612,11 @@ public class UnloggedTestRunner extends Runner {
             messageTemplate = messageTemplate +
                     "│ Failed Assertion                                                                                                                 │\n" +
                     "│                                                                                                                                  │\n" +
-                    "│  Key: %-123s│\n" +
-                    "│  Expression: %-116s│\n" +
+                    "│  Key:            %-112s│\n" +
+                    "│  Expression:     %-112s│\n" +
+                    "│  Assertion:      %-112s│\n" +
                     "│  Expected Value: %-112s│\n" +
-                    "│  Actual Value: %-114s│\n" +
+                    "│  Actual Value:   %-112s│\n" +
                     "│                                                                                                                                  │\n" +
                     "│                                                                                                                                  │\n" +
                     "│ %-88s                UnloggedReplayTestReport │\n" +
@@ -624,6 +625,7 @@ public class UnloggedTestRunner extends Runner {
 
             messageTemplateValues.add(atomicAssertion.getKey());
             messageTemplateValues.add(atomicAssertion.getExpression());
+            messageTemplateValues.add(atomicAssertion.getAssertionType());
             messageTemplateValues.add(atomicAssertion.getExpectedValue());
             messageTemplateValues.add(expressedValue);
             messageTemplateValues.add(new Date().toString());
