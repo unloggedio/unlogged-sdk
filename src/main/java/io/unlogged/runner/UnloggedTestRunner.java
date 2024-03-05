@@ -374,7 +374,6 @@ public class UnloggedTestRunner extends Runner {
             for (String className : recordsMap.keySet()) {
                 AtomicRecord classRecords = recordsMap.get(className);
                 Map<String, List<StoredCandidate>> storedCandidateMap = classRecords.getStoredCandidateMap();
-//                System.err.println("running the tests from unlogged: " + classFileResource);
 
                 int candidateCount = storedCandidateMap.values().stream().mapToInt(Collection::size).sum();
                 if (candidateCount < 1) {
