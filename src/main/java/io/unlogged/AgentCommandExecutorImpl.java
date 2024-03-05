@@ -197,8 +197,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             attributesClassName);
                     Object requestAttributes = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
                             attributesClassName,
-                            "{\"getRequest\": {\"getRequestURL\": " +
-                                    "\"https://localhost:8080/api\"}}", attributesClass
+                            "{\"request\": " +
+                                    "{" +
+                                    "   \"requestURL\": \"https://localhost:8080/api\"," +
+                                    "   \"queryString\": \"?query=value\"," +
+                                    "   \"method\": \"GET\"," +
+                                    "   \"requestURI\": \"/api\"" +
+                                    "}" +
+                                "}", attributesClass
                     );
                     setRequestAttributesMethod.invoke(null, requestAttributes, true);
 

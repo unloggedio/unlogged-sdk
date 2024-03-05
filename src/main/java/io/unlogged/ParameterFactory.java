@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.mocking.*;
 import net.bytebuddy.ByteBuddy;
@@ -88,6 +89,9 @@ public class ParameterFactory {
             for (Field declaredField : declaredFields) {
                 JsonNode fieldValueInNodeByName = providedValues.get(declaredField.getName());
                 Object valueToSet = getValueToSet(fieldValueInNodeByName, declaredField.getType());
+                if (valueToSet == null) {
+                    continue;
+                }
                 declaredField.setAccessible(true);
                 declaredField.set(parameterObject, valueToSet);
             }
@@ -96,7 +100,10 @@ public class ParameterFactory {
         return parameterObject;
     }
 
-    private Object getValueToSet(JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
+    private Object getValueToSet(JsonNode fieldValueInNodeByName, Class<?> type) {
+        if (fieldValueInNodeByName == null) {
+            return null;
+        }
         Object valueToSet = null;
         if (int.class.equals(type) || Integer.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.intValue();
@@ -116,7 +123,7 @@ public class ParameterFactory {
             valueToSet = new StringBuilder(fieldValueInNodeByName.textValue());
         } else {
             valueToSet = createObjectInstanceFromStringAndTypeInformation(
-                    null, fieldValueInNodeByName.asText(), type);
+                    null, fieldValueInNodeByName.toString(), type);
         }
         return valueToSet;
     }
@@ -226,7 +233,7 @@ public class ParameterFactory {
             Method[] definedMethods = currentClass.getDeclaredMethods();
             for (Method definedMethod : definedMethods) {
                 String methodName = definedMethod.getName();
-                String potentialFieldName = null;
+                String potentialFieldName = methodName;
                 Class<?> valueType = null;
                 if (methodName.startsWith("get") && definedMethod.getParameterTypes().length == 0) {
                     potentialFieldName = methodName.substring(3);
@@ -237,10 +244,6 @@ public class ParameterFactory {
                 } else if (methodName.startsWith("is") && definedMethod.getParameterTypes().length == 0) {
                     valueType = definedMethod.getReturnType();
                     potentialFieldName = methodName.substring(2);
-                }
-
-                if (potentialFieldName == null) {
-                    potentialFieldName = "5";
                 }
 
                 potentialFieldName = potentialFieldName.substring(0, 1).toLowerCase() + potentialFieldName.substring(1);
@@ -255,10 +258,12 @@ public class ParameterFactory {
                         ReturnValue returnParameter;
                         if (checkCanClassBeExtended(valueType)) {
                             returnParameter = new ReturnValue(
-                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
+                                    providedValue instanceof TextNode ?
+                                            providedValue.textValue() : providedValue.toString(),
+                                    valueType.getCanonicalName(),
+                                    ReturnValueType.MOCK);
                         } else {
-                            returnParameter = new ReturnValue(
-                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
+                            returnParameter = new ReturnValue(providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
                         }
 
                         DeclaredMock returnParamCallMock = new DeclaredMock();
