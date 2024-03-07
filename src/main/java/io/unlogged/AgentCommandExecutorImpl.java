@@ -618,6 +618,15 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 pendingImplementations.add(implementedInterface);
             }
 
+            String fameImplClassName = classType.getCanonicalName() + "$UnloggedFakeInterfaceImpl";
+            try {
+                Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
+                return alreadyExist;
+            }catch (Exception e) {
+                // good to create
+            }
+
+
             loadedMockedField = byteBuddyInstance
                     .subclass(Object.class)
                     .name(classType.getCanonicalName() + "$UnloggedFakeInterfaceImpl")
@@ -629,7 +638,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         } else {
             String fameImplClassName = classType.getCanonicalName() + "$UnloggedFakeImpl";
             try {
-                Class<?> alreadyExist = targetClassLoader.loadClass("fameImplClassName");
+                Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
                 return alreadyExist;
             }catch (Exception e) {
                 // good to create
