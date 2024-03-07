@@ -537,11 +537,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     targetClassLoader, field);
                             Class<?> fieldType = field.getType();
 
-                            DynamicType.Loaded<?> loadedMockedField;
+                            Class<?> loadedMockedField;
                             loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
-                            Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-                            existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler,
-                                    loadedMockedField);
+                            Object mockedFieldInstance = objenesis.newInstance(loadedMockedField);
+                            existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler
+                            );
                             globalFieldMockMap.put(key, existingMockInstance);
 
                         } else {
@@ -600,7 +600,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> classType) {
+    private Class<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> classType) {
         ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
         DynamicType.Loaded<?> loadedMockedField;
         if (classType.isInterface()) {
@@ -627,15 +627,22 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     .load(targetClassLoader, strategy);
 
         } else {
+            String fameImplClassName = classType.getCanonicalName() + "$UnloggedFakeImpl";
+            try {
+                Class<?> alreadyExist = targetClassLoader.loadClass("fameImplClassName");
+                return alreadyExist;
+            }catch (Exception e) {
+                // good to create
+            }
             loadedMockedField = byteBuddyInstance
                     .subclass(classType)
-                    .name(classType.getCanonicalName() + "$UnloggedFakeImpl")
+                    .name(fameImplClassName)
                     .method(isDeclaredBy(classType))
                     .intercept(MethodDelegation.to(mockHandler))
                     .make()
                     .load(targetClassLoader, strategy);
         }
-        return loadedMockedField;
+        return loadedMockedField.getLoaded();
     }
 
     @Override
@@ -1189,9 +1196,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             try {
                 MockHandler mockHandler = new MockHandler(new ArrayList<>(), objectMapper, parameterFactory,
                         objenesis, null, null, targetClassLoader, null);
-                DynamicType.Loaded<?> newInstanceLoader = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
+                Class<?> newInstanceLoader = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
                         loadedClass);
-                newInstance = objenesis.newInstance(newInstanceLoader.getLoaded());
+                newInstance = objenesis.newInstance(newInstanceLoader);
 
             } catch (Exception exception) {
                 // failed to create using bytebuddy also

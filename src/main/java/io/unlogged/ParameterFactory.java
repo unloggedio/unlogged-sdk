@@ -342,7 +342,7 @@ public class ParameterFactory {
 
         Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
 
-        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
+        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler);
         return existingMockInstance;
     }
 
