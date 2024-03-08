@@ -538,7 +538,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             Class<?> fieldType = field.getType();
 
                             Class<?> loadedMockedField;
+                            try {
                             loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
+                            }catch (Throwable t) {
+                                // failed to create an instance of class
+                                System.err.println("Failed to create instance of class: " + fieldType.getCanonicalName() + " " + fieldName);
+                                continue;
+                            }
                             Object mockedFieldInstance = objenesis.newInstance(loadedMockedField);
                             existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler
                             );
