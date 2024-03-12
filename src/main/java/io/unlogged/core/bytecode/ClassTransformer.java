@@ -52,7 +52,8 @@ public class ClassTransformer extends ClassVisitor {
      */
     public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy) {
         // Create a writer for the target class
-        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy));
+        this(weaver, config,
+                new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy));
         // Start weaving, and store the result to a byte array
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();
@@ -61,7 +62,8 @@ public class ClassTransformer extends ClassVisitor {
 
     /**
      * Initializes the object as a ClassVisitor.
-     *c
+     * c
+     *
      * @param weaver specifies the state of the weaver.
      * @param config specifies the configuration.
      * @param cw     specifies the class writer (MetracerClassWriter).
@@ -179,10 +181,18 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc,
                                      String signature, String[] exceptions) {
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        if (name.equals("equals") || name.equals("hashCode")) {
+        if (name.equals("equals")
+                || name.equals("hashCode")
+                || name.equals("onNext")
+                || name.equals("onSubscribe")
+                || name.equals("onError")
+                || name.equals("currentContext")
+                || name.equals("onComplete")
+        ) {
             return mv;
         }
-        if (mv != null) {
+        if (mv != null
+        ) {
             mv = new TryCatchBlockSorter(mv, access, name, desc, signature, exceptions);
             MethodTransformer trans = new MethodTransformer(
                     weavingInfo, config, sourceFileName,
