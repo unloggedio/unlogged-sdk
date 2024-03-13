@@ -60,7 +60,8 @@ if __name__=="__main__":
 				ReplayTest("Handling characters case - a", TestResult.PASS),
 				ReplayTest("Case to test #624", TestResult.PASS),
 				ReplayTest("Case - 595", TestResult.PASS),
-				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS)
+				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS),
+				ReplayTest("Issue - 655 - Custom converter for model mapper", TestResult.PASS)
 			]
 		)
 	]
