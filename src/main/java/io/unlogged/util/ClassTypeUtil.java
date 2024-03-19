@@ -41,7 +41,12 @@ public class ClassTypeUtil {
 
     public static JavaType getClassNameFromDescriptor(String descriptor, TypeFactory typeFactory) {
 //        System.err.println("Get class for: [" + descriptor + "]");
-        typeFactory.constructSimpleType(void.class, null);
+//        typeFactory.constructSimpleType(void.class, null);
+        if (descriptor.endsWith("[]")) {
+            return typeFactory.constructArrayType(
+                    getClassNameFromDescriptor(descriptor.substring(0, descriptor.length() - 2), typeFactory)
+            );
+        }
         char firstChar = descriptor.charAt(0);
         switch (firstChar) {
             case 'V':
