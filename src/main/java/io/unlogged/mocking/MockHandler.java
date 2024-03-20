@@ -263,7 +263,7 @@ public class MockHandler {
                     JsonNode argumentAsJsonNode = objectMapper.readTree(
                             objectMapper.writeValueAsString(argument));
                     JsonNode expectedJsonNode = objectMapper.readTree(parameterMatcher.getValue());
-                    if (expectedJsonNode.equals(argumentAsJsonNode)) {
+                    if (!expectedJsonNode.equals(argumentAsJsonNode)) {
                         mockMatched = false;
                     }
                 } catch (JsonProcessingException e) {
