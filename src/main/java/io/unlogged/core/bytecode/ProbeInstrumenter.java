@@ -73,6 +73,19 @@ public class ProbeInstrumenter implements PostCompilerTransformation {
         ClassFileMetaData classFileMetadata = new ClassFileMetaData(original);
         InstrumentedClass instrumentedClassBytes;
         final String className = classFileMetadata.getClassName();
+        for (String anInterface : classFileMetadata.getInterfaces()) {
+//            System.err.println("Class [" + className + "] implements [" + anInterface + "]");
+            if (anInterface.startsWith("reactor/core/CoreSubscriber")) {
+                return original;
+            }
+            if (anInterface.startsWith("java/lang/annotation/Annotation")) {
+                return original;
+            }
+            if (anInterface.startsWith("java/io/Serializable")) {
+                return original;
+            }
+        }
+
 
         ByteArrayOutputStream probesToRecordOutputStream = new ByteArrayOutputStream();
         try {

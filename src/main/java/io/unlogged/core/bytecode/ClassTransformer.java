@@ -1,5 +1,7 @@
 package io.unlogged.core.bytecode;
 
+import com.insidious.common.weaver.Descriptor;
+import com.insidious.common.weaver.EventType;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.logging.util.TypeIdUtil;
@@ -58,6 +60,7 @@ public class ClassTransformer extends ClassVisitor {
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();
         classLoaderIdentifier = TypeIdUtil.getClassLoaderIdentifier(weaver.getFullClassName());
+
     }
 
     /**

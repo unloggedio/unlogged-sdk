@@ -21,8 +21,8 @@ public class DiscardEventLogger implements IEventLogger {
     }
 
     @Override
-    public void recordEvent(int dataId, Object value) {
-
+    public Object recordEvent(int dataId, Object value) {
+        return value;
     }
 
     @Override

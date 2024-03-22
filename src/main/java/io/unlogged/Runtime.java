@@ -54,6 +54,7 @@ public class Runtime {
      * @param args string arguments for weaver
      */
     private Runtime(String args) {
+        System.err.println("UnloggedInit1" );
 
         try {
             WeaveParameters weaveParameters = new WeaveParameters(args);

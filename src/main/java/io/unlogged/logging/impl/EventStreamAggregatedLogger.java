@@ -69,10 +69,13 @@ public class EventStreamAggregatedLogger implements IEventLogger {
     /**
      * Record an event and an object.
      * The object is translated into an object ID.
+     *
+     * @return
      */
-    public void recordEvent(int dataId, Object value) {
+    public Object recordEvent(int dataId, Object value) {
         long objectId = objectIdMap.getId(value);
         aggregatedLogger.writeEvent(dataId, objectId);
+        return value;
     }
 
     /**

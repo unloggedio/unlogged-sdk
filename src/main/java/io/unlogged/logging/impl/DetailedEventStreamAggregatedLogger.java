@@ -2,6 +2,7 @@ package io.unlogged.logging.impl;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -18,6 +19,7 @@ import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayOutputStream;
@@ -354,6 +356,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             return objectMapperInstance;
         }
     });
+    private int firstProbeId;
 
     /**
      * Create an instance of logging object.
@@ -369,7 +372,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //        this.includedPackage = includedPackage;
         this.aggregatedLogger = aggregatedLogger;
         this.objectIdMap = objectIdMap;
-        this.probesToRecord.addAll(probesToRecord);
 
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
@@ -387,8 +389,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
         invertedRadixTree.put("com.google", true);
         invertedRadixTree.put("java.util.stream", true);
+        invertedRadixTree.put("org.pf4j", true);
         invertedRadixTree.put("org.elasticsearch.client", true);
         invertedRadixTree.put("org.apache", true);
+        invertedRadixTree.put("io.lettuce", true);
         invertedRadixTree.put("com.querydsl", true);
         invertedRadixTree.put("org.hibernate", true);
         invertedRadixTree.put("org.jgrapht", true);
@@ -457,9 +461,9 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
      * Record an event and an object.
      * The object is translated into an object ID.
      */
-    public void recordEvent(int dataId, Object value) {
+    public Object recordEvent(int dataId, Object value) {
         if (isRecording.get()) {
-            return;
+            return value;
         }
         String className;
         Class<?> valueClass = value == null ? Object.class : value.getClass();
@@ -520,6 +524,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 } else if (
                         invertedRadixTree.getKeysPrefixing(className).iterator().hasNext()
                                 || className.contains("java.lang.reflect")
+                                || className.contains("reactor.core.scheduler")
+                                || className.contains("com.mongodb")
                                 || (className.startsWith("org.glassfish")
                                 && !className.equals("org.glassfish.jersey.message.internal.OutboundJaxrsResponse"))
                                 || (className.startsWith("org.springframework")
@@ -527,19 +533,45 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                 && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
                                 || value instanceof Stream
+                                || value instanceof Flux
                 ) {
-//                    System.err.println("Removing probe: " + dataId);
+//                    System.err.println("Removing probe["+ className +"]: " + dataId);
                     probesToRecord.remove(dataId);
                 } else if (SERIALIZATION_MODE == SerializationMode.JACKSON) {
-//                    System.err.println("To serialize class: " + className);
+
+//                    if (className.startsWith("reactor.core")) {
+//                    }
 //                    objectMapper.writeValue(outputStream, value);
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
                     if (className.startsWith("reactor.core.publisher.Mono")) {
-                        Optional<?> result = ((Mono<?>) value).blockOptional(ONE_MILLISECOND);
-                        if (result.isPresent()) {
-                            bytes = objectMapper.get().writeValueAsBytes(result);
-                        }
+                        Mono<?> value1 = (Mono<?>) value;
+//                        System.err.println("SubscribeToMono [" + firstProbeId + "]: " + objectId);
+                        aggregatedLogger.writeEvent(dataId, objectId, bytes);
+
+                        return value1.doOnError((result) -> {
+                            try {
+//                                System.err.println("Async doOnError[" + firstProbeId + "]: " + result);
+                                byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+                                aggregatedLogger.writeEvent(firstProbeId, objectId, bytesAllocatedNew);
+                            } catch (JsonProcessingException e) {
+                                //
+                            }
+
+                        }).doOnSuccess((result) -> {
+                            try {
+                                byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+//                                System.err.println("Async doOnNext class[" + firstProbeId + "]: " + new String(
+//                                        bytesAllocatedNew));
+                                aggregatedLogger.writeEvent(firstProbeId, objectId, bytesAllocatedNew);
+                            } catch (JsonProcessingException e) {
+                                //
+                            }
+                        });
+//                        Optional<?> result = value1.blockOptional(ONE_MILLISECOND);
+//                        if (result.isPresent()) {
+//                            bytes = objectMapper.get().writeValueAsBytes(result);
+//                        }
                     } else if (value instanceof Future) {
                         Future<?> futureValue = (Future<?>) value;
                         bytes = objectMapper.get().writeValueAsBytes(futureValue.get());
@@ -620,7 +652,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //            System.err.println("No serialization for: " + dataId);
             aggregatedLogger.writeEvent(dataId, objectId);
         }
-
+        return value;
     }
 
     /**
@@ -731,7 +763,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     @Override
     public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
-        probesToRecord.addAll(probeIdsToRecord);
+        if (probeIdsToRecord.size() > 0) {
+            firstProbeId = probeIdsToRecord.get(0);
+            probesToRecord.addAll(probeIdsToRecord);
+        }
         aggregatedLogger.writeWeaveInfo(byteArray);
     }
 
@@ -751,18 +786,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     @Override
     public void registerClass(Integer id, Class<?> type) {
-//        if (serializeValues) {
-//            try {
-//                Registration registration = kryo.register(type);
-//            } catch (Throwable th) {
-//                System.out.println("Failed to register kryo class: " + type.getCanonicalName() +
-//                        " -> " + th.getMessage());
-//            }
-//        }
-    }
-
-    public void setProbesToRecord(List<Integer> newProbeIdList) {
-        probesToRecord.addAll(newProbeIdList);
     }
 
     private static class DummyClosable implements Closeable {

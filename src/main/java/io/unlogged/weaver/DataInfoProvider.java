@@ -32,6 +32,7 @@ public class DataInfoProvider {
         if (
                 eventType.equals(EventType.CALL_PARAM) ||
                         eventType.equals(EventType.METHOD_PARAM) ||
+                        eventType.equals(EventType.LABEL) ||
                         eventType.equals(EventType.CALL_RETURN) ||
                         eventType.equals(EventType.METHOD_NORMAL_EXIT) ||
                         eventType.equals(EventType.METHOD_EXCEPTIONAL_EXIT)

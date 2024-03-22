@@ -28,30 +28,25 @@ public class MethodTransformer extends LocalVariablesSorter {
 
     private final WeaveLog weavingInfo;
     private final WeaveConfig config;
-    private int currentLine;
     private final String className;
     private final String sourceFileName;
     private final int access;
     private final String methodName;
     private final String methodDesc;
-
+    private final Label startLabel = new Label();
+    private final Label endLabel = new Label();
+    private final HashMap<Label, String> catchBlockInfo = new HashMap<>();
+    private final HashMap<Label, String> labelStringMap = new HashMap<Label, String>();
+    private final HashMap<Label, Integer> labelLineNumberMap = new HashMap<Label, Integer>();
+    /// To check a pair of NEW instruction and its constructor call
+    private final Stack<ANewInstruction> newInstructionStack = new Stack<ANewInstruction>();
+    private int currentLine;
     /**
      * The index represents the original location in the InsnList object.
      */
     private int instructionIndex;
-
     private LocalVariables variables;
-
-    private final Label startLabel = new Label();
-    private final Label endLabel = new Label();
-    private final HashMap<Label, String> catchBlockInfo = new HashMap<>();
     private boolean isStartLabelLocated;
-    private final HashMap<Label, String> labelStringMap = new HashMap<Label, String>();
-    private final HashMap<Label, Integer> labelLineNumberMap = new HashMap<Label, Integer>();
-
-    /// To check a pair of NEW instruction and its constructor call
-    private final Stack<ANewInstruction> newInstructionStack = new Stack<ANewInstruction>();
-
     // Intentionally set -1 to represent "uninitialized"
     private int lastDataIdVar = -1;
 
@@ -64,6 +59,7 @@ public class MethodTransformer extends LocalVariablesSorter {
      * To skip ARRAY STORE instructions after an array creation
      */
     private boolean afterNewArray = false;
+//    private boolean hasMono;
 
     /**
      * Initialize the instance
@@ -108,8 +104,9 @@ public class MethodTransformer extends LocalVariablesSorter {
      * This method must be called before weaving
      * because local variable names and instruction indices are necessary
      * to generate textual information for DataId.
+     *
      * @param localVariableNodes list of LocalVariableNode
-     * @param instructions list of instructions for which information is to be collected
+     * @param instructions       list of instructions for which information is to be collected
      */
     public void setup(List<?> localVariableNodes, InsnList instructions) {
         variables = new LocalVariables(localVariableNodes, instructions);
@@ -152,6 +149,7 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         weavingInfo.startMethod(className, methodName, methodDesc, access, sourceFileName, hash);
         weavingInfo.nextDataId(-1, -1, EventType.RESERVED, Descriptor.Void, "");
+        weavingInfo.nextDataId(0, 0, EventType.LABEL, Descriptor.Integer, "I=Async");
     }
 
     /**
@@ -184,9 +182,9 @@ public class MethodTransformer extends LocalVariablesSorter {
     }
 
     /**
-     * @param line line number from the source code
+     * @param line  line number from the source code
      * @param start the current label under which this line number comes
-     * Record current line number for other visit methods
+     *              Record current line number for other visit methods
      */
     @Override
     public void visitLineNumber(int line, Label start) {
@@ -196,9 +194,9 @@ public class MethodTransformer extends LocalVariablesSorter {
         assert this.currentLine == line;
 
         // Generate a line number event
-        if (config.recordLineNumber()) {
-            generateLogging(EventType.LINE_NUMBER, Descriptor.Void, "");
-        }
+//        if (config.recordLineNumber()) {
+//            generateLogging(EventType.LINE_NUMBER, Descriptor.Void, "");
+//        }
         instructionIndex++;
     }
 
@@ -280,10 +278,11 @@ public class MethodTransformer extends LocalVariablesSorter {
      * Store entry points of catch blocks for later visit* methods.
      * The method is called BEFORE visit* methods for other instructions,
      * according to the implementation of MethodNode class.
-     * @param start start label of the try catch block
-     * @param end end label of the try catch block
+     *
+     * @param start   start label of the try catch block
+     * @param end     end label of the try catch block
      * @param handler label of the catch handler of the try catch block
-     * @param type try catch block has a finally block or not
+     * @param type    try catch block has a finally block or not
      */
     @Override
     public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
@@ -291,12 +290,14 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         // Store catch block information
         String block = type != null ? "CATCH" : "FINALLY";
-        catchBlockInfo.put(handler, "BlockType=" + block + ",ExceptionType=" + type + ",Start=" + getLabelString(start) + ",End=" + getLabelString(end) + ",Handler=" + getLabelString(handler));
+        catchBlockInfo.put(handler, "BlockType=" + block + ",ExceptionType=" + type + ",Start=" + getLabelString(
+                start) + ",End=" + getLabelString(end) + ",Handler=" + getLabelString(handler));
     }
 
     /**
      * Logging a jump instruction if recordLabel is enabled.
      * Logging a catch event for a method call.
+     *
      * @param label the label instruction being visited
      */
     @Override
@@ -314,13 +315,13 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         if (config.recordCatch() && catchBlockInfo.containsKey(label)) {
             // If the label is a catch block, record the previous location and an exception.
-            generateNewVarInsn(Opcodes.ILOAD, lastDataIdVar);
-            generateLogging(EventType.CATCH_LABEL, Descriptor.Integer, "");
+//            generateNewVarInsn(Opcodes.ILOAD, lastDataIdVar);
+//            generateLogging(EventType.CATCH_LABEL, Descriptor.Integer, "");
             generateLoggingPreservingStackTop(EventType.CATCH, Descriptor.Object, catchBlockInfo.get(label));
         } else if (config.recordLabel()) {
             // For a regular label, record a previous location.
-            generateNewVarInsn(Opcodes.ILOAD, lastDataIdVar);
-            generateLogging(EventType.LABEL, Descriptor.Integer, "");
+//            generateNewVarInsn(Opcodes.ILOAD, lastDataIdVar);
+//            generateLogging(EventType.LABEL, Descriptor.Integer, "");
         }
 
         instructionIndex++;
@@ -365,23 +366,23 @@ public class MethodTransformer extends LocalVariablesSorter {
      * implicit and must not be visited. Also, it is illegal to visit two or more frames for the same
      * code location (i.e., at least one instruction must be visited between two calls to visitFrame).
      *
-     * @param type the type of this stack map frame. Must be {@link Opcodes#F_NEW} for expanded
-     *     frames, or {@link Opcodes#F_FULL}, {@link Opcodes#F_APPEND}, {@link Opcodes#F_CHOP}, {@link
-     *     Opcodes#F_SAME} or {@link Opcodes#F_APPEND}, {@link Opcodes#F_SAME1} for compressed frames.
+     * @param type     the type of this stack map frame. Must be {@link Opcodes#F_NEW} for expanded
+     *                 frames, or {@link Opcodes#F_FULL}, {@link Opcodes#F_APPEND}, {@link Opcodes#F_CHOP}, {@link
+     *                 Opcodes#F_SAME} or {@link Opcodes#F_APPEND}, {@link Opcodes#F_SAME1} for compressed frames.
      * @param numLocal the number of local variables in the visited frame.
-     * @param local the local variable types in this frame. This array must not be modified. Primitive
-     *     types are represented by {@link Opcodes#TOP}, {@link Opcodes#INTEGER}, {@link
-     *     Opcodes#FLOAT}, {@link Opcodes#LONG}, {@link Opcodes#DOUBLE}, {@link Opcodes#NULL} or
-     *     {@link Opcodes#UNINITIALIZED_THIS} (long and double are represented by a single element).
-     *     Reference types are represented by String objects (representing internal names), and
-     *     uninitialized types by Label objects (this label designates the NEW instruction that
-     *     created this uninitialized value).
+     * @param local    the local variable types in this frame. This array must not be modified. Primitive
+     *                 types are represented by {@link Opcodes#TOP}, {@link Opcodes#INTEGER}, {@link
+     *                 Opcodes#FLOAT}, {@link Opcodes#LONG}, {@link Opcodes#DOUBLE}, {@link Opcodes#NULL} or
+     *                 {@link Opcodes#UNINITIALIZED_THIS} (long and double are represented by a single element).
+     *                 Reference types are represented by String objects (representing internal names), and
+     *                 uninitialized types by Label objects (this label designates the NEW instruction that
+     *                 created this uninitialized value).
      * @param numStack the number of operand stack elements in the visited frame.
-     * @param stack the operand stack types in this frame. This array must not be modified. Its
-     *     content has the same format as the "local" array.
+     * @param stack    the operand stack types in this frame. This array must not be modified. Its
+     *                 content has the same format as the "local" array.
      * @throws IllegalStateException if a frame is visited just after another one, without any
-     *     instruction between the two (unless this frame is a Opcodes#F_SAME frame, in which case it
-     *     is silently ignored).
+     *                               instruction between the two (unless this frame is a Opcodes#F_SAME frame, in which case it
+     *                               is silently ignored).
      */
     @Override
     public void visitFrame(int type, int numLocal, Object[] local, int numStack, Object[] stack) {
@@ -395,7 +396,8 @@ public class MethodTransformer extends LocalVariablesSorter {
     @Override
     public void visitJumpInsn(int opcode, Label label) {
         if (config.recordLabel()) {
-            int dataId = nextDataId(EventType.JUMP, Descriptor.Void, "Instruction=" + OpcodesUtil.getString(opcode) + ",JumpTo=" + getLabelString(label));
+            int dataId = nextDataId(EventType.JUMP, Descriptor.Void,
+                    "Instruction=" + OpcodesUtil.getString(opcode) + ",JumpTo=" + getLabelString(label));
             generateLocationUpdate(dataId);
         }
         super.visitJumpInsn(opcode, label);
@@ -437,7 +439,7 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         // Finalize the method
         try {
-            super.visitMaxs(maxStack, maxLocals);
+            super.visitMaxs( maxStack, maxLocals);
         } catch (RuntimeException e) {
             weavingInfo.log("Error during weaving method " + className + "#" + methodName + "#" + methodDesc);
             throw e;
@@ -528,7 +530,8 @@ public class MethodTransformer extends LocalVariablesSorter {
         // Generate instructions to record method call and its parameters
         if (config.recordMethodCall()) {
 
-            String callSig = "Instruction=" + OpcodesUtil.getString(opcode) + ",Owner=" + owner + ",Name=" + name + ",Desc=" + desc;
+            String callSig = "Instruction=" + OpcodesUtil.getString(
+                    opcode) + ",Owner=" + owner + ",Name=" + name + ",Desc=" + desc;
 
             if (config.recordParameters()) {
                 // Generate code to record parameters
@@ -603,7 +606,14 @@ public class MethodTransformer extends LocalVariablesSorter {
                 // record return value
                 String returnDesc = getReturnValueDesc(desc);
                 Descriptor d = Descriptor.get(returnDesc);
-                generateLoggingPreservingStackTop(EventType.CALL_RETURN, d, "CallParent=" + firstDataId + ",Type=" + returnDesc);
+//                System.out.println("CallReturn: " + firstDataId + ", Type: " + desc);
+                if (desc.endsWith("Lreactor/core/publisher/Mono;")) {
+                    generateLoggingPreservingStackTopMono(EventType.CALL_RETURN, d,
+                            "CallParent=" + firstDataId + ",Type=" + returnDesc);
+                } else {
+                    generateLoggingPreservingStackTop(EventType.CALL_RETURN, d,
+                            "CallParent=" + firstDataId + ",Type=" + returnDesc);
+                }
 
                 if (isConstructorChain) {
                     if (config.recordExecution()) {
@@ -697,7 +707,8 @@ public class MethodTransformer extends LocalVariablesSorter {
             super.visitMultiANewArrayInsn(desc, dims);
             super.visitInsn(Opcodes.DUP);
             super.visitLdcInsn(dataId);
-            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, "recordMultiNewArray", "(Ljava/lang/Object;I)V", false);
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, "recordMultiNewArray", "(Ljava/lang/Object;I)V",
+                    false);
         } else {
             super.visitMultiANewArrayInsn(desc, dims);
         }
@@ -860,7 +871,8 @@ public class MethodTransformer extends LocalVariablesSorter {
                 int paramIndex = 0;
                 while (paramIndex < params.size()) {
                     generateNewVarInsn(params.getLoadInstruction(paramIndex), params.getLocalVar(paramIndex));
-                    generateLogging(EventType.INVOKE_DYNAMIC_PARAM, params.getRecordDesc(paramIndex), "Type=" + params.getType(paramIndex).getDescriptor());
+                    generateLogging(EventType.INVOKE_DYNAMIC_PARAM, params.getRecordDesc(paramIndex),
+                            "Type=" + params.getType(paramIndex).getDescriptor());
                     paramIndex++;
                 }
 
@@ -914,7 +926,8 @@ public class MethodTransformer extends LocalVariablesSorter {
         if (config.recordObject() &&
                 !(cst instanceof Integer) && !(cst instanceof Long) &&
                 !(cst instanceof Double) && !(cst instanceof Float)) {
-            generateLoggingPreservingStackTop(EventType.OBJECT_CONSTANT_LOAD, Descriptor.Object, "Type=" + cst.getClass().getName());
+            generateLoggingPreservingStackTop(EventType.OBJECT_CONSTANT_LOAD, Descriptor.Object,
+                    "Type=" + cst.getClass().getName());
         }
         instructionIndex++;
     }
@@ -945,7 +958,8 @@ public class MethodTransformer extends LocalVariablesSorter {
             super.visitInsn(Opcodes.DUP);
         }
         super.visitLdcInsn(resultId);
-        super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, "recordEvent", "(" + elementDesc.getString() + "I)V", false);
+        super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, "recordEvent", "(" + elementDesc.getString() + "I)V",
+                false);
 
         generateLocationUpdate(0);
     }
@@ -963,7 +977,8 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         int valueStoreVar = super.newLocal(OpcodesUtil.getAsmType(elementDesc));
         // Stack: [ array, index, value ]
-        generateNewVarInsn(OpcodesUtil.getStoreInstruction(elementDesc), valueStoreVar); // -> Local: [value],  Stack: [array, index].
+        generateNewVarInsn(OpcodesUtil.getStoreInstruction(elementDesc),
+                valueStoreVar); // -> Local: [value],  Stack: [array, index].
         super.visitInsn(Opcodes.DUP2); // -> Local: [value], Stack: [array, index, array, index]
         generateNewVarInsn(OpcodesUtil.getLoadInstruction(elementDesc), valueStoreVar);
 
@@ -1023,11 +1038,12 @@ public class MethodTransformer extends LocalVariablesSorter {
                     int local = newLocal(OpcodesUtil.getAsmType(desc));
                     // Store a value to a local variable, record an object, and then load the value.
                     generateNewVarInsn(OpcodesUtil.getStoreInstruction(desc), local);
-                    int fieldDataId = generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD, Descriptor.Object, label);
+                    int fieldDataId = generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD, Descriptor.Object,
+                            label);
                     generateNewVarInsn(OpcodesUtil.getLoadInstruction(desc), local);
 
                     // Record a value.
-                    generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD_VALUE, Descriptor.get(desc),  label);
+                    generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD_VALUE, Descriptor.get(desc), label);
 
                     generateLocationUpdate(fieldDataId);
 
@@ -1048,7 +1064,8 @@ public class MethodTransformer extends LocalVariablesSorter {
                 }
             } else {
                 // Before the target object is initialized, we cannot record the object.
-                generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD_BEFORE_INITIALIZATION, Descriptor.get(desc), label);
+                generateLoggingPreservingStackTop(EventType.PUT_INSTANCE_FIELD_BEFORE_INITIALIZATION,
+                        Descriptor.get(desc), label);
                 super.visitFieldInsn(opcode, owner, name, desc);
             }
         }
@@ -1169,6 +1186,29 @@ public class MethodTransformer extends LocalVariablesSorter {
 //                    " call with stack " + "[" + valueDesc.getString() + "] ");
             super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT,
                     "(" + valueDesc.getString() + "I)V", false);
+        }
+        return dataId;
+    }
+
+    /**
+     * Generate logging instructions to record a copy value on the stack top.
+     * This call does not change a stack.
+     *
+     * @param eventType
+     * @param valueDesc
+     * @param label
+     */
+    private int generateLoggingPreservingStackTopMono(EventType eventType, Descriptor valueDesc, String label) {
+        int dataId = nextDataId(eventType, valueDesc, label);
+        if (valueDesc == Descriptor.Void) {
+            super.visitLdcInsn(dataId);
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT, "(I)V", false);
+        } else {
+            super.visitLdcInsn(dataId);
+//            System.out.println("[" + eventType + "]" + className + "@" + methodName + ":" + currentLine +
+//                    " call with stack " + "[" + valueDesc.getString() + "] ");
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT,
+                    "(" + "Lreactor/core/publisher/Mono;" + "I)Lreactor/core/publisher/Mono;", false);
         }
         return dataId;
     }

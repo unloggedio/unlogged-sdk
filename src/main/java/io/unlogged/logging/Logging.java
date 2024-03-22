@@ -5,6 +5,7 @@ import io.unlogged.logging.impl.EventStreamAggregatedLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
 import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +60,16 @@ public class Logging {
      */
     public static void recordEvent(Object value, int dataId) {
         INSTANCE.recordEvent(dataId, value);
+    }
+
+    /**
+     * A method to record an event associated to an object.
+     *
+     * @param value
+     * @param dataId
+     */
+    public static Mono<?> recordEvent(Mono<?> value, int dataId) {
+        return (Mono<?>) INSTANCE.recordEvent(dataId, value);
     }
 
     /**
