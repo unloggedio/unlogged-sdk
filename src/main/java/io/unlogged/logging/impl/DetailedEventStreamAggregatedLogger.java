@@ -551,9 +551,9 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
                         return value1.doOnError((result) -> {
                             try {
-//                                System.err.println("Async doOnError[" + firstProbeId + "]: " + result);
+                                System.err.println("Async doOnError[" + firstProbeId + "]: " + dataId);
                                 byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-                                aggregatedLogger.writeEvent(firstProbeId, objectId, bytesAllocatedNew);
+                                aggregatedLogger.writeEvent(firstProbeId, dataId, bytesAllocatedNew);
                             } catch (JsonProcessingException e) {
                                 //
                             }
@@ -561,9 +561,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                         }).doOnSuccess((result) -> {
                             try {
                                 byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-//                                System.err.println("Async doOnNext class[" + firstProbeId + "]: " + new String(
-//                                        bytesAllocatedNew));
-                                aggregatedLogger.writeEvent(firstProbeId, objectId, bytesAllocatedNew);
+                                System.err.println("Async doOnNext class[" + firstProbeId + "]: " + dataId);
+                                aggregatedLogger.writeEvent(firstProbeId, dataId, bytesAllocatedNew);
                             } catch (JsonProcessingException e) {
                                 //
                             }
