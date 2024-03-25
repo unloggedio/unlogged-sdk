@@ -29,6 +29,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -356,7 +357,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             return objectMapperInstance;
         }
     });
-    private int firstProbeId;
+    private Map<Integer, Integer> firstProbeId = new HashMap<>();
 
     /**
      * Create an instance of logging object.
@@ -496,6 +497,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         }
 
 
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
         long objectId = objectIdMap.getId(value);
 
         if (serializeValues && probesToRecord.size() > 0 && probesToRecord.contains(dataId) && !valueToSkip.contains(
@@ -545,35 +547,54 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
                     if (className.startsWith("reactor.core.publisher.Mono")) {
+                        final long newValueId = System.nanoTime();
                         Mono<?> value1 = (Mono<?>) value;
-//                        System.err.println("SubscribeToMono [" + firstProbeId + "]: " + objectId);
-                        aggregatedLogger.writeEvent(dataId, objectId, bytes);
+                        buffer.clear();
+                        buffer.putLong(newValueId);
+                        aggregatedLogger.writeEvent(dataId, objectId, buffer.array());
+                        final Integer firstProbeIdFinal = firstProbeId.get(dataId);
+                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
 
-                        return value1.doOnError((result) -> {
-                            try {
-                                System.err.println("Async doOnError[" + firstProbeId + "]: " + dataId);
-                                byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-                                aggregatedLogger.writeEvent(firstProbeId, dataId, bytesAllocatedNew);
-                            } catch (JsonProcessingException e) {
-                                //
-                            }
+                        value1
+                                .doOnError((result) -> {
+                                    try {
+                                        byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+                                System.err.println(
+                                        "Async doOnError[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+                                                bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    } catch (JsonProcessingException e) {
+                                        //
+                                        byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
+                                System.err.println("AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
+                                        " " +
+                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    }
 
-                        }).doOnSuccess((result) -> {
-                            try {
-                                byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-                                System.err.println("Async doOnNext class[" + firstProbeId + "]: " + dataId);
-                                aggregatedLogger.writeEvent(firstProbeId, dataId, bytesAllocatedNew);
-                            } catch (JsonProcessingException e) {
-                                //
-                            }
-                        });
-//                        Optional<?> result = value1.blockOptional(ONE_MILLISECOND);
-//                        if (result.isPresent()) {
-//                            bytes = objectMapper.get().writeValueAsBytes(result);
-//                        }
+                                })
+                                .doOnNext((result) -> {
+                                    try {
+                                        byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+                                        System.err.println(
+                                                "Async doOnSuccess[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+                                                        bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    } catch (JsonProcessingException e) {
+                                        //
+                                        byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
+                                        System.err.println("Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
+                                                " == " + new String(bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    }
+
+                                }).subscribe();
+                        return value1;
                     } else if (value instanceof Future) {
                         Future<?> futureValue = (Future<?>) value;
                         bytes = objectMapper.get().writeValueAsBytes(futureValue.get());
+                    } else if (value instanceof byte[]) {
+                        bytes = (byte[]) value;
                     } else {
                         bytes = objectMapper.get().writeValueAsBytes(value);
                     }
@@ -763,7 +784,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     @Override
     public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
         if (probeIdsToRecord.size() > 0) {
-            firstProbeId = probeIdsToRecord.get(0);
+            Integer firstProbeIdThisBatch = probeIdsToRecord.get(0);
+            for (Integer i : probeIdsToRecord) {
+                firstProbeId.put(i, firstProbeIdThisBatch);
+            }
+
             probesToRecord.addAll(probeIdsToRecord);
         }
         aggregatedLogger.writeWeaveInfo(byteArray);
