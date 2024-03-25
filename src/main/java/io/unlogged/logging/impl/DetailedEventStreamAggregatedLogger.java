@@ -546,29 +546,29 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    objectMapper.writeValue(outputStream, value);
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
-                    if (className.startsWith("reactor.core.publisher.Mono")) {
+                    if (value instanceof Mono) {
                         final long newValueId = System.nanoTime();
                         Mono<?> value1 = (Mono<?>) value;
                         buffer.clear();
                         buffer.putLong(newValueId);
                         aggregatedLogger.writeEvent(dataId, objectId, buffer.array());
                         final Integer firstProbeIdFinal = firstProbeId.get(dataId);
-                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
+//                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
 
                         value1
                                 .doOnError((result) -> {
                                     try {
                                         byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-                                System.err.println(
-                                        "Async doOnError[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
-                                                bytesAllocatedNew) + " => " + newValueId);
+//                                System.err.println(
+//                                        "Async doOnError[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+//                                                bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     } catch (JsonProcessingException e) {
                                         //
                                         byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
-                                System.err.println("AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
-                                        " " +
-                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
+//                                System.err.println("AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                        " " +
+//                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     }
 
@@ -576,15 +576,15 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                 .doOnNext((result) -> {
                                     try {
                                         byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-                                        System.err.println(
-                                                "Async doOnSuccess[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
-                                                        bytesAllocatedNew) + " => " + newValueId);
+//                                        System.err.println(
+//                                                "Async doOnSuccess[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+//                                                        bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     } catch (JsonProcessingException e) {
                                         //
                                         byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
-                                        System.err.println("Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
-                                                " == " + new String(bytesAllocatedNew) + " => " + newValueId);
+//                                        System.err.println("Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                                " == " + new String(bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     }
 
