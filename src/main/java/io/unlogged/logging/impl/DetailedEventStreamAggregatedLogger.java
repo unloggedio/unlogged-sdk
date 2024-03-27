@@ -590,6 +590,50 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
                                 }).subscribe();
                         return value1;
+                    } else if (value instanceof Flux) {
+                        final long newValueId = System.nanoTime();
+                        Flux<?> value1 = (Flux<?>) value;
+                        buffer.clear();
+                        buffer.putLong(newValueId);
+                        aggregatedLogger.writeEvent(dataId, objectId, buffer.array());
+                        final Integer firstProbeIdFinal = firstProbeId.get(dataId);
+//                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
+
+                        value1
+                                .doOnError((result) -> {
+                                    try {
+                                        byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+//                                System.err.println(
+//                                        "Async doOnError[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+//                                                bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    } catch (JsonProcessingException e) {
+                                        //
+                                        byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
+//                                System.err.println("AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                        " " +
+//                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    }
+
+                                })
+                                .doOnNext((result) -> {
+                                    try {
+                                        byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
+//                                        System.err.println(
+//                                                "Async doOnSuccess[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+//                                                        bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    } catch (JsonProcessingException e) {
+                                        //
+                                        byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
+//                                        System.err.println("Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                                " == " + new String(bytesAllocatedNew) + " => " + newValueId);
+                                        aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
+                                    }
+
+                                }).subscribe();
+                        return value1;
                     } else if (value instanceof Future) {
                         Future<?> futureValue = (Future<?>) value;
                         bytes = objectMapper.get().writeValueAsBytes(futureValue.get());
