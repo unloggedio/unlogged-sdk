@@ -412,7 +412,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("com.intellij", true);
         invertedRadixTree.put("java.lang.Class", true);
 //        invertedRadixTree.put("reactor.core", true);
-        invertedRadixTree.put("reactor.core.publisher.Flux", true);
         invertedRadixTree.put("reactor.util", true);
         invertedRadixTree.put("io.undertow", true);
         invertedRadixTree.put("org.thymeleaf", true);
@@ -535,7 +534,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                 && !className.startsWith("org.springframework.data.domain")))
                                 || value instanceof Iterator
                                 || value instanceof Stream
-                                || value instanceof Flux
                 ) {
 //                    System.err.println("Removing probe["+ className +"]: " + dataId);
                     probesToRecord.remove(dataId);
