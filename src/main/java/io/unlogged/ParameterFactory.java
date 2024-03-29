@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.type.ArrayType;
+import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.mocking.*;
 import net.bytebuddy.ByteBuddy;
@@ -189,8 +191,11 @@ public class ParameterFactory {
                 parameterObject = parameterObject == null ? Optional.empty() : Optional.of(parameterObject);
                 break;
             case "reactor.core.publisher.Flux":
-                parameterObject = objectFromTypeReference(methodParameter, parameterType, firstComponent);
-                parameterObject = parameterObject == null ? Flux.empty() : Flux.just(parameterObject);
+                CollectionType actuallyComponent = objectMapper.getTypeFactory()
+                        .constructCollectionType(ArrayList.class, firstComponent);
+                 List<?> parameterObjectList = (List<?>) objectFromTypeReference(methodParameter, parameterType,
+                         actuallyComponent);
+                parameterObject = parameterObjectList == null ? Flux.empty() : Flux.fromIterable(parameterObjectList);
                 break;
             default:
                 try {

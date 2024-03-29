@@ -80,6 +80,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     private boolean shutdown;
     private DataOutputStream fileIndex;
     private int offloadTaskQueueReadIndex;
+    private ThreadLocal<ByteArrayOutputStream> baos = ThreadLocal.withInitial(ByteArrayOutputStream::new);
 
     /**
      * Create an instance of stream.
@@ -369,8 +370,9 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
         try {
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
+            ByteArrayOutputStream boasTh = baos.get();
+            boasTh.reset();
+            DataOutputStream dos = new DataOutputStream(boasTh);
 
 
             dos.write(7);
@@ -382,12 +384,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             dos.write(toByteArray);
 
 
-            getStreamForThread(currentThreadId).write(baos.toByteArray());
-
-//            valueIdFilterSet.get(currentThreadId).add(valueId);
-//            probeIdFilterSet.get(currentThreadId).add(probeId);
-//            fileCollector.addValueId(valueId);
-//            fileCollector.addProbeId(probeId);
+            getStreamForThread(currentThreadId).write(boasTh.toByteArray());
             if (getThreadEventCountAddAndGet(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
@@ -405,8 +402,9 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
         try {
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
+            ByteArrayOutputStream baosTh = baos.get();
+            baosTh.reset();
+            DataOutputStream dos = new DataOutputStream(baosTh);
 
 
             dos.write(7);
@@ -419,7 +417,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             outputStream.flush();
 
 
-            getStreamForThread(currentThreadId).write(baos.toByteArray());
+            getStreamForThread(currentThreadId).write(baosTh.toByteArray());
 
             getThreadEventCountAddAndGet(currentThreadId, 1);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
