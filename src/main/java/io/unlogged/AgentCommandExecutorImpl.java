@@ -9,7 +9,9 @@ import io.unlogged.auth.RequestAuthentication;
 import io.unlogged.auth.UnloggedSpringAuthentication;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
-import io.unlogged.mocking.*;
+import io.unlogged.mocking.DeclaredMock;
+import io.unlogged.mocking.MockHandler;
+import io.unlogged.mocking.MockInstance;
 import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
@@ -23,6 +25,7 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.matcher.ElementMatchers;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
+import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -204,7 +207,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     "   \"method\": \"GET\"," +
                                     "   \"requestURI\": \"/api\"" +
                                     "}" +
-                                "}", attributesClass
+                                    "}", attributesClass
                     );
                     setRequestAttributesMethod.invoke(null, requestAttributes, true);
 
@@ -539,10 +542,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                             Class<?> loadedMockedField;
                             try {
-                            loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
-                            }catch (Throwable t) {
+                                loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
+                                        fieldType);
+                            } catch (Throwable t) {
                                 // failed to create an instance of class
-                                System.err.println("Failed to create instance of class: " + fieldType.getCanonicalName() + " " + fieldName);
+                                System.err.println(
+                                        "Failed to create instance of class: " + fieldType.getCanonicalName() + " " + fieldName);
                                 continue;
                             }
                             Object mockedFieldInstance = objenesis.newInstance(loadedMockedField);
@@ -628,7 +633,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             try {
                 Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
                 return alreadyExist;
-            }catch (Exception e) {
+            } catch (Exception e) {
                 // good to create
             }
 
@@ -646,7 +651,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             try {
                 Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
                 return alreadyExist;
-            }catch (Exception e) {
+            } catch (Exception e) {
                 // good to create
             }
             loadedMockedField = byteBuddyInstance
@@ -869,7 +874,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 //                            if (!fieldToSet.getType().isAssignableFrom(classTypeToBeMocked)) {
 //                                classTypeToBeMocked = fieldToSet.getType();
 //                            }
-                            existingMockInstance = parameterFactory.createMockedInstance(targetClassLoader, objectInstanceByClass,
+                            existingMockInstance = parameterFactory.createMockedInstance(targetClassLoader,
+                                    objectInstanceByClass,
                                     field, declaredMocksForField, fieldValue, classTypeToBeMocked);
                             mockInstanceMap.put(key, existingMockInstance);
 
@@ -1081,11 +1087,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     cdl.await();
                     return returnValue.toString();
 
+                } else if (methodReturnValue instanceof ResponseEntity) {
+//                    ResponseEntity re = (ResponseEntity) methodReturnValue;
+//                    re.
+
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
-                return "Failed to serialize response object of " +
-                        "type: " + methodReturnValue.getClass().getCanonicalName();
+                return "{\"className\": \"" + methodReturnValue.getClass().getCanonicalName() + "\"}";
             }
         }
     }
