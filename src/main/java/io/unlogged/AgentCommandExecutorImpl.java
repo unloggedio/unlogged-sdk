@@ -1,8 +1,11 @@
 package io.unlogged;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.auth.RequestAuthentication;
@@ -25,10 +28,10 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.matcher.ElementMatchers;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
-import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
@@ -1087,15 +1090,34 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     cdl.await();
                     return returnValue.toString();
 
-                } else if (methodReturnValue instanceof ResponseEntity) {
-//                    ResponseEntity re = (ResponseEntity) methodReturnValue;
-//                    re.
-
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
                 return "{\"className\": \"" + methodReturnValue.getClass().getCanonicalName() + "\"}";
             }
+        }
+    }
+
+
+    public static class MonoSerializer extends JsonSerializer<Mono> {
+        @Override
+        public void serialize(Mono mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            jsonGenerator.writeObject(mono.block()); // Blocks until the Mono emits a value
+        }
+    }
+
+    public static class FluxSerializer extends JsonSerializer<Flux> {
+        @Override
+        public void serialize(Flux flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            jsonGenerator.writeStartArray(); // Start writing JSON array
+            flux.toIterable().forEach(element -> {
+                try {
+                    jsonGenerator.writeObject(element); // Write each element of Flux
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            jsonGenerator.writeEndArray(); // End JSON array
         }
     }
 

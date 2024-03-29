@@ -11,10 +11,12 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
 import com.insidious.common.weaver.ClassInfo;
+import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.SerializationMode;
 import io.unlogged.logging.util.AggregatedFileLogger;
@@ -91,6 +93,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
             new DefaultCharArrayNodeFactory());
     private boolean isLombokPresent;
     private ClassLoader targetClassLoader;
+
+    static class ReactiveModule extends SimpleModule {
+        ReactiveModule() {
+            addSerializer(Mono.class, new AgentCommandExecutorImpl.MonoSerializer());
+            addSerializer(Flux.class, new AgentCommandExecutorImpl.FluxSerializer());
+        }
+    }
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(() -> {
         String jacksonVersion = ObjectMapper.class.getPackage().getImplementationVersion();
         if (jacksonVersion != null && (jacksonVersion.startsWith("2.9") || jacksonVersion.startsWith("2.8"))) {
@@ -108,6 +117,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     objectMapper1.configure(value, false);
                 }
             }
+            objectMapper1.registerModule(new ReactiveModule());
             objectMapper1.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
             objectMapper1.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
 
@@ -163,6 +173,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                 }
             }
 
+            jacksonBuilder.addModule(new ReactiveModule());
             jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
                 public boolean hasIgnoreMarker(AnnotatedMember m) {
