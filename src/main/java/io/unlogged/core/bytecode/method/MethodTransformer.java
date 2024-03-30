@@ -195,7 +195,8 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         // Generate a line number event
 //        if (config.recordLineNumber()) {
-//            generateLogging(EventType.LINE_NUMBER, Descriptor.Void, "");
+        System.err.println("generateLogging(EventType.LINE_NUMBER, Descriptor.Void, \"\")");
+            generateLogging(EventType.LINE_NUMBER, Descriptor.Void, "");
 //        }
         instructionIndex++;
     }
@@ -439,7 +440,7 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         // Finalize the method
         try {
-            super.visitMaxs( maxStack, maxLocals);
+            super.visitMaxs(maxStack, maxLocals);
         } catch (RuntimeException e) {
             weavingInfo.log("Error during weaving method " + className + "#" + methodName + "#" + methodDesc);
             throw e;
@@ -471,7 +472,8 @@ public class MethodTransformer extends LocalVariablesSorter {
             afterNewArray = true;
         } else if (opcode == Opcodes.INSTANCEOF) {
             if (config.recordObject()) {
-                int dataId = generateLoggingPreservingStackTop(EventType.OBJECT_INSTANCEOF, Descriptor.Object, "Type=" + type);
+                int dataId = generateLoggingPreservingStackTop(EventType.OBJECT_INSTANCEOF, Descriptor.Object,
+                        "Type=" + type);
                 super.visitTypeInsn(opcode, type); // -> [ result ]
                 generateLoggingPreservingStackTop(EventType.OBJECT_INSTANCEOF_RESULT, Descriptor.Boolean, "");
             } else {

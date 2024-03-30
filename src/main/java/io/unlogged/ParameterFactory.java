@@ -204,6 +204,16 @@ public class ParameterFactory {
                     }
                     parameterObject = objectMapper.readValue(methodParameter, typeReference);
                 } catch (Throwable e2) {
+                    if (methodParameter.startsWith("\"") && methodParameter.endsWith("\"")) {
+                        try {
+                            parameterObject = objectMapper.readValue(methodParameter.substring(
+                                    1, methodParameter.length() - 1
+                            ), typeReference);
+                            return parameterObject;
+                        }catch (Exception ingored) {
+
+                        }
+                    }
                     // a complicated type (no default args constructor), or interface which jackson cannot create ?
                     try {
                         // can we try using objenesis ?
