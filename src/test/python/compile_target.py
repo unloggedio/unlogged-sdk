@@ -22,7 +22,19 @@ def compile_target (target):
 	if (response_code == 0):
 		print ("Target compiled succesfully: " +  target.test_repo_name)
 	else:
-		raise Exception("Target did not compiled: " + target.test_repo_name)
+		raise Exception("Target did not compile: " + target.test_repo_name)
+
+	if response_code == 0:
+		print("starting application")
+		start_cmds = ""
+		for command in target.start_commands:
+			start_cmds+=command+"&&"
+		start_cmds = start_cmds[:-2]
+		start_response_code = os.system(start_cmds)
+		if start_response_code == 0:
+			print ("Target started successfully : "+target.test_repo_name)
+		else:
+			raise Exception("Target did not start successfully : "+target.test_repo_name)
 
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
@@ -38,7 +50,8 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN
+			buildSystem.MAVEN,
+			start_commands = ["docker compose -f conf/docker-compose.yml up"]
 		)
 	]
 		
