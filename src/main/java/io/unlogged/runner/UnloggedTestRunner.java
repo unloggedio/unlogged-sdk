@@ -21,6 +21,7 @@ import io.unlogged.command.AgentCommandRequest;
 import io.unlogged.command.AgentCommandResponse;
 import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
+import io.unlogged.logging.ObjectMapperFactory;
 import io.unlogged.mocking.DeclaredMock;
 import junit.framework.AssertionFailedError;
 import org.junit.runner.Description;
@@ -67,7 +68,7 @@ public class UnloggedTestRunner extends Runner {
             isLombokPresent = false;
         }
 
-        objectMapper = createObjectMapper();
+        objectMapper = ObjectMapperFactory.createObjectMapper();
 
     }
 
@@ -100,7 +101,7 @@ public class UnloggedTestRunner extends Runner {
     public UnloggedTestRunner(Class<?> testClass) {
         super();
         this.testClass = testClass;
-        this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
+        this.commandExecutor = new AgentCommandExecutorImpl(ObjectMapperFactory.createObjectMapper(), eventLogger);
         this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
         commandExecutor.enableSpringIntegration(this.testClass);

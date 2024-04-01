@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.unlogged.atomic.MethodUnderTest;
 import io.unlogged.atomic.StoredCandidate;
 import io.unlogged.atomic.StoredCandidateMetadata;
+import io.unlogged.logging.ObjectMapperFactory;
 import io.unlogged.mocking.DeclaredMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

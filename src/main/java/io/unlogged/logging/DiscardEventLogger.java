@@ -7,7 +7,7 @@ import java.util.List;
 
 public class DiscardEventLogger implements IEventLogger {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapper();
 
 
     @Override

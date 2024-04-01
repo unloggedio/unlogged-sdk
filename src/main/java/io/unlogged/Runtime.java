@@ -98,6 +98,7 @@ public class Runtime {
 
                 case DISCARD:
                     logger = Logging.initialiseDiscardLogger();
+                    break;
 
                 case PER_THREAD:
 

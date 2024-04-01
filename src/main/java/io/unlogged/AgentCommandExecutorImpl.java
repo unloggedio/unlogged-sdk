@@ -993,7 +993,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return methodToExecute;
     }
 
-    private Object serializeMethodReturnValue(Object methodReturnValue) throws JsonProcessingException {
+    public Object serializeMethodReturnValue(Object methodReturnValue) {
         if (methodReturnValue == null) {
             return null;
         }
@@ -1044,20 +1044,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     CountDownLatch cdl = new CountDownLatch(1);
                     StringBuffer returnValue = new StringBuffer();
 
-//                    returnedMono
-//                            .log()
-//                            .elapsed()
-//                                    .map(pair -> {
-//                                        try {
-//                                            returnValue.append(objectMapper.writeValueAsString(pair.getT2()));
-//                                        } catch (JsonProcessingException e) {
-//                                            throw new RuntimeException(e);
-//                                        } finally {
-//                                            cdl.countDown();
-//                                        }
-//                                        return pair.getT2();
-//                                    }).subscribe();
-
                     returnedMono
                             .log()
                             .subscribe(e -> {
@@ -1084,9 +1070,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 } finally {
                                     cdl.countDown();
                                 }
-                            }, () -> {
-                                cdl.countDown();
-                            });
+                            }, () -> cdl.countDown());
                     cdl.await();
                     return returnValue.toString();
 
@@ -1099,27 +1083,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-    public static class MonoSerializer extends JsonSerializer<Mono> {
-        @Override
-        public void serialize(Mono mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-            jsonGenerator.writeObject(mono.block()); // Blocks until the Mono emits a value
-        }
-    }
-
-    public static class FluxSerializer extends JsonSerializer<Flux> {
-        @Override
-        public void serialize(Flux flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-            jsonGenerator.writeStartArray(); // Start writing JSON array
-            flux.toIterable().forEach(element -> {
-                try {
-                    jsonGenerator.writeObject(element); // Write each element of Flux
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            jsonGenerator.writeEndArray(); // End JSON array
-        }
-    }
 
     private Object[] buildParametersUsingTargetClass(
             ClassLoader targetClassLoader,
