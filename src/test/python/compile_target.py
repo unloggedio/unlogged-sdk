@@ -25,7 +25,7 @@ def compile_target (target):
 		raise Exception("Target did not compile: " + target.test_repo_name)
 
 	if response_code == 0:
-		print("starting application")
+		print("Starting Application : "+target.test_repo_name)
 		start_cmds = "cd "+target.test_repo_name+" && "
 		for command in target.start_commands:
 			start_cmds+=command+" && "
@@ -51,7 +51,7 @@ if __name__=="__main__":
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			buildSystem.MAVEN,
-			start_commands = ["docker compose -f conf/docker-compose.yml up"]
+			start_commands = ["mvn spring-boot:run"]
 		)
 	]
 		
