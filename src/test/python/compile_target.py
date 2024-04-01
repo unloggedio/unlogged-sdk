@@ -26,9 +26,9 @@ def compile_target (target):
 
 	if response_code == 0:
 		print("starting application")
-		start_cmds = ""
+		start_cmds = "cd "+target.test_repo_name+" && "
 		for command in target.start_commands:
-			start_cmds+=command+"&&"
+			start_cmds+=command+" && "
 		start_cmds = start_cmds[:-2]
 		start_response_code = os.system(start_cmds)
 		if start_response_code == 0:
