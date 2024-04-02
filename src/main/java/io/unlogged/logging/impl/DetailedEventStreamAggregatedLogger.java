@@ -1,22 +1,12 @@
 package io.unlogged.logging.impl;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
-import com.fasterxml.jackson.databind.introspect.Annotated;
-import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
-import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
 import com.insidious.common.weaver.ClassInfo;
-import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.ObjectMapperFactory;
 import io.unlogged.logging.SerializationMode;
@@ -26,16 +16,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -81,13 +64,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     //    private final Set<String> classesToIgnore = new HashSet<>();
 //    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
+    private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
+            ObjectMapperFactory::createObjectMapper);
+    private final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
     InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
             new DefaultCharArrayNodeFactory());
     private ClassLoader targetClassLoader;
-
-    private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
-            ObjectMapperFactory::createObjectMapper);
-    private Map<Integer, Integer> firstProbeId = new HashMap<>();
+    private final Map<Integer, Integer> firstProbeId = new HashMap<>();
 
     /**
      * Create an instance of logging object.
@@ -133,7 +116,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         invertedRadixTree.put("net.openhft", true);
         invertedRadixTree.put("com.intellij", true);
         invertedRadixTree.put("java.lang.Class", true);
-//        invertedRadixTree.put("reactor.core", true);
+//        invertedRadixTree.put("reactor.core.publisher.Flux", true);
+//        invertedRadixTree.put("reactor.core.publisher.Mono", true);
         invertedRadixTree.put("reactor.util", true);
         invertedRadixTree.put("io.undertow", true);
         invertedRadixTree.put("org.thymeleaf", true);
@@ -183,7 +167,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
      * Record an event and an object.
      * The object is translated into an object ID.
      */
-    public Object recordEvent(int dataId, Object value) {
+    public Object recordEvent(final int dataId, Object value) {
         if (isRecording.get()) {
             return value;
         }
@@ -268,14 +252,13 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                     if (value instanceof Mono) {
                         final long newValueId = System.nanoTime();
                         Mono<?> value1 = (Mono<?>) value;
-                        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
                         buffer.clear();
                         buffer.putLong(newValueId);
                         aggregatedLogger.writeEvent(dataId, objectId, buffer.array());
                         final Integer firstProbeIdFinal = firstProbeId.get(dataId);
 //                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
 
-                        value1
+                        return value1
                                 .doOnError((result) -> {
                                     try {
                                         byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
@@ -308,32 +291,33 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     }
 
-                                }).subscribe();
-                        return value1;
+                                });
+//                        return value1;
                     } else if (value instanceof Flux) {
                         final long newValueId = System.nanoTime();
-                        Flux<?> value1 = (Flux<?>) value;
-                        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES); // this cannot be pre-allocated
+                        Flux<?> fluxValue = (Flux<?>) value;
                         buffer.clear();
                         buffer.putLong(newValueId);
                         aggregatedLogger.writeEvent(dataId, objectId, buffer.array());
                         final Integer firstProbeIdFinal = firstProbeId.get(dataId);
-//                        System.err.println("SubscribeToMono ["+dataId+"] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
+//                        System.err.println(
+//                                "SubscribeToFlux [" + dataId + "] [" + objectId + "] => " + newValueId + " => " + firstProbeIdFinal);
 
-                        value1
+                        return fluxValue
                                 .doOnError((result) -> {
                                     try {
                                         byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
-//                                System.err.println(
-//                                        "Async doOnError[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
-//                                                bytesAllocatedNew) + " => " + newValueId);
+//                                        System.err.println(
+//                                                "Async doOnError[" + objectId + "][" + dataId + "]: " + firstProbeIdFinal + " == "
+//                                                        + new String(bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     } catch (JsonProcessingException e) {
                                         //
                                         byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
-//                                System.err.println("AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
-//                                        " " +
-//                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
+//                                        System.err.println(
+//                                                "AsyncReal doOnErrorReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                                        " " +
+//                                                        "== " + new String(bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     }
 
@@ -342,19 +326,22 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
                                     try {
                                         byte[] bytesAllocatedNew = objectMapper.get().writeValueAsBytes(result);
 //                                        System.err.println(
-//                                                "Async doOnSuccess[" + objectId + "]: " + firstProbeIdFinal + " == " + new String(
+//                                                "Async doOnSuccess[" + objectId + "][" + dataId + "]: "
+//                                                        + firstProbeIdFinal +
+//                                                        " == " + new String(
 //                                                        bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     } catch (JsonProcessingException e) {
                                         //
                                         byte[] bytesAllocatedNew = result.toString().getBytes(StandardCharsets.UTF_8);
-//                                        System.err.println("Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
-//                                                " == " + new String(bytesAllocatedNew) + " => " + newValueId);
+//                                        System.err.println(
+//                                                "Async doOnSuccessReal[" + objectId + "]: " + firstProbeIdFinal +
+//                                                        " == " + new String(bytesAllocatedNew) + " => " + newValueId);
                                         aggregatedLogger.writeEvent(firstProbeIdFinal, newValueId, bytesAllocatedNew);
                                     }
 
-                                }).subscribe();
-                        return value1;
+                                });
+//                        return fluxValue;
                     } else if (value instanceof Future) {
                         Future<?> futureValue = (Future<?>) value;
                         bytes = objectMapper.get().writeValueAsBytes(futureValue.get());

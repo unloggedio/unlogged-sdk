@@ -195,7 +195,7 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         // Generate a line number event
 //        if (config.recordLineNumber()) {
-        System.err.println("generateLogging(EventType.LINE_NUMBER, Descriptor.Void, \"\")");
+//        System.err.println("generateLogging(EventType.LINE_NUMBER, Descriptor.Void, \"\")");
             generateLogging(EventType.LINE_NUMBER, Descriptor.Void, "");
 //        }
         instructionIndex++;
@@ -612,6 +612,9 @@ public class MethodTransformer extends LocalVariablesSorter {
                 if (desc.endsWith("Lreactor/core/publisher/Mono;")) {
                     generateLoggingPreservingStackTopMono(EventType.CALL_RETURN, d,
                             "CallParent=" + firstDataId + ",Type=" + returnDesc);
+                } else if (desc.endsWith("Lreactor/core/publisher/Flux;")) {
+                    generateLoggingPreservingStackTopFlux(EventType.CALL_RETURN, d,
+                            "CallParent=" + firstDataId + ",Type=" + returnDesc);
                 } else {
                     generateLoggingPreservingStackTop(EventType.CALL_RETURN, d,
                             "CallParent=" + firstDataId + ",Type=" + returnDesc);
@@ -765,7 +768,19 @@ public class MethodTransformer extends LocalVariablesSorter {
 
         if (OpcodesUtil.isReturn(opcode)) {
             if (config.recordExecution()) {
-                generateLoggingPreservingStackTop(EventType.METHOD_NORMAL_EXIT, getDescForReturn(), "");
+                String desc = getReturnValueDesc(methodDesc);
+                String returnDesc = getReturnValueDesc(desc);
+                Descriptor d = Descriptor.get(returnDesc);
+//                System.out.println("METHOD_NORMAL_EXIT: " + ", Type: " + desc);
+                if (desc.endsWith("Lreactor/core/publisher/Mono;")) {
+                    generateLoggingPreservingStackTopMono(EventType.METHOD_NORMAL_EXIT, getDescForReturn(),
+                            "Type=" + returnDesc);
+                } else if (desc.endsWith("Lreactor/core/publisher/Flux;")) {
+                    generateLoggingPreservingStackTopFlux(EventType.METHOD_NORMAL_EXIT, getDescForReturn(),
+                            "Type=" + returnDesc);
+                } else {
+                    generateLoggingPreservingStackTop(EventType.METHOD_NORMAL_EXIT, getDescForReturn(), "Type=" + returnDesc);
+                }
             }
             super.visitInsn(opcode);
         } else if (opcode == Opcodes.ATHROW) {
@@ -1211,6 +1226,29 @@ public class MethodTransformer extends LocalVariablesSorter {
 //                    " call with stack " + "[" + valueDesc.getString() + "] ");
             super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT,
                     "(" + "Lreactor/core/publisher/Mono;" + "I)Lreactor/core/publisher/Mono;", false);
+        }
+        return dataId;
+    }
+
+    /**
+     * Generate logging instructions to record a copy value on the stack top.
+     * This call does not change a stack.
+     *
+     * @param eventType
+     * @param valueDesc
+     * @param label
+     */
+    private int generateLoggingPreservingStackTopFlux(EventType eventType, Descriptor valueDesc, String label) {
+        int dataId = nextDataId(eventType, valueDesc, label);
+        if (valueDesc == Descriptor.Void) {
+            super.visitLdcInsn(dataId);
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT, "(I)V", false);
+        } else {
+            super.visitLdcInsn(dataId);
+//            System.out.println("[" + eventType + "]" + className + "@" + methodName + ":" + currentLine +
+//                    " call with stack " + "[" + valueDesc.getString() + "] ");
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, LOGGER_CLASS, METHOD_RECORD_EVENT,
+                    "(" + "Lreactor/core/publisher/Flux;" + "I)Lreactor/core/publisher/Flux;", false);
         }
         return dataId;
     }

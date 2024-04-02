@@ -5,12 +5,12 @@ import io.unlogged.logging.impl.EventStreamAggregatedLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
 import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.List;
 
 
 /**
@@ -70,6 +70,10 @@ public class Logging {
      */
     public static Mono<?> recordEvent(Mono<?> value, int dataId) {
         return (Mono<?>) INSTANCE.recordEvent(dataId, value);
+    }
+
+    public static Flux<?> recordEvent(Flux<?> value, int dataId) {
+        return (Flux<?>) INSTANCE.recordEvent(dataId, value);
     }
 
     /**
