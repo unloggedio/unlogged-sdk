@@ -61,7 +61,7 @@ public class Runtime {
 
 
             ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION);
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, AGENT_SERVER_PORT);
 
             httpServer = new AgentCommandServer(AGENT_SERVER_PORT, serverMetadata);
 
@@ -88,6 +88,7 @@ public class Runtime {
             errorLogger.log("Java version: " + System.getProperty("java.version"));
             errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
             errorLogger.log("Params: " + args);
+            errorLogger.log(serverMetadata.toString());
 
             System.out.println("[unlogged]" +
                     " session Id: [" + config.getSessionId() + "]" +

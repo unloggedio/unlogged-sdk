@@ -57,7 +57,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
 
         initIndexQueues();
 
-        errorLogger.log("prepare index archive: " + currentArchiveFile.getName());
+//        errorLogger.log("prepare index archive: " + currentArchiveFile.getName());
         archivedIndexOutputStream = new ZipOutputStream(
                 new BufferedOutputStream(new FileOutputStream(currentArchiveFile)));
 //        aggregatedValueSet = BloomFilterUtil.newBloomFilterForValues(BloomFilterUtil.BLOOM_AGGREGATED_FILTER_BIT_SIZE);
@@ -120,11 +120,11 @@ public class ArchivedIndexWriter implements IndexOutputStream {
             Queue<TypeInfoDocument> typesToIndex,
             List<StringInfoDocument> stringsToIndex
     ) {
-        errorLogger.log("drain queue to index: " + currentArchiveFile.getName() + ":"
-                + " [" + objectsToIndex.size() + "]"
-                + " [" + typesToIndex.size() + "]"
-                + " [" + stringsToIndex.size() + "]"
-        );
+//        errorLogger.log("drain queue to index: " + currentArchiveFile.getName() + ":"
+//                + " [" + objectsToIndex.size() + "]"
+//                + " [" + typesToIndex.size() + "]"
+//                + " [" + stringsToIndex.size() + "]"
+//        );
         long start = System.currentTimeMillis();
         int itemCount = objectsToIndex.size() + typesToIndex.size() + stringsToIndex.size();
 
@@ -139,7 +139,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
 
         long end = System.currentTimeMillis();
 
-        errorLogger.log("Took [" + (end - start) / 1000 + "] seconds to index [" + itemCount + "] items");
+//        errorLogger.log("Took [" + (end - start) / 1000 + "] seconds to index [" + itemCount + "] items");
     }
 
     @Override
@@ -157,7 +157,7 @@ public class ArchivedIndexWriter implements IndexOutputStream {
         indexWriterLock.lock();
 
         long start = System.currentTimeMillis();
-        errorLogger.log("lock acquired to finish archive: " + currentArchiveFile.getName());
+//        errorLogger.log("lock acquired to finish archive: " + currentArchiveFile.getName());
 
         try {
 
@@ -319,8 +319,8 @@ public class ArchivedIndexWriter implements IndexOutputStream {
         archivedIndexOutputStream.closeEntry();
         long end = System.currentTimeMillis();
 
-        errorLogger.log("[" + currentArchiveFile.getName() + "] Add files to archive: " + logFile.path + " " +
-                "took - " + (end - currentTimestamp) / 1000 + " ms");
+//        errorLogger.log("[" + currentArchiveFile.getName() + "] Add files to archive: " + logFile.path + " " +
+//                "took - " + (end - currentTimestamp) / 1000 + " ms");
     }
 
     void copy(InputStream source, OutputStream target) throws IOException {

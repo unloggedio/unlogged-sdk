@@ -137,7 +137,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     private synchronized void prepareNextFile(int currentThreadId) throws IOException {
 
-        errorLogger.log("prepare next file [" + currentThreadId + "]");
+//        errorLogger.log("prepare next file [" + currentThreadId + "]");
 
         if (count.containsKey(currentThreadId) && threadFileMap.get(currentThreadId) != null) {
             int eventCount = count.get(currentThreadId);
@@ -157,7 +157,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         threadFileMap.put(currentThreadId, outNew);
 
         if (currentOutputStream != null) {
-            errorLogger.log("flush existing file for thread [" + currentThreadId + "] -> " + currentFile);
+//            errorLogger.log("flush existing file for thread [" + currentThreadId + "] -> " + currentFile);
             try {
                 currentOutputStream.close();
             } catch (ClosedChannelException cce) {
@@ -177,7 +177,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
             UploadFile newLogFile = new UploadFile(currentFile, currentThreadId, null,
                     null);
-            errorLogger.log("new log file complete: " + newLogFile.getPath());
+//            errorLogger.log("new log file complete: " + newLogFile.getPath());
             fileList.offer(newLogFile);
 
 

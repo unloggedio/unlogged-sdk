@@ -64,7 +64,7 @@ public class RawFileCollector implements Runnable {
         objectsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
 
         this.outputDir = outputDir;
-        errorLogger.log("Created raw file collector, files per archive: " + filesPerArchive);
+//        errorLogger.log("Created raw file collector, files per archive: " + filesPerArchive);
         finalizeArchiveAndUpload();
         classWeaveFileRaw = new FileOutputStream(new File(outputDir + "/" + "class.weave.dat"));
         archiveCloser = new ArchiveCloser(archiveQueue, errorLogger);
@@ -97,7 +97,7 @@ public class RawFileCollector implements Runnable {
         try {
             while (true) {
                 long start = System.currentTimeMillis();
-                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
+//                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
                 if (shutdown) {
                     return;
                 }
@@ -136,9 +136,9 @@ public class RawFileCollector implements Runnable {
             return;
         }
         try {
-            errorLogger.log("wait for log file");
+//            errorLogger.log("wait for log file");
             UploadFile logFile = fileList.poll(1, TimeUnit.SECONDS);
-            errorLogger.log("got log file");
+//            errorLogger.log("got log file");
             if (logFile == null) {
                 if (fileCount > 0 || shutdown) {
                     errorLogger.log(
@@ -146,7 +146,7 @@ public class RawFileCollector implements Runnable {
                     finalizeArchiveAndUpload();
                     return;
                 }
-                errorLogger.log("nothing to load: " + shutdown);
+//                errorLogger.log("nothing to load: " + shutdown);
                 return;
             }
 
@@ -154,7 +154,7 @@ public class RawFileCollector implements Runnable {
             fileList.drainTo(logFiles, filesPerArchive - archivedIndexWriter.fileCount());
             logFiles.add(logFile);
 
-            errorLogger.log("add [" + logFiles.size() + "] files");
+//            errorLogger.log("add [" + logFiles.size() + "] files");
             for (UploadFile file : logFiles) {
                 File fileToAddToArchive = new File(file.path);
                 archivedIndexWriter.writeFileEntry(file);
@@ -168,8 +168,8 @@ public class RawFileCollector implements Runnable {
         } catch (InterruptedException e) {
             errorLogger.log("file upload cron interrupted, shutting down");
         } finally {
-            errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
-                    .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
+//            errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
+//                    .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
             if (archivedIndexWriter.fileCount() >= filesPerArchive || shutdown) {
                 finalizeArchiveAndUpload();
             }
@@ -265,10 +265,10 @@ public class RawFileCollector implements Runnable {
         public void run() {
             while (true) {
                 try {
-                    errorLogger.log("Waiting for next archive to close");
+//                    errorLogger.log("Waiting for next archive to close");
                     ArchivedIndexWriter archivedIndexWriterOld = archiveQueue.take();
                     try {
-                        errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile().getName());
+//                        errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile().getName());
                         drainItemsToIndex(archivedIndexWriterOld);
                         archivedIndexWriterOld.drainQueueToIndex(EMPTY_LIST, typeInfoDocuments, EMPTY_STRING_LIST);
                         archivedIndexWriterOld.close();
