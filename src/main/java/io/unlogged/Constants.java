@@ -5,6 +5,6 @@ public class Constants {
 
     private Constants() {}
 
-    public static final String AGENT_VERSION = "0.3.9";
+    public static final String AGENT_VERSION = "0.3.10";
 	public static final String METHOD_DEFAULT_NAME = "default value";
 }
