@@ -87,7 +87,7 @@ public class ParameterFactory {
         Class<?> currentClass = rawClass;
         JsonNode providedValues = objectMapper.readTree(methodParameter);
         while (!currentClass.equals(Object.class)) {
-            Field[] declaredFields = rawClass.getDeclaredFields();
+            Field[] declaredFields = currentClass.getDeclaredFields();
             for (Field declaredField : declaredFields) {
                 JsonNode fieldValueInNodeByName = providedValues.get(declaredField.getName());
                 Object valueToSet = getValueToSet(fieldValueInNodeByName, declaredField.getType());
