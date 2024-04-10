@@ -39,6 +39,13 @@ if __name__=="__main__":
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			buildSystem.MAVEN
+		),
+		Target(
+			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+			"unlogged-spring-webflux-maven-demo",
+			"/pom.xml",
+			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+			buildSystem.MAVEN
 		)
 	]
 		
