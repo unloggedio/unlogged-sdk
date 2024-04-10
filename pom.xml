@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.3.10</version>
+    <version>0.3.11</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -119,11 +119,11 @@
         <!--            <artifactId>spring-security-core</artifactId>-->
         <!--            <version>5.8.3</version>-->
         <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>jakarta.xml.bind</groupId>-->
-        <!--            <artifactId>jakarta.xml.bind-api</artifactId>-->
-        <!--            <version>4.0.0</version>-->
-        <!--        </dependency>-->
+                <dependency>
+                    <groupId>jakarta.xml.bind</groupId>
+                    <artifactId>jakarta.xml.bind-api</artifactId>
+                    <version>4.0.0</version>
+                </dependency>
 
         <!--        <dependency>-->
         <!--            <groupId>org.springframework.boot</groupId>-->
