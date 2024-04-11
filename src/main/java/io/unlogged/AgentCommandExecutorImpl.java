@@ -543,6 +543,16 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     targetClassLoader, field);
                             Class<?> fieldType = field.getType();
 
+                            try {
+                                Class<?> fieldTypeFromMockDefinition = Class.forName(
+                                        declaredMocks.get(0).getFieldTypeName());
+                                if (fieldType.isAssignableFrom(fieldTypeFromMockDefinition)) {
+                                    fieldType = fieldTypeFromMockDefinition;
+                                }
+                            } catch (Exception e1) {
+                                //
+                            }
+
                             Class<?> loadedMockedField;
                             try {
                                 loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
