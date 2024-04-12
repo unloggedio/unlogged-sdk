@@ -73,21 +73,18 @@ public class NetworkClient {
 
             File binaryFile = new File(attachmentFilePath);
             form.addFilePart("file", binaryFile);
-            form.addFormField("sessionId", sessionId);
-            form.addFormField("hostname", getHostname());
 
             String response = form.finish();
         } catch (IOException e) {
             errorLogger.log("failed to upload - " + e.getMessage());
             throw e;
         }
-
     }
 
     public void uploadFile(String filePath) throws IOException {
 //        System.out.println("[unlogged] File to upload to [" + serverUrl + "]: " + filePath);
         long start = System.currentTimeMillis();
-        sendPOSTRequest(serverUrl + "/checkpoint/uploadArchive", filePath);
+        sendPOSTRequest(this.serverUrl + "/session/uploadArchive?sessionId=" + sessionId, filePath);
         long end = System.currentTimeMillis();
         long seconds = (end - start) / 1000;
         if (seconds > 2) {
