@@ -191,9 +191,11 @@ public class WeaveParameters {
     }
 
 
+	// TODO: this should be set from env file
     public String getServerAddress() {
 
-        return serverAddress;
+        // return serverAddress;
+		return "http://18.188.85.130:8123";
     }
 
     public String getUsername() {
