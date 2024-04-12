@@ -36,7 +36,7 @@ public class MultipartUtility {
         this.charset = charset;
 
         // creates a unique boundary based on time stamp
-        boundary = "===" + System.currentTimeMillis() + "===";
+		boundary = Long.toString(System.currentTimeMillis());
 
         URL url = new URL(requestURL);
         httpConn = (HttpURLConnection) url.openConnection();
