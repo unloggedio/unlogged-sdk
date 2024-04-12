@@ -74,6 +74,14 @@ public class ArchivedIndexWriter implements IndexOutputStream {
         return currentArchiveFile;
     }
 
+	public String getClassWeavePath() {
+		return classWeavePath;
+	}
+
+	public String getOutputDir() {
+		return outputDir;
+	}
+
     private void initIndexQueues() {
         typesToIndex = new ArrayBlockingQueue<>(1);
         objectsToIndex = new ArrayBlockingQueue<>(1);
