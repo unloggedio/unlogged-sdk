@@ -7,6 +7,7 @@ import com.insidious.common.cqengine.TypeInfoDocument;
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
+import io.unlogged.logging.util.ZipCreator;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -277,10 +278,23 @@ public class RawFileCollector implements Runnable {
                         errorLogger.log(e);
                     }
 
-                    if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
+					// TODO: This should also not work when token value is "localhost-token". It is removed for testing. 
+                    // if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
+					if (networkClient != null) {
                         File archiveFile = archivedIndexWriterOld.getArchiveFile();
                         try {
                             errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
+							
+							// TODO: make this a single method
+							String outputDirectory = archivedIndexWriterOld.getOutputDir();
+							String[] outputDirectoryFilePath = outputDirectory.split("/");
+							String seloggerFolder = outputDirectoryFilePath[outputDirectoryFilePath.length-1];
+							String[] timeStamp = seloggerFolder.split("-");
+							String classArchiveFileName = "session-weave-" + timeStamp[2] + "-" + timeStamp[3] + ".zip";
+							String pathZip = outputDirectory + classArchiveFileName;
+
+							ZipCreator.writeZip(archivedIndexWriterOld.getClassWeavePath(), pathZip);
+							networkClient.uploadFile(pathZip);
                             networkClient.uploadFile(archiveFile.getAbsolutePath());
                         } catch (IOException e) {
                             errorLogger.log("failed to upload archive file: " + e.getMessage());
