@@ -191,7 +191,7 @@ public class WeaveParameters {
     }
 
 
-	// TODO: this should be set from env file
+	// TODO: this should be set from env file [preference order of values: env variable -> mvn properties -> spring properties]
     public String getServerAddress() {
 
         // return serverAddress;
