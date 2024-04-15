@@ -1,7 +1,11 @@
 package io.unlogged.command;
 
 public class ServerMetadata {
-    private final int agentServerPort;
+    public void setAgentServerPort(int agentServerPort) {
+        this.agentServerPort = agentServerPort;
+    }
+
+    private int agentServerPort;
     String includePackageName;
     String agentVersion;
     String agentServerUrl;
