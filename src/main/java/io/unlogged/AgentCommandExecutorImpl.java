@@ -1416,44 +1416,55 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     private Object setSpringApplicationContextAndLoadBeanFactory(Object applicationContext) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        if (applicationContext == null) {
-            return null;
+        try {
+            if (applicationContext == null) {
+                return null;
+            }
+            this.applicationContext = applicationContext;
+
+            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+            getBeanByBeanNameMethod = applicationContextClass.getMethod("getBean", String.class);
+            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
+                    "getAutowireCapableBeanFactory");
+
+            springBeanFactory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
+                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+            return springBeanFactory;
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
-        this.applicationContext = applicationContext;
+        return null;
 
-        Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-        getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-        getBeanByBeanNameMethod = applicationContextClass.getMethod("getBean", String.class);
-        Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod("getAutowireCapableBeanFactory");
-
-        springBeanFactory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
-                .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
-        return springBeanFactory;
     }
 
-    private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        if (this.applicationContext != null) {
-            // already loaded
-            return;
-        }
-        if (this.springTestContextManager == null) {
-            this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-                    ".reactive.context" +
-                    ".AnnotationConfigReactiveWebServerApplicationContext");
-            setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-        }
+    private void loadContext() {
+        try {
+            if (this.applicationContext != null) {
+                // already loaded
+                return;
+            }
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+                        ".reactive.context" +
+                        ".AnnotationConfigReactiveWebServerApplicationContext");
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
 
-        if (this.springTestContextManager == null) {
-            this.springTestContextManager = logger.getObjectByClassName(
-                    "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-            );
-            setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-        }
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName(
+                        "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+                );
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
 
-        if (applicationContext != null) {
-            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-            getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanNamesForType", Class.class,
-                    boolean.class, boolean.class);
+            if (applicationContext != null) {
+                Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+                getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanNamesForType", Class.class,
+                        boolean.class, boolean.class);
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
 
     }
