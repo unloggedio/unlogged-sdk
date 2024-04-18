@@ -1,11 +1,8 @@
 package io.unlogged;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.auth.RequestAuthentication;
@@ -31,7 +28,6 @@ import org.objenesis.ObjenesisStd;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
@@ -101,9 +97,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             requestType = AgentCommandRequestType.REPEAT_INVOKE;
         }
         try {
-            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
-                logger.setRecording(true);
-            }
+            logger.setRecording(true);
 
             this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
@@ -389,7 +383,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         // failed to set auth for non reactive spring app
                     }
 
+                    logger.setRecording(false);
                     methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+                    logger.setRecording(true);
+
                 }
 //                reactorContextTestExecutionListener.afterTestMethod(null);
 
@@ -438,9 +435,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
             agentCommandResponse.setResponseType(ResponseType.FAILED);
         } finally {
-            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
-                logger.setRecording(false);
-            }
+            logger.setRecording(false);
         }
         return agentCommandRawResponse;
 
@@ -1093,7 +1088,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
 
-
     private Object[] buildParametersUsingTargetClass(
             ClassLoader targetClassLoader,
             List<String> methodParameters,
@@ -1178,7 +1172,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             Class<?>[] paramTypes = noArgsConstructor.getParameterTypes();
             Object[] parameters = new Object[paramCount];
             for (int i = 0; i < paramCount; i++) {
-                Object paramValue = tryObjectConstruct(paramTypes[i].getCanonicalName(), targetClassLoader, buildMap);
+                String typeName = paramTypes[i].getCanonicalName();
+                Object paramValue = buildMap.get(typeName);
+                if (paramValue == null) {
+                    paramValue = tryObjectConstruct(typeName, targetClassLoader, buildMap);
+                }
                 parameters[i] = paramValue;
             }
 
