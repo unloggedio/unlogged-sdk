@@ -82,7 +82,7 @@ public class MethodTransformer extends LocalVariablesSorter {
                              String methodName, String methodDesc,
                              String signature, String[] exceptions,
                              MethodVisitor mv) {
-        super(Opcodes.ASM5, access, methodDesc, mv);
+        super(Opcodes.ASM9, access, methodDesc, mv);
         this.weavingInfo = w;
         this.config = config;
         this.className = className;

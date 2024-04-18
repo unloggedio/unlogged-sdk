@@ -204,7 +204,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     "   \"method\": \"GET\"," +
                                     "   \"requestURI\": \"/api\"" +
                                     "}" +
-                                    "}", attributesClass
+                                    "}", attributesClass, objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                     );
                     setRequestAttributesMethod.invoke(null, requestAttributes, true);
 
@@ -486,8 +486,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 // alas no object, lets create one
 
+                ClassLoader classLoader = sourceClassInstance1.getClass().getClassLoader();
                 Object anInstance = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
-                        sourceClassName, "{}", targetClassObject
+                        sourceClassName, "{}", targetClassObject,
+                        objectMapper.getTypeFactory().withClassLoader(classLoader)
                 );
                 // we need to hold on to this object
                 ourOwnObjects.put(sourceClassName, anInstance); // its a leak
@@ -869,7 +871,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             if (fieldValue == null) {
                                 try {
                                     fieldValue = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
-                                            field.getType().getCanonicalName(), "{}", field.getType()
+                                            field.getType().getCanonicalName(), "{}", field.getType(),
+                                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                                     );
                                 } catch (Exception e) {
                                     fieldValue = null;
@@ -1103,7 +1106,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             Object parameterObject;
             try {
                 parameterObject = parameterFactory.createObjectInstanceFromStringAndTypeInformation(parameterTypeName,
-                        methodParameterStringValue, parameterType);
+                        methodParameterStringValue, parameterType, typeFactory);
             } catch (Exception e) {
                 System.err.println(
                         "Failed to create paramter of type [" + parameterTypeName + "] from source " + methodParameterStringValue + " => " + e.getMessage());

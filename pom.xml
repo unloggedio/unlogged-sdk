@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.4.5</version>
+    <version>0.4.6</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -150,22 +150,22 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
-            <version>9.5</version>
+            <version>9.7</version>
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-tree</artifactId>
-            <version>9.5</version>
+            <version>9.7</version>
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-commons</artifactId>
-            <version>9.5</version>
+            <version>9.7</version>
         </dependency>
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-analysis</artifactId>
-            <version>9.5</version>
+            <version>9.7</version>
         </dependency>
 
 
@@ -208,7 +208,8 @@
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
-            <version>3.5.4</version>
+            <version>3.6.2</version>
+            <scope>provided</scope>
         </dependency>
 
 

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.fasterxml.jackson.databind.type.ArrayType;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.unlogged.mocking.*;
@@ -125,14 +124,13 @@ public class ParameterFactory {
             valueToSet = new StringBuilder(fieldValueInNodeByName.textValue());
         } else {
             valueToSet = createObjectInstanceFromStringAndTypeInformation(
-                    null, fieldValueInNodeByName.toString(), type);
+                    null, fieldValueInNodeByName.toString(), type, objectMapper.getTypeFactory());
         }
         return valueToSet;
     }
 
     public Object createObjectInstanceFromStringAndTypeInformation(
-            String targetClassName, String objectJsonRepresentation, Class<?> parameterType) {
-        TypeFactory typeFactory = objectMapper.getTypeFactory();
+            String targetClassName, String objectJsonRepresentation, Class<?> parameterType, TypeFactory typeFactory) {
         Object parameterObject = null;
         if (parameterType.getCanonicalName().equals(MULTI_VALUE_MAP_CLASS)) {
             try {

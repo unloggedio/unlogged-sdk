@@ -38,6 +38,7 @@ public class MetracerClassWriter extends ClassWriter {
 	// Code is based on a test from an ASM framework and based on behaviour Javassist
 	protected String getCommonSuperClass(String theType1, String theType2) {
 		try {
+			System.err.println("Get commonSuperClass for " + theType1 + " and " + theType2);
 			ClassReader info1 = typeInfo(theType1);
 			ClassReader info2 = typeInfo(theType2);
 
