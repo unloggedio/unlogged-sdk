@@ -59,10 +59,12 @@ public class Runtime {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
 
+            Integer agentServerPort = Integer.valueOf(weaveParameters.getAgentServerPort());
             ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, 0);
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION,
+                            agentServerPort);
 
-            httpServer = new AgentCommandServer(0, serverMetadata);
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
 
             File outputDir = new File(weaveParameters.getOutputDirname());
