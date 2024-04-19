@@ -53,7 +53,11 @@ public class Runtime {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
 
-            int agentServerPort = Integer.parseInt(weaveParameters.getAgentServerPort());
+            String agentServerPort1 = weaveParameters.getAgentServerPort();
+            if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
+                agentServerPort1 = "0";
+            }
+            int agentServerPort = Integer.parseInt(agentServerPort1);
 
             String portFromEnv = System.getenv().get("UNLOGGED_AGENT_PORT");
             if (portFromEnv != null) {
