@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head><title>DadaDash</title>
+    <meta charset=utf-8>
+    <meta name=description content="OpenFaceAPI">
+    <meta name=format-detection content="telephone=no">
+    <meta name=msapplication-tap-highlight content=no>
+    <meta name=viewport content="user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1,width=device-width">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+<body class=container-main>
+<div id=app>
+    <div id="sidebar">
+        <div id="control">
+            <a href="">+ New</a>
+        </div>
+        <div id="worlds">
+
+        </div>
+    </div>
+</div>
+</body>
+<script>
+
+  const ApplicationState = {
+    authentication: null,
+  }
+
+  jQuery.ajax({
+    url: '/api/world?page[size]=200', // Set the URL of the API or server endpoint
+    type: 'GET', // Specify the request type
+    success: function (response) {
+      console.log('Data received:', response);
+      var items = response.data
+        .filter(e => {
+          console.log("is joint able: " + e.attributes.is_join_table)
+          return e.attributes.is_join_table === 0;
+        });
+      console.log("items: ", items)
+      items.sort((a, b) => a.attributes.table_name.localeCompare(b.attributes.table_name))
+      for (let i = 0; i < items.length; i++) {
+        $("<div id='"+ items[i].id+"'>" + toTitleCase(items[i].attributes.table_name) + "</div>")
+          .appendTo("#worlds")
+      }
+    },
+    error: function (error) {
+      console.error('Error fetching data:', error);
+    }
+  });
+
+  function toTitleCase(text) {
+    return text.replace(/([^\W_]+[^\s-]*)/g, function(txt){
+      return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    }).replace(/[-_]+/g, ' ');
+  }
+
+</script>
+
+</html>

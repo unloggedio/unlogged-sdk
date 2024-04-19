@@ -20,16 +20,10 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -59,7 +53,17 @@ public class Runtime {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
 
-            Integer agentServerPort = Integer.valueOf(weaveParameters.getAgentServerPort());
+            int agentServerPort = Integer.parseInt(weaveParameters.getAgentServerPort());
+
+            String portFromEnv = System.getenv().get("UNLOGGED_AGENT_PORT");
+            if (portFromEnv != null) {
+                try {
+                    agentServerPort = Integer.parseInt(portFromEnv);
+                } catch (Exception e) {
+                    //
+                }
+            }
+
             ServerMetadata serverMetadata =
                     new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION,
                             agentServerPort);
@@ -97,8 +101,7 @@ public class Runtime {
             errorLogger.log(serverMetadata.toString());
 
             System.out.println("[unlogged]" +
-                    " session Id: [" + config.getSessionId() + "]" +
-                    " on hostname [" + NetworkClient.getHostname() + "]");
+                    " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
             switch (weaveParameters.getMode()) {
 
@@ -215,7 +218,7 @@ public class Runtime {
             byte[] decodedClassWeaveInfo = new byte[0];
             List<Integer> probesToRecord = null;
             try {
-                decodedClassWeaveInfo =  ByteTools.decompressBase64String(classInfoBytes);
+                decodedClassWeaveInfo = ByteTools.decompressBase64String(classInfoBytes);
                 byte[] decodedProbesToRecord = ByteTools.decompressBase64String(probesToRecordBase64);
                 probesToRecord = bytesToIntList(decodedProbesToRecord);
             } catch (IOException e) {

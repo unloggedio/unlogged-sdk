@@ -20,5 +20,5 @@ public @interface Unlogged {
     String[] includePackage() default "";
 
     boolean enable() default true;
-
+    int port() default 0;
 }
