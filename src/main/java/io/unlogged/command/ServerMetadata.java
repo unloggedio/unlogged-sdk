@@ -1,5 +1,7 @@
 package io.unlogged.command;
 
+import java.util.TimeZone;
+
 public class ServerMetadata {
     public void setAgentServerPort(int agentServerPort) {
         this.agentServerPort = agentServerPort;
@@ -22,7 +24,8 @@ public class ServerMetadata {
                 "\"agentServerPort\": \"" + agentServerPort + "\"," +
                 "\"includePackageName\": \"" + includePackageName + "\"," +
                 "\"agentServerUrl\": \"" + agentServerUrl + "\"," +
-                "\"agentVersion\": \"" + agentVersion + '\"' +
+                "\"agentVersion\": \"" + agentVersion + "\"," +
+                "\"timezone\": \"" + TimeZone.getDefault().getID() + '\"' +
                 '}';
     }
 
