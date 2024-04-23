@@ -20,23 +20,16 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
 
 /**
  * This class is the main program of SELogger as a javaagent.
  */
 public class Runtime {
 
-    public static final int AGENT_SERVER_PORT = 12100;
     private static Runtime instance;
     private static List<Pair<String, String>> pendingClassRegistrations = new ArrayList<>();
     private final ScheduledExecutorService probeReaderExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -60,10 +53,26 @@ public class Runtime {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
 
-            ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, AGENT_SERVER_PORT);
+            String agentServerPort1 = weaveParameters.getAgentServerPort();
+            if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
+                agentServerPort1 = "0";
+            }
+            int agentServerPort = Integer.parseInt(agentServerPort1);
 
-            httpServer = new AgentCommandServer(AGENT_SERVER_PORT, serverMetadata);
+            String portFromEnv = System.getenv().get("UNLOGGED_AGENT_PORT");
+            if (portFromEnv != null) {
+                try {
+                    agentServerPort = Integer.parseInt(portFromEnv);
+                } catch (Exception e) {
+                    //
+                }
+            }
+
+            ServerMetadata serverMetadata =
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION,
+                            agentServerPort);
+
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
 
             File outputDir = new File(weaveParameters.getOutputDirname());
@@ -88,11 +97,15 @@ public class Runtime {
             errorLogger.log("Java version: " + System.getProperty("java.version"));
             errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
             errorLogger.log("Params: " + args);
+
+            httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+            serverMetadata.setAgentServerUrl("http://localhost:" + httpServer.getListeningPort());
+            serverMetadata.setAgentServerPort(httpServer.getListeningPort());
+
             errorLogger.log(serverMetadata.toString());
 
             System.out.println("[unlogged]" +
-                    " session Id: [" + config.getSessionId() + "]" +
-                    " on hostname [" + NetworkClient.getHostname() + "]");
+                    " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
             switch (weaveParameters.getMode()) {
 
@@ -148,7 +161,6 @@ public class Runtime {
 
 
             httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(logger.getObjectMapper(), logger));
-            httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 
             java.lang.Runtime.getRuntime()
                     .addShutdownHook(new Thread(() -> {
@@ -210,7 +222,7 @@ public class Runtime {
             byte[] decodedClassWeaveInfo = new byte[0];
             List<Integer> probesToRecord = null;
             try {
-                decodedClassWeaveInfo =  ByteTools.decompressBase64String(classInfoBytes);
+                decodedClassWeaveInfo = ByteTools.decompressBase64String(classInfoBytes);
                 byte[] decodedProbesToRecord = ByteTools.decompressBase64String(probesToRecordBase64);
                 probesToRecord = bytesToIntList(decodedProbesToRecord);
             } catch (IOException e) {

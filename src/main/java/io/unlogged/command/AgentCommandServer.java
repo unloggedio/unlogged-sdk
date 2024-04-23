@@ -60,6 +60,10 @@ public class AgentCommandServer extends NanoHTTPD {
         if (requestPath.equals("/ping")) {
             return newFixedLengthResponse(Response.Status.OK, "application/json", pingResponseBody);
         }
+        if (requestPath.equals("/index.html")) {
+            return newChunkedResponse(Response.Status.OK, "application/json",
+                    this.getClass().getClassLoader().getResourceAsStream("index.html"));
+        }
         try {
             AgentCommandRequest agentCommandRequest = objectMapper.readValue(
                     postBody != null ? postBody : requestBodyText,

@@ -60,7 +60,7 @@ public class WeaveParameters {
     private boolean weaveSecurityManagerClass = false;
     private Runtime.Mode mode = Runtime.Mode.TESTING;
     private int filesPerIndex = 100;
-    private String agentServerPort = "12100";
+    private String agentServerPort = "0";
 
     public WeaveParameters(String args) {
         if (args == null) args = "";
