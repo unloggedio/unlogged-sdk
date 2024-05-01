@@ -97,7 +97,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             requestType = AgentCommandRequestType.REPEAT_INVOKE;
         }
         try {
-            logger.setRecording(true);
+            logger.setRecordingPaused(true);
 
             this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
@@ -330,7 +330,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     Mono.defer(() -> {
                                 try {
                                     // Invoke the method using reflection
+                                    logger.setRecordingPaused(false);
                                     Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
+                                    logger.setRecordingPaused(true);
+
 
                                     // Handle different return types
                                     if (returnValue instanceof Mono) {
@@ -383,9 +386,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         // failed to set auth for non reactive spring app
                     }
 
-                    logger.setRecording(false);
+                    logger.setRecordingPaused(false);
                     methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
-                    logger.setRecording(true);
+                    logger.setRecordingPaused(true);
 
                 }
 //                reactorContextTestExecutionListener.afterTestMethod(null);
@@ -435,7 +438,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
             agentCommandResponse.setResponseType(ResponseType.FAILED);
         } finally {
-            logger.setRecording(false);
+            logger.setRecordingPaused(false);
         }
         return agentCommandRawResponse;
 

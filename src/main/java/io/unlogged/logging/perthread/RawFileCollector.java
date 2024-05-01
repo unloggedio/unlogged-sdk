@@ -242,6 +242,7 @@ public class RawFileCollector implements Runnable {
     synchronized public void addClassWeaveInfo(byte[] byteArray) {
         try {
             classWeaveFileRaw.write(byteArray);
+            classWeaveFileRaw.flush();
         } catch (IOException e) {
             errorLogger.log("Failed to write class weave information: " + e.getMessage());
         }

@@ -547,7 +547,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     }
 
     @Override
-    public void setRecording(boolean b) {
+    public void setRecordingPaused(boolean b) {
         isRecording.set(b);
     }
 
