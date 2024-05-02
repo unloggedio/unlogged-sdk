@@ -61,6 +61,7 @@ if __name__=="__main__":
 				ReplayTest("Case to test #624", TestResult.PASS),
 				ReplayTest("Case - 595", TestResult.PASS),
 				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS)
+				ReplayTest("CalculateScoreForCenosCustomer - akshat", TestResult.PASS)
 			]
 		),
 		Target(
