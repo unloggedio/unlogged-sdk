@@ -108,23 +108,51 @@ public class ParameterFactory {
         Object valueToSet = null;
         if (int.class.equals(type) || Integer.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.intValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Integer.parseInt(fieldValueInNodeByName.textValue());
+            }
+
         } else if (long.class.equals(type) || Long.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.longValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Long.parseLong(fieldValueInNodeByName.textValue());
+            }
+
         } else if (double.class.equals(type) || Double.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.doubleValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Double.parseDouble(fieldValueInNodeByName.textValue());
+            }
+
         } else if (float.class.equals(type) || Float.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.floatValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Float.parseFloat(fieldValueInNodeByName.textValue());
+            }
+
         } else if (boolean.class.equals(type) || Boolean.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.booleanValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Boolean.parseBoolean(fieldValueInNodeByName.textValue());
+            }
+
         } else if (short.class.equals(type) || Short.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.shortValue();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valueToSet = Short.parseShort(fieldValueInNodeByName.textValue());
+            }
+
         } else if (String.class.equals(type)) {
             valueToSet = fieldValueInNodeByName.textValue();
         } else if (StringBuilder.class.equals(type)) {
             valueToSet = new StringBuilder(fieldValueInNodeByName.textValue());
         } else {
+            String valAsJsonString = fieldValueInNodeByName.toString();
+            if (fieldValueInNodeByName instanceof TextNode) {
+                valAsJsonString = fieldValueInNodeByName.textValue();
+            }
             valueToSet = createObjectInstanceFromStringAndTypeInformation(
-                    null, fieldValueInNodeByName.toString(), type, objectMapper.getTypeFactory());
+                    null, valAsJsonString, type, objectMapper.getTypeFactory());
         }
         return valueToSet;
     }
@@ -191,8 +219,8 @@ public class ParameterFactory {
             case "reactor.core.publisher.Flux":
                 CollectionType actuallyComponent = objectMapper.getTypeFactory()
                         .constructCollectionType(ArrayList.class, firstComponent);
-                 List<?> parameterObjectList = (List<?>) objectFromTypeReference(methodParameter, parameterType,
-                         actuallyComponent);
+                List<?> parameterObjectList = (List<?>) objectFromTypeReference(methodParameter, parameterType,
+                        actuallyComponent);
                 parameterObject = parameterObjectList == null ? Flux.empty() : Flux.fromIterable(parameterObjectList);
                 break;
             default:
@@ -208,7 +236,7 @@ public class ParameterFactory {
                                     1, methodParameter.length() - 1
                             ), typeReference);
                             return parameterObject;
-                        }catch (Exception ingored) {
+                        } catch (Exception ingored) {
 
                         }
                     }
