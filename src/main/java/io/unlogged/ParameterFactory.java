@@ -32,6 +32,7 @@ public class ParameterFactory {
     private final Objenesis objenesis;
     private final ObjectMapper objectMapper;
     private final ByteBuddy byteBuddyInstance;
+    private ObjectMapper basicObjectMapper = new ObjectMapper();
 
 
     public ParameterFactory(Objenesis objenesis, ObjectMapper objectMapper, ByteBuddy byteBuddyInstance) {
@@ -230,6 +231,12 @@ public class ParameterFactory {
                     }
                     parameterObject = objectMapper.readValue(methodParameter, typeReference);
                 } catch (Throwable e2) {
+                    try {
+                        parameterObject = basicObjectMapper.readValue(methodParameter, typeReference);
+                        return parameterObject;
+                    }catch (Throwable ignored) {
+                        //
+                    }
                     if (methodParameter.startsWith("\"") && methodParameter.endsWith("\"")) {
                         try {
                             parameterObject = objectMapper.readValue(methodParameter.substring(
