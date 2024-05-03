@@ -2,7 +2,7 @@ package io.unlogged.logging;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.core.JsonGenerator;
+//import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -11,9 +11,9 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+//import com.fasterxml.jackson.databind.module.SimpleModule;
+//import reactor.core.publisher.Flux;
+//import reactor.core.publisher.Mono;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -39,6 +39,8 @@ public class ObjectMapperFactory {
     );
     private static boolean isLombokPresent;
 
+    private static boolean isReactivePresent = false;
+
     static {
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
@@ -47,6 +49,14 @@ public class ObjectMapperFactory {
         } catch (ClassNotFoundException e) {
 //            System.err.println("Lombok not found");
             isLombokPresent = false;
+        }
+        try {
+            Class<?> lombokBuilderAnnotation = Class.forName("reactor.core.publisher.Mono");
+            isReactivePresent = true;
+//            System.err.println("Lombok found: " + lombokBuilderAnnotation.getCanonicalName());
+        } catch (ClassNotFoundException e) {
+//            System.err.println("Lombok not found");
+            isReactivePresent = false;
         }
 
     }
@@ -68,7 +78,10 @@ public class ObjectMapperFactory {
                     objectMapper1.configure(value, false);
                 }
             }
-            objectMapper1.registerModule(new ReactiveModule());
+
+//            if (isReactivePresent) {
+//                objectMapper1.registerModule(new ReactiveModule());
+//            }
             objectMapper1.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
             objectMapper1.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
 
@@ -126,7 +139,9 @@ public class ObjectMapperFactory {
                 }
             }
 
-            jacksonBuilder.addModule(new ReactiveModule());
+//            if (isReactivePresent) {
+//                jacksonBuilder.addModule(new ReactiveModule());
+//            }
             jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
                 @Override
                 public boolean hasIgnoreMarker(AnnotatedMember m) {
@@ -332,32 +347,32 @@ public class ObjectMapperFactory {
         }
     }
 
-    static class ReactiveModule extends SimpleModule {
-        ReactiveModule() {
-            addSerializer(Mono.class, new MonoSerializer());
-            addSerializer(Flux.class, new FluxSerializer());
-        }
-    }
+//    static class ReactiveModule extends SimpleModule {
+//        ReactiveModule() {
+//            addSerializer(Mono.class, new MonoSerializer());
+//            addSerializer(Flux.class, new FluxSerializer());
+//        }
+//    }
 
-    public static class MonoSerializer extends JsonSerializer<Mono> {
-        @Override
-        public void serialize(Mono mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-            jsonGenerator.writeObject(mono.block()); // Blocks until the Mono emits a value
-        }
-    }
+//    public static class MonoSerializer extends JsonSerializer<Mono> {
+//        @Override
+//        public void serialize(Mono mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+//            jsonGenerator.writeObject(mono.block()); // Blocks until the Mono emits a value
+//        }
+//    }
 
-    public static class FluxSerializer extends JsonSerializer<Flux> {
-        @Override
-        public void serialize(Flux flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-            jsonGenerator.writeStartArray(); // Start writing JSON array
-            flux.toIterable().forEach(element -> {
-                try {
-                    jsonGenerator.writeObject(element); // Write each element of Flux
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            jsonGenerator.writeEndArray(); // End JSON array
-        }
-    }
+//    public static class FluxSerializer extends JsonSerializer<Flux> {
+//        @Override
+//        public void serialize(Flux flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+//            jsonGenerator.writeStartArray(); // Start writing JSON array
+//            flux.toIterable().forEach(element -> {
+//                try {
+//                    jsonGenerator.writeObject(element); // Write each element of Flux
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            });
+//            jsonGenerator.writeEndArray(); // End JSON array
+//        }
+//    }
 }
