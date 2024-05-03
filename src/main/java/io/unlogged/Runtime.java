@@ -71,7 +71,7 @@ public class Runtime {
             ServerMetadata serverMetadata =
                     new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, 0);
 
-            httpServer = new AgentCommandServer(0, serverMetadata);
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
 
             File outputDir = new File(weaveParameters.getOutputDirname());
