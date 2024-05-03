@@ -54,7 +54,7 @@ if __name__=="__main__":
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
 			buildSystem.MAVEN,
-			custom_start_command="mvn clean spring-boot:run"
+			custom_start_command="mvn clean compile && docker compose -f conf/docker-compose.yml up"
 		)
 	]
 		
