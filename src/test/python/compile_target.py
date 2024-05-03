@@ -49,7 +49,7 @@ if __name__=="__main__":
 			custom_start_command=""
 		),
 		Target(
-			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+			"-b dockerization https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
 			"unlogged-spring-webflux-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
