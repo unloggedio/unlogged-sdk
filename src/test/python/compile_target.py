@@ -10,12 +10,19 @@ def compile_target (target):
 	
 	# modify build system file
 	target.modify_main()
+	action_command=""
+	if target.custom_start_command != "":
+		action_command = " && "+target.custom_start_command
 	if (target.buildSystem == buildSystem.MAVEN):
 		target.modify_pom(sdk_version)
-		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+		if action_command == "":
+			action_command = " && mvn clean compile"
+		compile_command = "cd " + target.test_repo_name + action_command
 	elif (target.buildSystem == buildSystem.GRADLE):
 		target.modify_gradle(sdk_version)
-		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
+		if action_command == "":
+			action_command = " && gradle clean compileJava"
+		compile_command = "cd " + target.test_repo_name + action_command
 	
 	# target compile
 	response_code = os.system(compile_command)
@@ -38,14 +45,16 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN
+			buildSystem.MAVEN,
+			custom_start_command=""
 		),
 		Target(
 			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
 			"unlogged-spring-webflux-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-			buildSystem.MAVEN
+			buildSystem.MAVEN,
+			custom_start_command="mvn clean spring-boot:run"
 		)
 	]
 		
