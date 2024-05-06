@@ -32,6 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
@@ -204,7 +205,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     "   \"method\": \"GET\"," +
                                     "   \"requestURI\": \"/api\"" +
                                     "}" +
-                                    "}", attributesClass, objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
+                                    "}", attributesClass,
+                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                     );
                     setRequestAttributesMethod.invoke(null, requestAttributes, true);
 
@@ -214,7 +216,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 UnloggedSpringAuthentication authInstance = null;
                 UnloggedSpringAuthentication usa = null;
-                Object mockedContext = null;
+                Object mockedContext = new Object();
                 RequestAuthentication requestAuthentication = agentCommandRequest.getRequestAuthentication();
                 if (requestAuthentication != null && requestAuthentication.getPrincipalClassName() != null) {
 
@@ -314,9 +316,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
                 Object methodReturnValue;
-                if (isSpringPresent && mockedContext != null && springTestContextManager != null
-                        && springTestContextManager.getClass()
-                        .getCanonicalName().contains("AnnotationConfigReactiveWebServerApplicationContext")) {
+                if ((methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Mono") ||
+                        methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Flux"))
+                        && springTestContextManager != null
+                        && springTestContextManager.getClass().getCanonicalName()
+                        .contains("AnnotationConfigReactiveWebServerApplicationContext")) {
                     final Map<String, Object> resultContainer = new HashMap<>();
 
                     final Mono<?> securityContext = Mono.just(mockedContext);
@@ -349,7 +353,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             })
                             .contextWrite(ctx -> {
 //                                System.out.println("setting sec");
-                                return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                if (finalSECURITY_CONTEXT_KEY != null) {
+                                    return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                }
+                                return ctx;
                             }) // Set the security context
                             .doOnSuccess(result -> {
                                 resultContainer.put("returnValue", result);
@@ -1081,10 +1088,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                 } finally {
                                     cdl.countDown();
                                 }
-                            }, () -> cdl.countDown());
+                            }, cdl::countDown);
                     cdl.await();
                     return returnValue.toString();
 
+                } else if (methodReturnValue instanceof Future) {
+                    methodReturnValue = ((Future<?>) methodReturnValue).get();
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
