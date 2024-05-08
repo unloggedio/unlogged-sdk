@@ -46,6 +46,11 @@ public class Runtime {
     private Runtime(String args) {
 //        System.err.println("UnloggedInit1" );
 
+        if ("true".equals(System.getProperty("UNLOGGED_DISABLE", "false"))) {
+            logger = Logging.initialiseDiscardLogger();
+            return;
+        }
+
         try {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
