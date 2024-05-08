@@ -627,16 +627,16 @@ public class ObjectMapperFactory {
         }
     }
 
-    public static class MonoSerializer extends JsonSerializer<Mono<?>> {
+    public static class MonoSerializer extends JsonSerializer<Mono> {
         @Override
-        public void serialize(Mono<?> mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+        public void serialize(Mono mono, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
             jsonGenerator.writeObject(mono.block()); // Blocks until the Mono emits a value
         }
     }
 
-    public static class FluxSerializer extends JsonSerializer<Flux<?>> {
+    public static class FluxSerializer extends JsonSerializer<Flux> {
         @Override
-        public void serialize(Flux<?> flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+        public void serialize(Flux flux, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
             jsonGenerator.writeStartArray(); // Start writing JSON array
             flux.toIterable().forEach(element -> {
                 try {
