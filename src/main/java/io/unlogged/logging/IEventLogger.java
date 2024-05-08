@@ -107,7 +107,6 @@ public interface IEventLogger {
 
     void setRecordingPaused(boolean b);
 
-    ObjectMapper getObjectMapper();
 
     ClassLoader getTargetClassLoader();
 }

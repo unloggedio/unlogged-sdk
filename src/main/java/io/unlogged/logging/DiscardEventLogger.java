@@ -80,10 +80,6 @@ public class DiscardEventLogger implements IEventLogger {
 
     }
 
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return objectMapper;
-    }
 
     @Override
     public ClassLoader getTargetClassLoader() {

@@ -4,10 +4,7 @@ import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.IErrorLogger;
-import io.unlogged.logging.IEventLogger;
-import io.unlogged.logging.Logging;
-import io.unlogged.logging.SimpleFileLogger;
+import io.unlogged.logging.*;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
@@ -159,12 +156,11 @@ public class Runtime {
             }
 
 
-            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(logger.getObjectMapper(), logger));
+            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(
+                    ObjectMapperFactory.createObjectMapperReactive(), logger));
 
             java.lang.Runtime.getRuntime()
-                    .addShutdownHook(new Thread(() -> {
-                        close();
-                    }));
+                    .addShutdownHook(new Thread(this::close));
 
 
         } catch (Throwable thx) {

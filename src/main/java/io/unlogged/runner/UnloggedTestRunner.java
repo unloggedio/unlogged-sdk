@@ -37,6 +37,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -68,7 +69,7 @@ public class UnloggedTestRunner extends Runner {
             isLombokPresent = false;
         }
 
-        objectMapper = ObjectMapperFactory.createObjectMapper();
+        objectMapper = ObjectMapperFactory.createObjectMapperReactive();
 
     }
 
@@ -101,7 +102,7 @@ public class UnloggedTestRunner extends Runner {
     public UnloggedTestRunner(Class<?> testClass) {
         super();
         this.testClass = testClass;
-        this.commandExecutor = new AgentCommandExecutorImpl(ObjectMapperFactory.createObjectMapper(), eventLogger);
+        this.commandExecutor = new AgentCommandExecutorImpl(ObjectMapperFactory.createObjectMapperReactive(), eventLogger);
         this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
         commandExecutor.enableSpringIntegration(this.testClass);
@@ -460,6 +461,11 @@ public class UnloggedTestRunner extends Runner {
         if (mocksToUse != null) {
             for (String mockId : mocksToUse) {
                 DeclaredMock mockDefinition = mocksById.get(mockId);
+                if (mockDefinition == null) {
+                    return new UndeclaredThrowableException(
+                            new Throwable("Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId())
+                    );
+                }
                 mockList.add(mockDefinition);
             }
         }

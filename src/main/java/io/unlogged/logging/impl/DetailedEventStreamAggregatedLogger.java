@@ -67,10 +67,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
             ObjectMapperFactory::createObjectMapper);
     private final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+    private final Map<Integer, Integer> firstProbeId = new HashMap<>();
     InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
             new DefaultCharArrayNodeFactory());
     private ClassLoader targetClassLoader;
-    private final Map<Integer, Integer> firstProbeId = new HashMap<>();
 
     /**
      * Create an instance of logging object.
@@ -551,9 +551,6 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
         isRecording.set(b);
     }
 
-    public ObjectMapper getObjectMapper() {
-        return objectMapper.get();
-    }
 
     @Override
     public ClassLoader getTargetClassLoader() {
