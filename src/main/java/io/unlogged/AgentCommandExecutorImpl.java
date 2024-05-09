@@ -1062,6 +1062,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     CountDownLatch cdl = new CountDownLatch(1);
                     StringBuffer returnValue = new StringBuffer();
 
+                    Object finalMethodReturnValue = methodReturnValue;
                     returnedMono
                             .log()
                             .subscribe(e -> {
@@ -1071,7 +1072,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass().getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
@@ -1083,7 +1084,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass().getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
