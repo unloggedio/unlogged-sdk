@@ -336,7 +336,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     // Invoke the method using reflection
                                     logger.setRecordingPaused(false);
                                     Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
-                                    logger.setRecordingPaused(true);
 
 
                                     // Handle different return types
@@ -365,6 +364,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             .doOnError(error -> {
                                 resultContainer.put("exception", error);
                                 cdl.countDown(); // Count down on error
+                            })
+                            .doFinally(e -> {
+                                logger.setRecordingPaused(true);
                             })
                             .subscribe();
 

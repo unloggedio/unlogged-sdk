@@ -241,7 +241,8 @@ public class UnloggedTestRunner extends Runner {
                 DeclaredMock mockDefinition = mocksById.get(mockId);
                 if (mockDefinition == null) {
                     return new UndeclaredThrowableException(
-                            new Throwable("Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId())
+                            new Throwable("Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId()),
+                            "Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId()
                     );
                 }
                 mockList.add(mockDefinition);
