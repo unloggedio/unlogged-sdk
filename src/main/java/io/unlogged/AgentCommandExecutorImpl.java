@@ -173,12 +173,20 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 JavaType[] expectedMethodArgumentTypes = new JavaType[methodSignatureParts.size()];
 
+                List<String> typeFromRequest = agentCommandRequest.getParameterTypes();
                 TypeFactory typeFactory = objectMapper.getTypeFactory();
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    JavaType typeReference = ClassTypeUtil
-                            .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    String typeName = typeFromRequest.get(i);
+                    JavaType typeReference;
+                    try {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    } catch (Exception e) {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(typeName, typeFactory);
+                    }
                     expectedMethodArgumentTypes[i] = typeReference;
                 }
 
@@ -1074,7 +1082,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass().getCanonicalName() + "\"}");
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
@@ -1086,7 +1095,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass().getCanonicalName() + "\"}");
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
