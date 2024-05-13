@@ -42,7 +42,6 @@ public class WeaveParameters {
     private String password;
     private String weaveOption = WeaveConfig.KEY_RECORD_ALL;
     private boolean outputJson = false;
-	private String sessionId;
     /**
      * Dump woven class files (mainly for debugging)
      */
@@ -92,8 +91,6 @@ public class WeaveParameters {
                 agentServerPort = arg.substring("agentserverport=".length());
             } else if (arg.startsWith("server=")) {
                 serverAddress = arg.substring("server=".length());
-			} else if (arg.startsWith("sessionId=")) {
-                sessionId = arg.substring("sessionId=".length());
             } else if (arg.startsWith("token=")) {
                 authToken = arg.substring("token=".length());
             } else if (arg.startsWith("username=")) {
@@ -228,8 +225,4 @@ public class WeaveParameters {
     public void setAgentServerPort(String agentServerPort) {
         this.agentServerPort = agentServerPort;
     }
-
-	public String getSessionId(){
-		return sessionId;
-	}
 }
