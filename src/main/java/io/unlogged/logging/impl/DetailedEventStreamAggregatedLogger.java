@@ -65,7 +65,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
-            ObjectMapperFactory::createObjectMapper);
+            ObjectMapperFactory::createObjectMapperReactive);
     private final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
     private final Map<Integer, Integer> firstProbeId = new HashMap<>();
     InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
