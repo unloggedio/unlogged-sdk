@@ -62,7 +62,7 @@ public class WeaveParameters {
     private int filesPerIndex = 100;
     private String agentServerPort = "0";
 
-    public WeaveParameters(String args) {
+    public WeaveParameters(String args, String serverAddress) {
         if (args == null) args = "";
         String[] a = args.split(ARG_SEPARATOR);
 
@@ -72,6 +72,7 @@ public class WeaveParameters {
         excludedNames = new ArrayList<String>(Arrays.asList(SYSTEM_PACKAGES));
         includedNames = new ArrayList<String>();
         excludedLocations = new ArrayList<String>();
+		this.serverAddress = serverAddress;
 
 
         for (String arg : a) {
@@ -190,13 +191,8 @@ public class WeaveParameters {
         return includedNames;
     }
 
-
-	// TODO: this should be set from env file [preference order of values: env variable -> mvn properties -> spring properties]
     public String getServerAddress() {
-
-        // return serverAddress;
-		return "http://18.188.85.130:8123";
-//		 return "http://localhost:8123";
+		return this.serverAddress;
     }
 
     public String getUsername() {
