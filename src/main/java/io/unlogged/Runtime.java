@@ -52,7 +52,16 @@ public class Runtime {
         }
 
         try {
-            WeaveParameters weaveParameters = new WeaveParameters(args);
+
+
+			System.out.println("--------------------------");
+			String serverAddress = System.getenv("UNLOGGED_SERVER_URL");
+			System.out.println("serverAddress = " + serverAddress);
+			System.out.println("--------------------------");
+
+
+			// weave creation
+            WeaveParameters weaveParameters = new WeaveParameters(args, serverAddress);
 
 
             String agentServerPort1 = weaveParameters.getAgentServerPort();

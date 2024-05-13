@@ -21,4 +21,6 @@ public @interface Unlogged {
 
     boolean enable() default true;
     int port() default 0;
+
+	String serverLink() default "";
 }
