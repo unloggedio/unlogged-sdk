@@ -315,9 +315,7 @@ public class WeaveConfig {
         this.authToken = authToken;
     }
 
-	// TODO: return sessionId after implementing token
     public String getSessionId() {
-        // return sessionId;
-		return "0";
+        return sessionId;
     }
 }
