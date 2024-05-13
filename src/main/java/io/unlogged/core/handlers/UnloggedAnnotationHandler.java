@@ -64,9 +64,10 @@ public class UnloggedAnnotationHandler extends JavacAnnotationHandler<Unlogged> 
 //        annotation.getInstance()
 
         Integer unloggedAgentPort = (Integer) annotation.getValueGuess("port");
+        String serverLink = annotation.getAsString("serverLink");
 
-        JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
-                maker.Literal("i=" + includedPackageName + ",agentserverport=" + unloggedAgentPort),
+		JCTree.JCExpression[] factoryParameters = new JCTree.JCExpression[]{
+                maker.Literal("i=" + includedPackageName + ",server=" + serverLink + ",agentserverport=" + unloggedAgentPort),
         };
 
         JCTree.JCMethodInvocation factoryMethodCall = maker.Apply(

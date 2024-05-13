@@ -52,18 +52,8 @@ public class Runtime {
         }
 
         try {
-
-
-			System.out.println("--------------------------");
-			String serverAddress = System.getenv("UNLOGGED_SERVER_URL");
-			System.out.println("serverAddress = " + serverAddress);
-			System.out.println("--------------------------");
-
-
 			// weave creation
-            WeaveParameters weaveParameters = new WeaveParameters(args, serverAddress);
-
-
+            WeaveParameters weaveParameters = new WeaveParameters(args);
             String agentServerPort1 = weaveParameters.getAgentServerPort();
             if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
                 agentServerPort1 = "0";
