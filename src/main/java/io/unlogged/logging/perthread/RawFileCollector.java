@@ -278,9 +278,7 @@ public class RawFileCollector implements Runnable {
                         errorLogger.log(e);
                     }
 
-					// TODO: This should also not work when token value is "localhost-token". It is removed for testing. 
-                    // if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
-					if (networkClient != null) {
+                    if (networkClient != null && !"".equals(networkClient.getServerUrl())) {
                         File archiveFile = archivedIndexWriterOld.getArchiveFile();
                         try {
                             errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());

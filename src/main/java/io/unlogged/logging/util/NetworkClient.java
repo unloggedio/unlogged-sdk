@@ -92,4 +92,8 @@ public class NetworkClient {
         }
     }
 
+	public String getServerUrl() {
+		return serverUrl;
+	}
+
 }
