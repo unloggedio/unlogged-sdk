@@ -23,4 +23,6 @@ public @interface Unlogged {
     int port() default 0;
 
 	String serverLink() default "";
+
+	String sessionId() default "";
 }
