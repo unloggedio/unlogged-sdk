@@ -32,6 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
@@ -97,7 +98,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             requestType = AgentCommandRequestType.REPEAT_INVOKE;
         }
         try {
-            logger.setRecording(true);
+            logger.setRecordingPaused(true);
 
             this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
@@ -172,12 +173,20 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 JavaType[] expectedMethodArgumentTypes = new JavaType[methodSignatureParts.size()];
 
+                List<String> typeFromRequest = agentCommandRequest.getParameterTypes();
                 TypeFactory typeFactory = objectMapper.getTypeFactory();
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    JavaType typeReference = ClassTypeUtil
-                            .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    String typeName = typeFromRequest.get(i);
+                    JavaType typeReference;
+                    try {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    } catch (Exception e) {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(typeName, typeFactory);
+                    }
                     expectedMethodArgumentTypes[i] = typeReference;
                 }
 
@@ -204,7 +213,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     "   \"method\": \"GET\"," +
                                     "   \"requestURI\": \"/api\"" +
                                     "}" +
-                                    "}", attributesClass
+                                    "}", attributesClass,
+                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                     );
                     setRequestAttributesMethod.invoke(null, requestAttributes, true);
 
@@ -214,7 +224,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 UnloggedSpringAuthentication authInstance = null;
                 UnloggedSpringAuthentication usa = null;
-                Object mockedContext = null;
+                Object mockedContext = new Object();
                 RequestAuthentication requestAuthentication = agentCommandRequest.getRequestAuthentication();
                 if (requestAuthentication != null && requestAuthentication.getPrincipalClassName() != null) {
 
@@ -314,9 +324,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
                 Object methodReturnValue;
-                if (isSpringPresent && mockedContext != null && springTestContextManager != null
-                        && springTestContextManager.getClass()
-                        .getCanonicalName().contains("AnnotationConfigReactiveWebServerApplicationContext")) {
+                if ((methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Mono") ||
+                        methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Flux"))
+                        && springTestContextManager != null
+                        && springTestContextManager.getClass().getCanonicalName()
+                        .contains("AnnotationConfigReactiveWebServerApplicationContext")) {
                     final Map<String, Object> resultContainer = new HashMap<>();
 
                     final Mono<?> securityContext = Mono.just(mockedContext);
@@ -330,7 +342,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     Mono.defer(() -> {
                                 try {
                                     // Invoke the method using reflection
+                                    logger.setRecordingPaused(false);
                                     Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
+
 
                                     // Handle different return types
                                     if (returnValue instanceof Mono) {
@@ -346,7 +360,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             })
                             .contextWrite(ctx -> {
 //                                System.out.println("setting sec");
-                                return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                if (finalSECURITY_CONTEXT_KEY != null) {
+                                    return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                }
+                                return ctx;
                             }) // Set the security context
                             .doOnSuccess(result -> {
                                 resultContainer.put("returnValue", result);
@@ -355,6 +372,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             .doOnError(error -> {
                                 resultContainer.put("exception", error);
                                 cdl.countDown(); // Count down on error
+                            })
+                            .doFinally(e -> {
+                                logger.setRecordingPaused(true);
                             })
                             .subscribe();
 
@@ -383,9 +403,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         // failed to set auth for non reactive spring app
                     }
 
-                    logger.setRecording(false);
+                    logger.setRecordingPaused(false);
                     methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
-                    logger.setRecording(true);
+                    logger.setRecordingPaused(true);
 
                 }
 //                reactorContextTestExecutionListener.afterTestMethod(null);
@@ -435,7 +455,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
             agentCommandResponse.setResponseType(ResponseType.FAILED);
         } finally {
-            logger.setRecording(false);
+            logger.setRecordingPaused(false);
         }
         return agentCommandRawResponse;
 
@@ -486,8 +506,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 // alas no object, lets create one
 
+                ClassLoader classLoader = sourceClassInstance1.getClass().getClassLoader();
                 Object anInstance = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
-                        sourceClassName, "{}", targetClassObject
+                        sourceClassName, "{}", targetClassObject,
+                        objectMapper.getTypeFactory().withClassLoader(classLoader)
                 );
                 // we need to hold on to this object
                 ourOwnObjects.put(sourceClassName, anInstance); // its a leak
@@ -869,7 +891,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             if (fieldValue == null) {
                                 try {
                                     fieldValue = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
-                                            field.getType().getCanonicalName(), "{}", field.getType()
+                                            field.getType().getCanonicalName(), "{}", field.getType(),
+                                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                                     );
                                 } catch (Exception e) {
                                     fieldValue = null;
@@ -1049,6 +1072,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     CountDownLatch cdl = new CountDownLatch(1);
                     StringBuffer returnValue = new StringBuffer();
 
+                    Object finalMethodReturnValue = methodReturnValue;
                     returnedMono
                             .log()
                             .subscribe(e -> {
@@ -1058,7 +1082,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
@@ -1070,15 +1095,18 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
                                 }
-                            }, () -> cdl.countDown());
+                            }, cdl::countDown);
                     cdl.await();
                     return returnValue.toString();
 
+                } else if (methodReturnValue instanceof Future) {
+                    methodReturnValue = ((Future<?>) methodReturnValue).get();
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
@@ -1103,7 +1131,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             Object parameterObject;
             try {
                 parameterObject = parameterFactory.createObjectInstanceFromStringAndTypeInformation(parameterTypeName,
-                        methodParameterStringValue, parameterType);
+                        methodParameterStringValue, parameterType, typeFactory);
             } catch (Exception e) {
                 System.err.println(
                         "Failed to create paramter of type [" + parameterTypeName + "] from source " + methodParameterStringValue + " => " + e.getMessage());

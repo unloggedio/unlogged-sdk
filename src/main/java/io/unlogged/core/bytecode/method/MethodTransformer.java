@@ -82,7 +82,7 @@ public class MethodTransformer extends LocalVariablesSorter {
                              String methodName, String methodDesc,
                              String signature, String[] exceptions,
                              MethodVisitor mv) {
-        super(Opcodes.ASM5, access, methodDesc, mv);
+        super(Opcodes.ASM9, access, methodDesc, mv);
         this.weavingInfo = w;
         this.config = config;
         this.className = className;
@@ -907,7 +907,18 @@ public class MethodTransformer extends LocalVariablesSorter {
             }
 
             // record return value
-            generateLoggingPreservingStackTop(EventType.INVOKE_DYNAMIC_RESULT, Descriptor.Object, "");
+            if (
+                    // the new switch case in java 21 invokes a typeSwitch method to
+                    // identify the correct case
+                    // return type is Integer for this specifically
+                    bsm.getOwner().equals("java/lang/runtime/SwitchBootstraps")
+                            && bsm.getName().equals("typeSwitch")
+            ) {
+                generateLoggingPreservingStackTop(EventType.INVOKE_DYNAMIC_RESULT, Descriptor.Integer, "");
+            } else {
+                generateLoggingPreservingStackTop(EventType.INVOKE_DYNAMIC_RESULT, Descriptor.Object, "");
+
+            }
 
         } else {
             super.visitInvokeDynamicInsn(name, desc, bsm, bsmArgs);

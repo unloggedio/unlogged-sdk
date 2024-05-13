@@ -3,8 +3,8 @@ package io.unlogged;
 
 public class Constants {
 
-    private Constants() {}
-
-    public static final String AGENT_VERSION = "0.4.5";
-	public static final String METHOD_DEFAULT_NAME = "default value";
+    public static final String AGENT_VERSION = Constants.class.getPackage().getImplementationVersion();
+    public static final String METHOD_DEFAULT_NAME = "default value";
+    private Constants() {
+    }
 }

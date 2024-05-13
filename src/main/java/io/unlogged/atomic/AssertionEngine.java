@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class AssertionEngine {
 
-    private static final ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapper();
+    private static final ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapperReactive();
 
     public static AssertionResult executeAssertions(
             AtomicAssertion assertion, JsonNode responseNode

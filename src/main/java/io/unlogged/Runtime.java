@@ -4,10 +4,7 @@ import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.IErrorLogger;
-import io.unlogged.logging.IEventLogger;
-import io.unlogged.logging.Logging;
-import io.unlogged.logging.SimpleFileLogger;
+import io.unlogged.logging.*;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
@@ -49,6 +46,11 @@ public class Runtime {
     private Runtime(String args) {
 //        System.err.println("UnloggedInit1" );
 
+        if ("true".equals(System.getProperty("UNLOGGED_DISABLE", "false"))) {
+            logger = Logging.initialiseDiscardLogger();
+            return;
+        }
+
         try {
             WeaveParameters weaveParameters = new WeaveParameters(args);
 
@@ -69,8 +71,7 @@ public class Runtime {
             }
 
             ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION,
-                            agentServerPort);
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, 0);
 
             httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
@@ -160,12 +161,11 @@ public class Runtime {
             }
 
 
-            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(logger.getObjectMapper(), logger));
+            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(
+                    ObjectMapperFactory.createObjectMapperReactive(), logger));
 
             java.lang.Runtime.getRuntime()
-                    .addShutdownHook(new Thread(() -> {
-                        close();
-                    }));
+                    .addShutdownHook(new Thread(this::close));
 
 
         } catch (Throwable thx) {

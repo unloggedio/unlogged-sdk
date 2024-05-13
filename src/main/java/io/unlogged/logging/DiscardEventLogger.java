@@ -76,14 +76,10 @@ public class DiscardEventLogger implements IEventLogger {
     }
 
     @Override
-    public void setRecording(boolean b) {
+    public void setRecordingPaused(boolean b) {
 
     }
 
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return objectMapper;
-    }
 
     @Override
     public ClassLoader getTargetClassLoader() {

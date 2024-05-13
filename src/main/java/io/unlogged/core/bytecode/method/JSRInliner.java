@@ -22,7 +22,7 @@ public class JSRInliner extends JSRInlinerAdapter {
 	 */
 	public JSRInliner(MethodTransformer mv, int access, String name, String desc, String signature, String[] exceptions) {
 		// The second parameter is null so that the object delays the execution of the given MethodTransformer
-		super(Opcodes.ASM5, null, access, name, desc, signature, exceptions);
+		super(Opcodes.ASM9, null, access, name, desc, signature, exceptions);
 		this.analysis = mv;
 	}
 	

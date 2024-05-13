@@ -13,7 +13,7 @@ import java.util.Map;
 public class AgentCommandServer extends NanoHTTPD {
 
     private final ServerMetadata serverMetadata;
-    ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapper();
+    ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapperReactive();
     private AgentCommandExecutor agentCommandExecutor;
     private String pingResponseBody;
 

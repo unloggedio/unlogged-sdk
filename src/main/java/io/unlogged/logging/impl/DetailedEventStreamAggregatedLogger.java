@@ -65,12 +65,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
-            ObjectMapperFactory::createObjectMapper);
+            ObjectMapperFactory::createObjectMapperReactive);
     private final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+    private final Map<Integer, Integer> firstProbeId = new HashMap<>();
     InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
             new DefaultCharArrayNodeFactory());
     private ClassLoader targetClassLoader;
-    private final Map<Integer, Integer> firstProbeId = new HashMap<>();
 
     /**
      * Create an instance of logging object.
@@ -547,13 +547,10 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     }
 
     @Override
-    public void setRecording(boolean b) {
+    public void setRecordingPaused(boolean b) {
         isRecording.set(b);
     }
 
-    public ObjectMapper getObjectMapper() {
-        return objectMapper.get();
-    }
 
     @Override
     public ClassLoader getTargetClassLoader() {

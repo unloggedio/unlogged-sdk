@@ -148,7 +148,8 @@ public class MockHandler {
 
                                 returnValueInstance = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
                                         returnParameter.getClassName(), returnParameter.getValue(),
-                                        invokedMethod.getReturnType()
+                                        invokedMethod.getReturnType(),
+                                        objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                                 );
                             } catch (Exception e) {
                                 e.printStackTrace();
