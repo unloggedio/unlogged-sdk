@@ -37,14 +37,14 @@ def compile_target (target):
 	if target.projectType == "Normal":
 		#Ensure reactive frameworks are not used on Non reactive repos
 		if "io.projectreactor" in dependencies:
-			raise Exception("Found reactor core in a Non reactive project " + target.test_repo_name)
+			raise Exception("Found reactor core in a Non reactive project " + target.test_repo_name + " - Failing")
 		else :
-			print("Reactor core not found on NonReactive project")
+			print("Reactor core not found on NonReactive project - Passsing")
 	else:
 		if "io.projectreactor" in dependencies:
-			print("Reactor core found on Reactive project")
+			print("Reactor core found on Reactive project - Passing")
 		else :
-			raise Exception("Reactor core not found in reactive project " + target.test_repo_name)
+			raise Exception("Reactor core not found in reactive project " + target.test_repo_name + " - Failing")
 
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
