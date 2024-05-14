@@ -2,6 +2,7 @@ import os
 import sys
 from Target import Target
 from configEnum import buildSystem
+import subprocess
 
 def compile_target (target):
 	
@@ -24,6 +25,27 @@ def compile_target (target):
 	else:
 		raise Exception("Target did not compiled: " + target.test_repo_name)
 
+	os_cwd = os.getcwd()
+	program = 'mvn'
+	arg = 'dependency:tree'
+	if target.buildSystem == buildSystem.GRADLE:
+		program = 'gradle'
+		arg = 'dependencies'
+
+	dependencies = subprocess.run([program, arg], cwd = os_cwd + "/" + target.test_repo_name,capture_output=True, text=True).stdout
+
+	if target.projectType == "Normal":
+		#Ensure reactive frameworks are not used on Non reactive repos
+		if "io.projectreactor" in dependencies:
+			raise Exception("Found reactor core in a Non reactive project " + target.test_repo_name + " - Failing")
+		else :
+			print("Reactor core not found on NonReactive project - Passsing")
+	else:
+		if "io.projectreactor" in dependencies:
+			print("Reactor core found on Reactive project - Passing")
+		else :
+			raise Exception("Reactor core not found in reactive project " + target.test_repo_name + " - Failing")
+
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
@@ -38,14 +60,16 @@ if __name__=="__main__":
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN
+			buildSystem.MAVEN,
+			projectType="Normal"
 		),
 		Target(
 			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
 			"unlogged-spring-webflux-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-			buildSystem.MAVEN
+			buildSystem.MAVEN,
+			projectType="Reactive"
 		)
 	]
 		
