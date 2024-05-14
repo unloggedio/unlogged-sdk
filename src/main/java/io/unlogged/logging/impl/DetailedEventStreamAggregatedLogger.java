@@ -44,6 +44,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     public static final String FAILED_TO_RECORD_MESSAGE =
             "{\"error\": \"failed to serialize object\", \"message\":\"";
     public static final Duration ONE_MILLISECOND = Duration.ofMillis(1);
+    private static boolean isReactive = false;
     //    private final FSTConfiguration fstObjectMapper;
     private final AggregatedFileLogger aggregatedLogger;
     //    private final TypeIdAggregatedStreamMap typeToId;
@@ -86,6 +87,11 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //        this.includedPackage = includedPackage;
         this.aggregatedLogger = aggregatedLogger;
         this.objectIdMap = objectIdMap;
+        try {
+            Class.forName("reactor.core.publisher.Mono");
+            isReactive = true;
+        } catch (Exception e) {
+        }
 
         initSkipPackages();
 
@@ -249,7 +255,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                    objectMapper.writeValue(outputStream, value);
 //                    outputStream.flush();
 //                    bytes = outputStream.toByteArray();
-                    if (value instanceof Mono) {
+                    if (isReactive && value instanceof Mono) {
                         final long newValueId = System.nanoTime();
                         Mono<?> value1 = (Mono<?>) value;
                         buffer.clear();
@@ -293,7 +299,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
                                 });
 //                        return value1;
-                    } else if (value instanceof Flux) {
+                    } else if (isReactive && value instanceof Flux) {
                         final long newValueId = System.nanoTime();
                         Flux<?> fluxValue = (Flux<?>) value;
                         buffer.clear();
