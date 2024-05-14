@@ -32,7 +32,7 @@ def compile_target (target):
 		program = 'gradle'
 		arg = 'dependencies'
 
-	dependencies = subprocess.run([program, arg], cwd = os_cwd + target.test_repo_name,capture_output=True, text=True).stdout
+	dependencies = subprocess.run([program, arg], cwd = os_cwd + "/" + target.test_repo_name,capture_output=True, text=True).stdout
 
 	if target.projectType == "Normal":
 		#Ensure reactive frameworks are not used on Non reactive repos
