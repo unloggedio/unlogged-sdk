@@ -1033,7 +1033,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             return methodReturnValue;
         } else {
             try {
-                if (methodReturnValue instanceof Flux) {
+                if (methodReturnValue.getClass().getCanonicalName().startsWith("reactor.core.publisher.Flux")) {
                     Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
 
                     CountDownLatch cdl = new CountDownLatch(1);
@@ -1067,7 +1067,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     cdl.await();
                     return returnValue.toString();
 
-                } else if (methodReturnValue instanceof Mono) {
+                } else if (methodReturnValue.getClass().getCanonicalName().startsWith("reactor.core.publisher.Mono")) {
                     Mono<?> returnedMono = (Mono<?>) methodReturnValue;
                     CountDownLatch cdl = new CountDownLatch(1);
                     StringBuffer returnValue = new StringBuffer();
