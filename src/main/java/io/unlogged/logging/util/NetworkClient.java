@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -60,7 +62,7 @@ public class NetworkClient {
         return hostname;
     }
 
-    public void sendPOSTRequest(String url, String attachmentFilePath) throws IOException {
+    public void sendPOSTRequest(String url, String attachmentFilePath, String loggerPath) throws IOException {
 
         String charset = "UTF-8";
         Map<String, String> headers = new HashMap<>();
@@ -71,9 +73,10 @@ public class NetworkClient {
         try {
             form = new MultipartUtility(url, charset, headers);
 
-            File binaryFile = new File(attachmentFilePath);
-            form.addFilePart("file", binaryFile);
-
+			List<File> listUpload = new ArrayList<>();
+			listUpload.add(new File(attachmentFilePath));
+			listUpload.add(new File(loggerPath));
+            form.addFilePart("file", listUpload);
             String response = form.finish();
         } catch (IOException e) {
             errorLogger.log("failed to upload - " + e.getMessage());
@@ -81,10 +84,10 @@ public class NetworkClient {
         }
     }
 
-    public void uploadFile(String filePath) throws IOException {
+    public void uploadFile(String filePath, String loggerPath) throws IOException {
 //        System.out.println("[unlogged] File to upload to [" + serverUrl + "]: " + filePath);
         long start = System.currentTimeMillis();
-        sendPOSTRequest(this.serverUrl + "/session/uploadArchive?sessionId=" + sessionId, filePath);
+        sendPOSTRequest(this.serverUrl + "/session/uploadArchive?sessionId=" + sessionId, filePath, loggerPath);
         long end = System.currentTimeMillis();
         long seconds = (end - start) / 1000;
         if (seconds > 2) {
