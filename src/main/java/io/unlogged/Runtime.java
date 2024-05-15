@@ -71,21 +71,6 @@ public class Runtime {
                 }
             }
 
-			String hostname = null;
-			InetAddress inetAddress;
-			try {
-				inetAddress = InetAddress.getLocalHost();
-				hostname = inetAddress.getHostName();
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			}
-
-            ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname, 0);
-
-            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
-
-
             File outputDir = new File(weaveParameters.getOutputDirname());
             if (!outputDir.exists()) {
                 outputDir.mkdirs();
@@ -104,6 +89,20 @@ public class Runtime {
             }
 
             errorLogger = new SimpleFileLogger(outputDir);
+
+			String hostname = null;
+			InetAddress inetAddress;
+			try {
+				inetAddress = InetAddress.getLocalHost();
+				hostname = inetAddress.getHostName();
+			} catch (UnknownHostException e) {
+				errorLogger.log(e.toString());
+			}
+
+            ServerMetadata serverMetadata =
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname, 0);
+
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
             errorLogger.log("Java version: " + System.getProperty("java.version"));
             errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
