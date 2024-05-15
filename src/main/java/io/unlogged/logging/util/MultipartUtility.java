@@ -105,36 +105,34 @@ public class MultipartUtility {
      * @param uploadFile a File to be uploaded
      * @throws IOException on failure to copy file
      */
-    public void addFilePart(String fieldName, List<File> listUpload)
+    public void addFilePart(String fieldName, File uploadFile)
             throws IOException {
 
-		for (File localFile: listUpload) {
-			String fileName = localFile.getName();
-			writer.append("--" + boundary).append(LINE_FEED);
-			writer.append(
-							"Content-Disposition: form-data; name=\"" + fieldName
-									+ "\"; filename=\"" + fileName + "\"")
-					.append(LINE_FEED);
-			writer.append(
-							"Content-Type: "
-									+ URLConnection.guessContentTypeFromName(fileName))
-					.append(LINE_FEED);
-			writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
-			writer.append(LINE_FEED);
-			writer.flush();
-	
-			FileInputStream inputStream = new FileInputStream(localFile);
-			byte[] buffer = new byte[4096];
-			int bytesRead = -1;
-			while ((bytesRead = inputStream.read(buffer)) != -1) {
-				outputStream.write(buffer, 0, bytesRead);
-			}
-			outputStream.flush();
-			inputStream.close();
-	
-			writer.append(LINE_FEED);
-			writer.flush();
+		String fileName = uploadFile.getName();
+		writer.append("--" + boundary).append(LINE_FEED);
+		writer.append(
+						"Content-Disposition: form-data; name=\"" + fieldName
+								+ "\"; filename=\"" + fileName + "\"")
+				.append(LINE_FEED);
+		writer.append(
+						"Content-Type: "
+								+ URLConnection.guessContentTypeFromName(fileName))
+				.append(LINE_FEED);
+		writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
+		writer.append(LINE_FEED);
+		writer.flush();
+
+		FileInputStream inputStream = new FileInputStream(uploadFile);
+		byte[] buffer = new byte[4096];
+		int bytesRead = -1;
+		while ((bytesRead = inputStream.read(buffer)) != -1) {
+			outputStream.write(buffer, 0, bytesRead);
 		}
+		outputStream.flush();
+		inputStream.close();
+
+		writer.append(LINE_FEED);
+		writer.flush();
     }
 
     /**

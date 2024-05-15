@@ -72,12 +72,10 @@ public class NetworkClient {
         MultipartUtility form = null;
         try {
             form = new MultipartUtility(url, charset, headers);
-
-			List<File> listUpload = new ArrayList<>();
-			listUpload.add(new File(attachmentFilePath));
-			listUpload.add(new File(loggerPath));
-            form.addFilePart("file", listUpload);
-            String response = form.finish();
+            form.addFilePart("file", new File(attachmentFilePath));
+            form.addFilePart("file", new File(loggerPath));
+			
+			String response = form.finish();
         } catch (IOException e) {
             errorLogger.log("failed to upload - " + e.getMessage());
             throw e;
