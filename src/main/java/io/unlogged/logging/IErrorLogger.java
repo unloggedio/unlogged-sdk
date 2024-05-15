@@ -22,4 +22,10 @@ public interface IErrorLogger {
 	 * This method is called when the program is terminated.
 	 */
 	void close();
+
+	/**
+	 * This method returns the path of log file
+	 * @return path of log file
+	 */
+	public String getPath();
 }
