@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>LOG_UPLOAD_3</version>
+    <version>LOG_UPLOAD</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
