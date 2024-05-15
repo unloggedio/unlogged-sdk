@@ -278,7 +278,7 @@ public class RawFileCollector implements Runnable {
                         errorLogger.log(e);
                     }
 
-                    if (networkClient != null && !"".equals(networkClient.getServerUrl())) {
+                    if (networkClient != null && !networkClient.getServerUrl().equals("") && !networkClient.getServerUrl().equals("null")) {
                         File archiveFile = archivedIndexWriterOld.getArchiveFile();
                         try {
                             errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
