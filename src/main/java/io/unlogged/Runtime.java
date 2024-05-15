@@ -17,6 +17,8 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -69,8 +71,17 @@ public class Runtime {
                 }
             }
 
+			String hostname = null;
+			InetAddress inetAddress;
+			try {
+				inetAddress = InetAddress.getLocalHost();
+				hostname = inetAddress.getHostName();
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+
             ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, 0);
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname, 0);
 
             httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 

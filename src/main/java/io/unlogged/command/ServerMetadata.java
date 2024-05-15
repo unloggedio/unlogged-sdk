@@ -1,7 +1,5 @@
 package io.unlogged.command;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.TimeZone;
 
 public class ServerMetadata {
@@ -16,21 +14,13 @@ public class ServerMetadata {
 	private String hostname;
 	private long createdAt;
 
-    public ServerMetadata(String includePackageName, String agentVersion, int agentServerPort) {
+    public ServerMetadata(String includePackageName, String agentVersion, String hostname, int agentServerPort) {
         this.includePackageName = includePackageName;
         this.agentVersion = agentVersion;
 		this.createdAt = System.currentTimeMillis() / 1000L;
         this.agentServerPort = agentServerPort;
         this.agentServerUrl = "http://localhost:" + String.valueOf(agentServerPort);
-
-		InetAddress inetAddress;
-		try {
-			inetAddress = InetAddress.getLocalHost();
-			this.hostname = inetAddress.getHostName();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			this.hostname = null;
-		}
+		this.hostname = hostname;
     }
 
     @Override
