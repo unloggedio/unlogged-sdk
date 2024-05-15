@@ -17,7 +17,7 @@ public class ServerMetadata {
     public ServerMetadata(String includePackageName, String agentVersion, String hostname, int agentServerPort) {
         this.includePackageName = includePackageName;
         this.agentVersion = agentVersion;
-		this.createdAt = System.currentTimeMillis() / 1000L;
+		this.createdAt = System.currentTimeMillis();
         this.agentServerPort = agentServerPort;
         this.agentServerUrl = "http://localhost:" + String.valueOf(agentServerPort);
 		this.hostname = hostname;
