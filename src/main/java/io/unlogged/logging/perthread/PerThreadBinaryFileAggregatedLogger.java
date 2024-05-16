@@ -55,11 +55,11 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         bytes[29] = 0;
         return bytes;
     });
-    private final ThreadLocal<byte[]> threadLocalByteBuffer2 = ThreadLocal.withInitial(() -> {
-        byte[] bytes = new byte[29];
-        bytes[0] = 4;
-        return bytes;
-    });
+//    private final ThreadLocal<byte[]> threadLocalByteBuffer2 = ThreadLocal.withInitial(() -> {
+//        byte[] bytes = new byte[29];
+//        bytes[0] = 4;
+//        return bytes;
+//    });
     //    private final Map<Integer, BloomFilter<Long>> valueIdFilterSet = new HashMap<>();
 //    private final Map<Integer, BloomFilter<Integer>> probeIdFilterSet = new HashMap<>();
 //    private final OffLoadTaskPayload[] TaskQueueArray = new OffLoadTaskPayload[TASK_QUEUE_CAPACITY];

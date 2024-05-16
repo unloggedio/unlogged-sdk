@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 
@@ -350,7 +352,12 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 //                        return fluxValue;
                     } else if (value instanceof Future) {
                         Future<?> futureValue = (Future<?>) value;
-                        bytes = objectMapper.get().writeValueAsBytes(futureValue.get());
+                        try {
+                            Object value1 = futureValue.get(100, TimeUnit.MILLISECONDS);
+                            bytes = objectMapper.get().writeValueAsBytes(value1);
+                        } catch (TimeoutException te) {
+                            bytes = objectMapper.get().writeValueAsBytes("{\"message\": \"failed to read future\"}");
+                        }
                     } else if (value instanceof byte[]) {
                         bytes = (byte[]) value;
                     } else {
