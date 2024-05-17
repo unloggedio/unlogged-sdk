@@ -2,16 +2,13 @@ name: compile_target
 
 on:
   push:
-    branches: [main]
+    branches: [testing-akj]
   pull_request:
-    branches: [main]
+    branches: [testing-akj]
 
 jobs:
   build: 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java-version: ['8','11', '17', '21' ]
 
     steps:
       # clone the unlogged-sdk project
@@ -42,4 +39,4 @@ jobs:
           pip install -r ./src/test/python/requirements.txt
       - name: Run testing script
         run: |
-          python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }} ${{ matrix.java-version }}
+          python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }}

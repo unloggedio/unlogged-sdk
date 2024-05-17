@@ -14,7 +14,7 @@ class ReplayTest:
 		self.result_ideal = result_ideal
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response = [], projectType = "Normal"):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response = [], projectType = "Normal", branch_name="main"):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_dependency_path = rel_dependency_path
@@ -22,6 +22,7 @@ class Target:
 		self.buildSystem = buildSystem
 		self.test_response = test_response
 		self.projectType = projectType
+		self.branch_name = branch_name
 
 	def modify_pom(self, sdk_version):
 

@@ -7,7 +7,8 @@ import subprocess
 def compile_target (target):
 	
 	# clone target
-	os.system("git clone " + target.test_repo_url)
+	clone_command = f"git clone --branch {target.branch_name} {target.test_repo_url}"
+	os.system(clone_command)
 	
 	# modify build system file
 	target.modify_main()
@@ -49,35 +50,39 @@ def compile_target (target):
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
-def convert_version_name_to_branch_name(version):
-    if version == '17':
-        return 'main'
-    return f"java{version}"
 
 if __name__=="__main__":
 
 	sdk_version = sys.argv[1]
-	java_branch_name = convert_version_name_to_branch_name(sys.argv[2])
 
-	target_list = [
-		#unlogged-spring-maven-demo
-		Target(
-			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-maven-demo",
-			"unlogged-spring-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN,
-			projectType="Normal"
-		),
-		Target(
-			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-			"unlogged-spring-webflux-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-			buildSystem.MAVEN,
-			projectType="Reactive"
-		)
-	]
+	# List of branch names to compile
+	branch_names = ["java8", "java11", "java21", "main"]
+
+    target_list = []
+
+    for branch_name in branch_names:
+        target_list.append(
+        Target(
+        			"https://github.com/unloggedio/unlogged-spring-maven-demo",
+        			"unlogged-spring-maven-demo",
+        			"/pom.xml",
+        			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+        			buildSystem.MAVEN,
+        			projectType="Normal",
+        			branch_name=branch_name
+        		)
+        	)
+        target_list.append(
+            Target(
+            			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+            			"unlogged-spring-webflux-maven-demo",
+            			"/pom.xml",
+            			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+            			buildSystem.MAVEN,
+            			projectType="Reactive",
+            			branch_name=branch_name
+            		)
+            	)
 		
 	for local_target in target_list:
 		compile_target(local_target)
