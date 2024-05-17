@@ -17,9 +17,12 @@ def check_java_version(expected_version):
     version = version_output.split('"')[1]
     print(f"Java version Akshat {version}")
 
-#     version = version.split('.')[0]
+    version = version[:2]
 
-    if not version.startswith(expected_version):
+    if version == "1.8":
+        version = "8"
+
+    if not version == expected_version:
         raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
     print(f"Java version {version} matches expected version {expected_version} - Passing")
 
