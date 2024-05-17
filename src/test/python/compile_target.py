@@ -103,10 +103,7 @@ if __name__ == "__main__":
 
     # List of branch names to compile
     branch_java_version_map = {
-            "java8": "8",
-            "java11": "11",
-            "java21": "21",
-            "main": "17"
+            "java11": "11"
         }
     target_list = []
 
