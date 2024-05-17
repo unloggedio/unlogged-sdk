@@ -19,35 +19,39 @@ from configEnum import buildSystem
 #         for version in java_versions:
 #             print(f"- {version}")
 
-def set_java_version(expected_version):
-    try:
-        # Check if the expected version of Java is already set
-        current_version_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
-        current_version = current_version_output.stderr.split('\n')[0].split('"')[1]
+def set_java_home(java_home):
+    os.environ["JAVA_HOME"] = java_home
+    os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
 
-        if current_version.startswith(expected_version):
-            print(f"Java version {expected_version} is already set.")
-            return
-
-        # Use update-alternatives to set the Java version
-        update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
-        print(f"Executing update command: {update_command}")
-        update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
-
-        if update_result.returncode != 0:
-            raise Exception(f"Failed to set Java version to {expected_version}. Command output: {update_result.stderr}")
-
-        # Verify the change
-        verification_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
-        new_version = verification_output.stderr.split('\n')[0].split('"')[1]
-
-        if not new_version.startswith(expected_version):
-            raise Exception(f"Failed to set Java version to {expected_version}. Current version: {new_version}")
-
-        print(f"Java version set to {expected_version} successfully.")
-
-    except Exception as e:
-        raise Exception(f"Failed to set Java version to {expected_version}: {str(e)}")
+# def set_java_version(expected_version):
+#     try:
+#         # Check if the expected version of Java is already set
+#         current_version_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
+#         current_version = current_version_output.stderr.split('\n')[0].split('"')[1]
+#
+#         if current_version.startswith(expected_version):
+#             print(f"Java version {expected_version} is already set.")
+#             return
+#
+#         # Use update-alternatives to set the Java version
+#         update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
+#         print(f"Executing update command: {update_command}")
+#         update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
+#
+#         if update_result.returncode != 0:
+#             raise Exception(f"Failed to set Java version to {expected_version}. Command output: {update_result.stderr}")
+#
+#         # Verify the change
+#         verification_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
+#         new_version = verification_output.stderr.split('\n')[0].split('"')[1]
+#
+#         if not new_version.startswith(expected_version):
+#             raise Exception(f"Failed to set Java version to {expected_version}. Current version: {new_version}")
+#
+#         print(f"Java version set to {expected_version} successfully.")
+#
+#     except Exception as e:
+#         raise Exception(f"Failed to set Java version to {expected_version}: {str(e)}")
 
 def check_java_version(expected_version):
     result = subprocess.run(["java", "-version"], capture_output=True, text=True)
@@ -70,9 +74,11 @@ def compile_target(target, sdk_version):
         raise Exception(f"Failed to clone repository: {result.stderr}")
 
 
-    expected_java_version = target.java_version
-    set_java_version(expected_java_version)
-    check_java_version(expected_java_version)
+    set_java_home(f"/usr/lib/jvm/temurin-{target.java_version}-jdk-amd64")
+    check_java_version(target.java_version)
+#     expected_java_version = target.java_version
+#     set_java_version(expected_java_version)
+#     check_java_version(expected_java_version)
 
     # Modify build system file
     target.modify_main()
