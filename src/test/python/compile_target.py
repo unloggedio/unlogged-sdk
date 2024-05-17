@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 buildSystem.MAVEN,
                 projectType="Normal",
                 branch_name=branch_name,
-                java_version=branch_java_versions[branch_name]
+                java_version=branch_java_version_map[branch_name]
             )
         )
         target_list.append(
@@ -132,7 +132,7 @@ if __name__ == "__main__":
                 buildSystem.MAVEN,
                 projectType="Reactive",
                 branch_name=branch_name,
-                java_version=branch_java_versions[branch_name]
+                java_version=branch_java_version_map[branch_name]
             )
         )
 
