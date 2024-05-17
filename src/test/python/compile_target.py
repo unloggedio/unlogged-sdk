@@ -60,29 +60,30 @@ if __name__=="__main__":
 
     target_list = []
 
+   
     for branch_name in branch_names:
         target_list.append(
-        Target(
-        			"https://github.com/unloggedio/unlogged-spring-maven-demo",
-        			"unlogged-spring-maven-demo",
-        			"/pom.xml",
-        			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-        			buildSystem.MAVEN,
-        			projectType="Normal",
-        			branch_name=branch_name
-        		)
-        	)
+            Target(
+                "https://github.com/unloggedio/unlogged-spring-maven-demo", 
+                "unlogged-spring-maven-demo", 
+                "/pom.xml", 
+                "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java", 
+                buildSystem.MAVEN, 
+                projectType="Normal", 
+                branch_name=branch_name 
+            ) 
+        ) 
         target_list.append(
             Target(
-            			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-            			"unlogged-spring-webflux-maven-demo",
-            			"/pom.xml",
-            			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-            			buildSystem.MAVEN,
-            			projectType="Reactive",
-            			branch_name=branch_name
-            		)
-            	)
-		
-	for local_target in target_list:
-		compile_target(local_target)
+                "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo", 
+                "unlogged-spring-webflux-maven-demo", 
+                "/pom.xml", 
+                "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java", 
+                buildSystem.MAVEN, 
+                projectType="Reactive", 
+                branch_name=branch_name 
+            ) 
+        ) 
+        
+    for local_target in target_list: 
+        compile_target(local_target, sdk_version) 
