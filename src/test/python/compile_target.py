@@ -129,7 +129,6 @@ if __name__ == "__main__":
 #     print_installed_java_versions()
 
     branch_java_version_map = {
-        "java8": "8",
         "java11": "11",
         "java21": "21",
         "main": "17"
