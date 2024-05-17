@@ -50,7 +50,7 @@ def compile_target (target):
 	os.system("rm -rf " + target.test_repo_name)
 
 def convert_version_name_to_branch_name(version):
-    if version == '19':
+    if version == '17':
         return 'main'
     return f"java{version}"
 
