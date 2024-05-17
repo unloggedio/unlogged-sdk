@@ -6,7 +6,7 @@ from configEnum import buildSystem
 
 
 def print_installed_java_versions():
-    jvm_path = "/usr/lib/jvm/"
+    jvm_path = "/usr/lib/jvm/temurin-8-jdk-amd64/"
     if not os.path.exists(jvm_path):
         print(f"Akshat No Java installations found at {jvm_path}")
         return
@@ -30,7 +30,7 @@ def set_java_version(expected_version):
             return
 
         # Use update-alternatives to set the Java version
-        update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java 1"
+        update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
         print(f"Executing update command: {update_command}")
         update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
 
