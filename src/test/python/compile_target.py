@@ -32,7 +32,7 @@ def set_java_version(expected_version):
         # Use update-alternatives to set the Java version
         update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
         print(f"Executing update command: {update_command}")
-        update_result = subprocess.run(update_command, capture_output=True, text=True)
+        update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
 
         if update_result.returncode != 0:
             raise Exception(f"Failed to set Java version to {expected_version}. Command output: {update_result.stderr}")
@@ -118,7 +118,14 @@ def compile_target(target, sdk_version):
 
 if __name__ == "__main__":
     sdk_version = sys.argv[1]
-    print_installed_java_versions()
+
+    command = ["ls", "/usr/lib/jvm"]
+
+    # Run the command
+    result = subprocess.run(command, capture_output=True, text=True)
+    print("Output Akshat 123:")
+    print(result.stdout)
+#     print_installed_java_versions()
 
     branch_java_version_map = {
         "java8": "8",
