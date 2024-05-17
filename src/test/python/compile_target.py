@@ -11,6 +11,7 @@ def check_java_version(expected_version):
 
     version_output = result.stderr.split('\n')[0]
     version = version_output.split('"')[1]
+    version = version.split('.')[0]
 
     if not version.startswith(expected_version):
         raise Exception(f"Java version {version} does not match expected version {expected_version}")
@@ -24,7 +25,7 @@ def compile_target(target, sdk_version):
         raise Exception(f"Failed to clone repository: {result.stderr}")
 
     branch_java_version_map = {
-            "java8": "1.8",
+            "java8": "8",
             "java11": "11",
             "java21": "21",
             "main": "17"  # Assuming main branch uses Java 11, adjust as needed
