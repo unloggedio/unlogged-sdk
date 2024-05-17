@@ -4,54 +4,9 @@ import subprocess
 from Target import Target
 from configEnum import buildSystem
 
-
-# def print_installed_java_versions():
-#     jvm_path = "/usr/lib/jvm/"
-#     if not os.path.exists(jvm_path):
-#         print(f"Akshat No Java installations found at {jvm_path}")
-#         return
-#
-#     java_versions = os.listdir(jvm_path)
-#     if not java_versions:
-#         print(f"Akshat No Java installations found in {jvm_path}")
-#     else:
-#         print("Akshat Installed Java versions:")
-#         for version in java_versions:
-#             print(f"- {version}")
-
 def set_java_home(java_home):
     os.environ["JAVA_HOME"] = java_home
     os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
-
-# def set_java_version(expected_version):
-#     try:
-#         # Check if the expected version of Java is already set
-#         current_version_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
-#         current_version = current_version_output.stderr.split('\n')[0].split('"')[1]
-#
-#         if current_version.startswith(expected_version):
-#             print(f"Java version {expected_version} is already set.")
-#             return
-#
-#         # Use update-alternatives to set the Java version
-#         update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
-#         print(f"Executing update command: {update_command}")
-#         update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
-#
-#         if update_result.returncode != 0:
-#             raise Exception(f"Failed to set Java version to {expected_version}. Command output: {update_result.stderr}")
-#
-#         # Verify the change
-#         verification_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
-#         new_version = verification_output.stderr.split('\n')[0].split('"')[1]
-#
-#         if not new_version.startswith(expected_version):
-#             raise Exception(f"Failed to set Java version to {expected_version}. Current version: {new_version}")
-#
-#         print(f"Java version set to {expected_version} successfully.")
-#
-#     except Exception as e:
-#         raise Exception(f"Failed to set Java version to {expected_version}: {str(e)}")
 
 def check_java_version(expected_version):
     result = subprocess.run(["java", "-version"], capture_output=True, text=True)
@@ -62,7 +17,7 @@ def check_java_version(expected_version):
     version = version_output.split('"')[1]
     print(f"Java version Akshat {version}")
 
-    version = version.split('.')[0]
+#     version = version.split('.')[0]
 
     if not version.startswith(expected_version):
         raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
@@ -76,11 +31,9 @@ def compile_target(target, sdk_version):
         raise Exception(f"Failed to clone repository: {result.stderr}")
 
 
-    set_java_home(f"/usr/lib/jvm/temurin-{target.java_version}-jdk-amd64")
-    check_java_version(target.java_version)
-#     expected_java_version = target.java_version
-#     set_java_version(expected_java_version)
-#     check_java_version(expected_java_version)
+    expected_java_version = target.java_version
+    set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
+    check_java_version(expected_java_version)
 
     # Modify build system file
     target.modify_main()
@@ -126,7 +79,6 @@ def compile_target(target, sdk_version):
 
 if __name__ == "__main__":
     sdk_version = sys.argv[1]
-#     print_installed_java_versions()
 
     branch_java_version_map = {
         "java11": "11",
