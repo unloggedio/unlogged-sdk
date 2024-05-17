@@ -5,10 +5,10 @@ from configEnum import buildSystem
 import subprocess
 
 def compile_target (target):
-	
+
 	# clone target
 	os.system("git clone " + target.test_repo_url)
-	
+
 	# modify build system file
 	target.modify_main()
 	if (target.buildSystem == buildSystem.MAVEN):
@@ -17,7 +17,7 @@ def compile_target (target):
 	elif (target.buildSystem == buildSystem.GRADLE):
 		target.modify_gradle(sdk_version)
 		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
-	
+
 	# target compile
 	response_code = os.system(compile_command)
 	if (response_code == 0):
@@ -49,20 +49,14 @@ def compile_target (target):
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
-def convert_version_name_to_branch_name(version):
-    if version == '17':
-        return 'main'
-    return f"java{version}"
 
 if __name__=="__main__":
 
 	sdk_version = sys.argv[1]
-	java_branch_name = convert_version_name_to_branch_name(sys.argv[2])
-
 	target_list = [
 		#unlogged-spring-maven-demo
 		Target(
-			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-maven-demo",
+			"https://github.com/unloggedio/unlogged-spring-maven-demo",
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
@@ -70,7 +64,7 @@ if __name__=="__main__":
 			projectType="Normal"
 		),
 		Target(
-			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
 			"unlogged-spring-webflux-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
@@ -78,6 +72,6 @@ if __name__=="__main__":
 			projectType="Reactive"
 		)
 	]
-		
+
 	for local_target in target_list:
 		compile_target(local_target)
