@@ -30,9 +30,7 @@ def set_java_version(expected_version):
             return
 
         # Use update-alternatives to set the Java version
-        java_executable = f"/usr/lib/jvm/{expected_version}/bin/java"
-        update_command = f"sudo update-alternatives --set java {java_executable}"
-#         update_command = f"sudo update-alternatives --set java /usr/lib/jvm/java-{expected_version}-openjdk-amd64/bin/java"
+        update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
         subprocess.run(update_command, shell=True, check=True, capture_output=True, text=True)
 
         # Verify the change
