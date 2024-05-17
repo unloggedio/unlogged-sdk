@@ -49,14 +49,20 @@ def compile_target (target):
 	# delete target
 	os.system("rm -rf " + target.test_repo_name)
 
+def convert_version_name_to_branch_name(version):
+    if version == '17':
+        return 'main'
+    return f"java{version}"
 
 if __name__=="__main__":
 
 	sdk_version = sys.argv[1]
+	java_branch_name = convert_version_name_to_branch_name(sys.argv[2])
+
 	target_list = [
 		#unlogged-spring-maven-demo
 		Target(
-			"https://github.com/unloggedio/unlogged-spring-maven-demo",
+			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-maven-demo",
 			"unlogged-spring-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
@@ -64,7 +70,7 @@ if __name__=="__main__":
 			projectType="Normal"
 		),
 		Target(
-			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+			f"-b {java_branch_name} https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
 			"unlogged-spring-webflux-maven-demo",
 			"/pom.xml",
 			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
