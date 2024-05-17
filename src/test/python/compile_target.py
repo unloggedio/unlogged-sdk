@@ -6,7 +6,7 @@ from configEnum import buildSystem
 
 
 def print_installed_java_versions():
-    jvm_path = "/usr/lib/jvm/temurin-8-jdk-amd64/"
+    jvm_path = "/usr/lib/jvm/temurin-8-jdk-amd64/bin/"
     if not os.path.exists(jvm_path):
         print(f"Akshat No Java installations found at {jvm_path}")
         return
