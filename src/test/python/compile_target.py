@@ -4,6 +4,33 @@ import subprocess
 from Target import Target
 from configEnum import buildSystem
 
+def set_java_version(expected_version):
+    try:
+        # Check if the expected version of Java is already set
+        current_version_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
+        current_version = current_version_output.stderr.split('\n')[0].split('"')[1]
+
+        if current_version.startswith(expected_version):
+            print(f"Java version {expected_version} is already set.")
+            return
+
+        # Use update-alternatives to set the Java version
+        update_command = f"sudo update-alternatives --set java /usr/lib/jvm/java-{expected_version}-openjdk-amd64/bin/java"
+        subprocess.run(update_command, shell=True, check=True, capture_output=True, text=True)
+
+        # Verify the change
+        verification_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
+        new_version = verification_output.stderr.split('\n')[0].split('"')[1]
+
+        if not new_version.startswith(expected_version):
+            raise Exception(f"Failed to set Java version to {expected_version}.")
+
+        print(f"Java version set to {expected_version} successfully.")
+
+    except Exception as e:
+        raise Exception(f"Failed to set Java version to {expected_version}: {str(e)}")
+
+
 def check_java_version(expected_version):
     result = subprocess.run(["java", "-version"], capture_output=True, text=True)
     if result.returncode != 0:
@@ -24,14 +51,9 @@ def compile_target(target, sdk_version):
     if result.returncode != 0:
         raise Exception(f"Failed to clone repository: {result.stderr}")
 
-    branch_java_version_map = {
-            "java8": "8",
-            "java11": "11",
-            "java21": "21",
-            "main": "17"  # Assuming main branch uses Java 11, adjust as needed
-        }
 
-    expected_java_version = branch_java_version_map.get(target.branch_name)
+    expected_java_version = target.java_version
+    set_java_version(expected_java_version)
     check_java_version(expected_java_version)
 
     # Modify build system file
@@ -80,10 +102,15 @@ if __name__ == "__main__":
     sdk_version = sys.argv[1]
 
     # List of branch names to compile
-    branch_names = ["java8", "java11", "java21", "main"]
+    branch_java_version_map = {
+            "java8": "8",
+            "java11": "11",
+            "java21": "21",
+            "main": "17"
+        }
     target_list = []
 
-    for branch_name in branch_names:
+    for branch_name in branch_java_version_map:
         target_list.append(
             Target(
                 "https://github.com/unloggedio/unlogged-spring-maven-demo",
@@ -92,7 +119,8 @@ if __name__ == "__main__":
                 "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
                 buildSystem.MAVEN,
                 projectType="Normal",
-                branch_name=branch_name
+                branch_name=branch_name,
+                java_version=branch_java_versions[branch_name]
             )
         )
         target_list.append(
@@ -103,7 +131,8 @@ if __name__ == "__main__":
                 "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
                 buildSystem.MAVEN,
                 projectType="Reactive",
-                branch_name=branch_name
+                branch_name=branch_name,
+                java_version=branch_java_versions[branch_name]
             )
         )
 
