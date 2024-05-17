@@ -5,7 +5,7 @@ from Target import Target
 from configEnum import buildSystem
 
 def check_java_version(expected_version):
-    result = subprocess.run(["java", "-version"], capture_output=True, text=True, shell=True)
+    result = subprocess.run(["java", "-version"], capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Failed to check Java version: {result.stderr}")
 
