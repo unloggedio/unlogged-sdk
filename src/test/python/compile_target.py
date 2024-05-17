@@ -31,20 +31,23 @@ def set_java_version(expected_version):
 
         # Use update-alternatives to set the Java version
         update_command = f"sudo update-alternatives --set java /usr/lib/jvm/temurin-{expected_version}-jdk-amd64/bin/java"
-        subprocess.run(update_command, shell=True, check=True, capture_output=True, text=True)
+        print(f"Executing update command: {update_command}")
+        update_result = subprocess.run(update_command, shell=True, capture_output=True, text=True)
+
+        if update_result.returncode != 0:
+            raise Exception(f"Failed to set Java version to {expected_version}. Command output: {update_result.stderr}")
 
         # Verify the change
         verification_output = subprocess.run(["java", "-version"], capture_output=True, text=True)
         new_version = verification_output.stderr.split('\n')[0].split('"')[1]
 
         if not new_version.startswith(expected_version):
-            raise Exception(f"Failed to set Java version to {expected_version}.")
+            raise Exception(f"Failed to set Java version to {expected_version}. Current version: {new_version}")
 
         print(f"Java version set to {expected_version} successfully.")
 
     except Exception as e:
         raise Exception(f"Failed to set Java version to {expected_version}: {str(e)}")
-
 
 def check_java_version(expected_version):
     result = subprocess.run(["java", "-version"], capture_output=True, text=True)
