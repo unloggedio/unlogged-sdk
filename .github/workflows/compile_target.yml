@@ -7,11 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build: 
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java-version: ['8','11', '17', '21' ]
 
     steps:
       # clone the unlogged-sdk project
@@ -19,11 +16,10 @@ jobs:
         uses: actions/checkout@v4
 
       # unlogged-sdk project
-      # setting JDK to 11 in case of java 8 project. For other projects JDK is set to project JDK
-      - name: Set up JDK ${{ matrix.java-version == '8' && '11' || matrix.java-version }}
+      - name: Set up JDK 19
         uses: actions/setup-java@v3
         with:
-          java-version: ${{ matrix.java-version == '8' && '11' || matrix.java-version }}
+          java-version: '19'
           distribution: 'temurin'
           cache: maven
       - name: Build with Maven
@@ -43,4 +39,4 @@ jobs:
           pip install -r ./src/test/python/requirements.txt
       - name: Run testing script
         run: |
-          python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }} ${{ matrix.java-version }}
+          python3 ./src/test/python/compile_target.py ${{ env.RELEASE_VERSION }}
