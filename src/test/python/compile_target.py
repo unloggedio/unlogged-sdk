@@ -5,19 +5,19 @@ from Target import Target
 from configEnum import buildSystem
 
 
-def print_installed_java_versions():
-    jvm_path = "/usr/lib/jvm/temurin-8-jdk-amd64/bin/"
-    if not os.path.exists(jvm_path):
-        print(f"Akshat No Java installations found at {jvm_path}")
-        return
-
-    java_versions = os.listdir(jvm_path)
-    if not java_versions:
-        print(f"Akshat No Java installations found in {jvm_path}")
-    else:
-        print("Akshat Installed Java versions:")
-        for version in java_versions:
-            print(f"- {version}")
+# def print_installed_java_versions():
+#     jvm_path = "/usr/lib/jvm/"
+#     if not os.path.exists(jvm_path):
+#         print(f"Akshat No Java installations found at {jvm_path}")
+#         return
+#
+#     java_versions = os.listdir(jvm_path)
+#     if not java_versions:
+#         print(f"Akshat No Java installations found in {jvm_path}")
+#     else:
+#         print("Akshat Installed Java versions:")
+#         for version in java_versions:
+#             print(f"- {version}")
 
 def set_java_version(expected_version):
     try:
@@ -118,7 +118,7 @@ def compile_target(target, sdk_version):
 
 if __name__ == "__main__":
     sdk_version = sys.argv[1]
-    print_installed_java_versions()
+#     print_installed_java_versions()
 
     branch_java_version_map = {
         "java8": "8",
