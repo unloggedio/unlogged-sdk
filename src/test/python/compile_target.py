@@ -4,12 +4,34 @@ import subprocess
 from Target import Target
 from configEnum import buildSystem
 
+def check_java_version(expected_version):
+    result = subprocess.run(["java", "-version"], capture_output=True, text=True, shell=True)
+    if result.returncode != 0:
+        raise Exception(f"Failed to check Java version: {result.stderr}")
+
+    version_output = result.stderr.split('\n')[0]
+    version = version_output.split('"')[1]
+
+    if not version.startswith(expected_version):
+        raise Exception(f"Java version {version} does not match expected version {expected_version}")
+    print(f"Java version {version} matches expected version {expected_version}")
+
 def compile_target(target, sdk_version):
     # Clone target repository
     clone_command = ["git", "clone", "--branch", target.branch_name, target.test_repo_url]
     result = subprocess.run(clone_command, capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Failed to clone repository: {result.stderr}")
+
+    branch_java_version_map = {
+            "java8": "1.8",
+            "java11": "11",
+            "java21": "21",
+            "main": "17"  # Assuming main branch uses Java 11, adjust as needed
+        }
+
+    expected_java_version = branch_java_version_map.get(target.branch_name)
+    check_java_version(expected_java_version)
 
     # Modify build system file
     target.modify_main()
