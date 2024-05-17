@@ -60,6 +60,8 @@ def check_java_version(expected_version):
 
     version_output = result.stderr.split('\n')[0]
     version = version_output.split('"')[1]
+    print(f"Java version Akshat {version}")
+
     version = version.split('.')[0]
 
     if not version.startswith(expected_version):
