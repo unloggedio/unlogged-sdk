@@ -4,10 +4,34 @@ from Target import Target
 from configEnum import buildSystem
 import subprocess
 
+def set_java_home(java_home):
+    os.environ["JAVA_HOME"] = java_home
+    os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
+
+def check_java_version(expected_version):
+    result = subprocess.run(["java", "-version"], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Failed to check Java version: {result.stderr}")
+
+    version_output = result.stderr.split('\n')[0]
+    version = version_output.split('"')[1]
+
+    if version.startswith("1.8"):
+        version = "8"
+    else:
+        version = version.split('.')[0]
+
+    if not version == expected_version:
+        raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
+    print(f"Java version {version} matches expected version {expected_version} - Passing")
+
 def compile_target (target):
 
 	# clone target
-	os.system("git clone " + target.test_repo_url)
+	os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
+	expected_java_version = target.java_version
+	set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
+	check_java_version(expected_java_version)
 
 	# modify build system file
 	target.modify_main()
@@ -52,26 +76,40 @@ def compile_target (target):
 
 if __name__=="__main__":
 
-	sdk_version = sys.argv[1]
-	target_list = [
-		#unlogged-spring-maven-demo
-		Target(
-			"https://github.com/unloggedio/unlogged-spring-maven-demo",
-			"unlogged-spring-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN,
-			projectType="Normal"
-		),
-		Target(
-			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-			"unlogged-spring-webflux-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-			buildSystem.MAVEN,
-			projectType="Reactive"
-		)
-	]
+    sdk_version = sys.argv[1]
+    branch_java_version_map = {
+        "java8" : "8",
+        "java11" : "11",
+        "java21" : "21",
+        "main" : "17"
+        }
 
-	for local_target in target_list:
-		compile_target(local_target)
+    target_list = []
+
+    for branch_name in branch_java_version_map:
+        target_list.append(
+            Target(
+                "https://github.com/unloggedio/unlogged-spring-maven-demo",
+                "unlogged-spring-maven-demo",
+                "/pom.xml",
+                "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+                buildSystem.MAVEN,
+                projectType="Normal",
+                branch_name=branch_name,
+                java_version=branch_java_version_map[branch_name]
+            )
+        )
+        target_list.append(
+            Target(
+                "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+                "unlogged-spring-webflux-maven-demo",
+                "/pom.xml",
+                "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+                buildSystem.MAVEN,
+                projectType="Reactive",
+                branch_name=branch_name,
+                java_version=branch_java_version_map[branch_name]
+            )
+        )
+    for local_target in target_list:
+        compile_target(local_target)
