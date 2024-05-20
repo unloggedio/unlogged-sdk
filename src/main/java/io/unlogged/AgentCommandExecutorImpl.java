@@ -1232,7 +1232,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (newInstance == null) {
             try {
                 newInstance = objenesis.newInstance(loadedClass);
-            } catch (java.lang.InstantiationError | IllegalAccessError e) {
+            } catch (Throwable e) {
                 // failed to create using objenesis
             }
         }
@@ -1246,6 +1246,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 newInstance = objenesis.newInstance(newInstanceLoader);
 
             } catch (Exception exception) {
+                exception.printStackTrace();
                 // failed to create using bytebuddy also
                 //
             }
