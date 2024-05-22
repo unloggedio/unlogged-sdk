@@ -17,8 +17,6 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -53,8 +51,17 @@ public class Runtime {
             return;
         }
 
+        if (System.getProperty("UNLOGGED_ARGS") != null) {
+            args = System.getProperty("UNLOGGED_ARGS");
+        }
+
+
+        if (System.getenv("UNLOGGED_ARGS") != null) {
+            args = System.getenv("UNLOGGED_ARGS");
+        }
+
         try {
-			// weave creation
+            // weave creation
             WeaveParameters weaveParameters = new WeaveParameters(args);
             String agentServerPort1 = weaveParameters.getAgentServerPort();
             if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
@@ -90,17 +97,11 @@ public class Runtime {
 
             errorLogger = new SimpleFileLogger(outputDir);
 
-			String hostname = null;
-			InetAddress inetAddress;
-			try {
-				inetAddress = InetAddress.getLocalHost();
-				hostname = inetAddress.getHostName();
-			} catch (UnknownHostException e) {
-				errorLogger.log(e.toString());
-			}
+            String hostname = NetworkClient.getHostname();
 
             ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname, 0);
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname,
+                            0);
 
             httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
@@ -229,7 +230,26 @@ public class Runtime {
         StackTraceElement callerClassAndMethodStack = new Exception().getStackTrace()[1];
         try {
             Class<?> callerClass = Class.forName(callerClassAndMethodStack.getClassName());
-            getInstance("i=" + callerClass.getPackage().getName());
+            String args = "";
+            for (Method method : callerClass.getMethods()) {
+                if (method.isAnnotationPresent(Unlogged.class)) {
+                    Unlogged annotationData = method.getAnnotation(Unlogged.class);
+                    if (annotationData.enable()) {
+                        args =
+                                "i=" + annotationData.includePackage()[0] +
+                                        (annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
+                                        (",agentserverport=" + annotationData.port());
+                    } else {
+                        args = "format=discard";
+                    }
+                    break;
+                }
+            }
+
+            if (args.isEmpty()) {
+                args = "i=" + callerClass.getPackage().getName();
+            }
+            getInstance(args);
         } catch (ClassNotFoundException e) {
 //            throw new RuntimeException(e);
         }
