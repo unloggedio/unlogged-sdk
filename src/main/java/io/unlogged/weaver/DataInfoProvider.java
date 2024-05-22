@@ -65,9 +65,12 @@ public class DataInfoProvider {
     }
 
     public void flushIdInformation() throws IOException {
-        DataOutputStream infoWriter = new DataOutputStream(new FileOutputStream(idsInfoOutputFile));
+        FileOutputStream out = new FileOutputStream(idsInfoOutputFile);
+        DataOutputStream infoWriter = new DataOutputStream(out);
         infoWriter.writeInt(classId.get());
         infoWriter.writeInt(methodId.get());
         infoWriter.writeInt(probeId.get());
+        out.flush();
+        out.close();
     }
 }

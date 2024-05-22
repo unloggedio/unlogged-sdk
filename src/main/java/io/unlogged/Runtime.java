@@ -226,6 +226,13 @@ public class Runtime {
     public static void registerClass(String classInfoBytes, String probesToRecordBase64) {
 //        System.out.println(
 //                "New class registration [" + classInfoBytes.getBytes().length + "][" + probesToRecordBase64.getBytes().length + "]");
+        StackTraceElement callerClassAndMethodStack = new Exception().getStackTrace()[1];
+        try {
+            Class<?> callerClass = Class.forName(callerClassAndMethodStack.getClassName());
+            getInstance("i=" + callerClass.getPackage().getName());
+        } catch (ClassNotFoundException e) {
+//            throw new RuntimeException(e);
+        }
         if (instance != null) {
 
             byte[] decodedClassWeaveInfo = new byte[0];
