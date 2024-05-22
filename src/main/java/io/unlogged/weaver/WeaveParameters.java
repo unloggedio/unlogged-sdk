@@ -190,10 +190,8 @@ public class WeaveParameters {
         return includedNames;
     }
 
-
     public String getServerAddress() {
-
-        return serverAddress;
+		return serverAddress;
     }
 
     public String getUsername() {

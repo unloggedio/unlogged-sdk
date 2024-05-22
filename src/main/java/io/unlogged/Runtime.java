@@ -17,6 +17,8 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -52,9 +54,8 @@ public class Runtime {
         }
 
         try {
+			// weave creation
             WeaveParameters weaveParameters = new WeaveParameters(args);
-
-
             String agentServerPort1 = weaveParameters.getAgentServerPort();
             if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
                 agentServerPort1 = "0";
@@ -69,12 +70,6 @@ public class Runtime {
                     //
                 }
             }
-
-            ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, 0);
-
-            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
-
 
             File outputDir = new File(weaveParameters.getOutputDirname());
             if (!outputDir.exists()) {
@@ -94,6 +89,20 @@ public class Runtime {
             }
 
             errorLogger = new SimpleFileLogger(outputDir);
+
+			String hostname = null;
+			InetAddress inetAddress;
+			try {
+				inetAddress = InetAddress.getLocalHost();
+				hostname = inetAddress.getHostName();
+			} catch (UnknownHostException e) {
+				errorLogger.log(e.toString());
+			}
+
+            ServerMetadata serverMetadata =
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname, 0);
+
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
             errorLogger.log("Java version: " + System.getProperty("java.version"));
             errorLogger.log("Agent version: " + Constants.AGENT_VERSION);

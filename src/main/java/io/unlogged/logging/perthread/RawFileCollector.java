@@ -278,11 +278,11 @@ public class RawFileCollector implements Runnable {
                         errorLogger.log(e);
                     }
 
-                    if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
+                    if (networkClient != null && !networkClient.getServerUrl().equals("") && !networkClient.getServerUrl().equals("null")) {
                         File archiveFile = archivedIndexWriterOld.getArchiveFile();
                         try {
                             errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
-                            networkClient.uploadFile(archiveFile.getAbsolutePath());
+                            networkClient.uploadFile(archiveFile.getAbsolutePath(), errorLogger.getPath());
                         } catch (IOException e) {
                             errorLogger.log("failed to upload archive file: " + e.getMessage());
                         } finally {

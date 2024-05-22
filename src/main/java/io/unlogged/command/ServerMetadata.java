@@ -1,5 +1,7 @@
 package io.unlogged.command;
 
+import java.util.TimeZone;
+
 public class ServerMetadata {
     public void setAgentServerPort(int agentServerPort) {
         this.agentServerPort = agentServerPort;
@@ -9,11 +11,16 @@ public class ServerMetadata {
     String includePackageName;
     String agentVersion;
     String agentServerUrl;
-    public ServerMetadata(String includePackageName, String agentVersion, int agentServerPort) {
+	private String hostname;
+	private long createdAt;
+
+    public ServerMetadata(String includePackageName, String agentVersion, String hostname, int agentServerPort) {
         this.includePackageName = includePackageName;
         this.agentVersion = agentVersion;
+		this.createdAt = System.currentTimeMillis();
         this.agentServerPort = agentServerPort;
         this.agentServerUrl = "http://localhost:" + String.valueOf(agentServerPort);
+		this.hostname = hostname;
     }
 
     @Override
@@ -22,7 +29,10 @@ public class ServerMetadata {
                 "\"agentServerPort\": \"" + agentServerPort + "\"," +
                 "\"includePackageName\": \"" + includePackageName + "\"," +
                 "\"agentServerUrl\": \"" + agentServerUrl + "\"," +
-                "\"agentVersion\": \"" + agentVersion + '\"' +
+                "\"agentVersion\": \"" + agentVersion + "\"," +
+                "\"hostname\": \"" + hostname + "\"," +
+                "\"createdAt\": \"" + createdAt + "\"," +
+                "\"timezone\": \"" + TimeZone.getDefault().getID() + '\"' +
                 '}';
     }
 
