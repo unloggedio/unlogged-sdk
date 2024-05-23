@@ -235,8 +235,16 @@ public class Runtime {
                 if (method.isAnnotationPresent(Unlogged.class)) {
                     Unlogged annotationData = method.getAnnotation(Unlogged.class);
                     if (annotationData.enable()) {
+                        String includedPackageName = annotationData.includePackage()[0];
+                        if (includedPackageName == null || includedPackageName.isEmpty()) {
+                            includedPackageName = callerClassAndMethodStack.getClassName();
+                            if (includedPackageName.contains(".")) {
+                                includedPackageName = includedPackageName.substring(0,
+                                        includedPackageName.lastIndexOf("."));
+                            }
+                        }
                         args =
-                                "i=" + annotationData.includePackage()[0] +
+                                "i=" + includedPackageName +
                                         (annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
                                         (",agentserverport=" + annotationData.port());
                     } else {
