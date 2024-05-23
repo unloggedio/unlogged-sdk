@@ -1208,7 +1208,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 parameters[i] = paramValue;
             }
 
+            logger.setRecordingPaused(false);
             newInstance = noArgsConstructor.newInstance(parameters);
+            logger.setRecordingPaused(true);
         } catch (Throwable e) {
         }
 
@@ -1220,7 +1222,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
                     if (method.getReturnType().equals(loadedClass)) {
                         try {
-                            return method.invoke(null);
+                            logger.setRecordingPaused(false);
+                            Object invoke = method.invoke(null);
+                            logger.setRecordingPaused(true);
+                            return invoke;
                         } catch (InvocationTargetException ex) {
                             // this method for potentially getting instance from static getInstance type method
                             // did not work
