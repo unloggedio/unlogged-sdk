@@ -11,11 +11,14 @@ public class ServerMetadata {
     String includePackageName;
     String agentVersion;
     String agentServerUrl;
+    String mode;
 	private String hostname;
 	private long createdAt;
 
-    public ServerMetadata(String includePackageName, String agentVersion, String hostname, int agentServerPort) {
+    public ServerMetadata(String includePackageName, String agentVersion, String hostname, int agentServerPort,
+                          String mode) {
         this.includePackageName = includePackageName;
+        this.mode = mode;
         this.agentVersion = agentVersion;
 		this.createdAt = System.currentTimeMillis();
         this.agentServerPort = agentServerPort;
@@ -30,6 +33,7 @@ public class ServerMetadata {
                 "\"includePackageName\": \"" + includePackageName + "\"," +
                 "\"agentServerUrl\": \"" + agentServerUrl + "\"," +
                 "\"agentVersion\": \"" + agentVersion + "\"," +
+                "\"mode\": \"" + mode + "\"," +
                 "\"hostname\": \"" + hostname + "\"," +
                 "\"createdAt\": \"" + createdAt + "\"," +
                 "\"timezone\": \"" + TimeZone.getDefault().getID() + '\"' +

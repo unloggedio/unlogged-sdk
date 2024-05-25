@@ -101,7 +101,9 @@ public class Runtime {
 
             ServerMetadata serverMetadata =
                     new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname,
-                            0);
+                            0,
+                            (weaveParameters.getServerAddress() == null || weaveParameters.getServerAddress()
+                                    .isEmpty() ? "local" : "remote"));
 
             httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
@@ -115,8 +117,7 @@ public class Runtime {
 
             errorLogger.log(serverMetadata.toString());
 
-            System.out.println("[unlogged]" +
-                    " session Id: [" + config.getSessionId() + "] " + serverMetadata);
+            System.out.println("[unlogged]" + " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
             switch (weaveParameters.getMode()) {
 
