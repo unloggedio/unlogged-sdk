@@ -44,8 +44,8 @@ public class MultipartUtility {
         httpConn.setUseCaches(false);
         httpConn.setDoOutput(true); // indicates POST method
         httpConn.setDoInput(true);
-        httpConn.setConnectTimeout(1000);
-        httpConn.setReadTimeout(1000);
+        httpConn.setConnectTimeout(5000);
+        httpConn.setReadTimeout(10000);
         httpConn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
         for (Map.Entry<String, String> header : headers.entrySet()) {
             httpConn.setRequestProperty(header.getKey(), header.getValue());

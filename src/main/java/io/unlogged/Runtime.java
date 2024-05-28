@@ -107,15 +107,18 @@ public class Runtime {
 
             httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
 
-            errorLogger.log("Java version: " + System.getProperty("java.version"));
-            errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
-            errorLogger.log("Params: " + args);
+            StringBuilder firstLogLine = new StringBuilder();
+
+            firstLogLine.append("Java version: " + System.getProperty("java.version") + "\n");
+            firstLogLine.append("Agent version: " + Constants.AGENT_VERSION + "\n");
+            firstLogLine.append("Params: " + args + "\n");
 
             httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
             serverMetadata.setAgentServerUrl("http://localhost:" + httpServer.getListeningPort());
             serverMetadata.setAgentServerPort(httpServer.getListeningPort());
 
-            errorLogger.log(serverMetadata.toString());
+            firstLogLine.append(serverMetadata + "\n");
+            errorLogger.log(firstLogLine.toString());
 
             System.out.println("[unlogged]" + " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
