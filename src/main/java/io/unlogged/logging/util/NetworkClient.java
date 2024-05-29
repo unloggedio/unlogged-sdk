@@ -24,6 +24,9 @@ public class NetworkClient {
     private final IErrorLogger errorLogger;
 
     public NetworkClient(String serverUrl, String sessionId, String token, IErrorLogger errorLogger) {
+        if (serverUrl == null || serverUrl.isEmpty()) {
+            serverUrl = "";
+        }
         while (serverUrl.endsWith("/")) {
             serverUrl = serverUrl.substring(0, serverUrl.length() - 1);
         }
