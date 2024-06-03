@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +24,12 @@ public class NetworkClient {
     private final IErrorLogger errorLogger;
 
     public NetworkClient(String serverUrl, String sessionId, String token, IErrorLogger errorLogger) {
+        if (serverUrl == null || serverUrl.isEmpty()) {
+            serverUrl = "";
+        }
+        while (serverUrl.endsWith("/")) {
+            serverUrl = serverUrl.substring(0, serverUrl.length() - 1);
+        }
         this.serverUrl = serverUrl;
         this.token = token;
         this.sessionId = sessionId;
@@ -60,7 +68,7 @@ public class NetworkClient {
         return hostname;
     }
 
-    public void sendPOSTRequest(String url, String attachmentFilePath) throws IOException {
+    public void sendPOSTRequest(String url, String attachmentFilePath, String loggerPath) throws IOException {
 
         String charset = "UTF-8";
         Map<String, String> headers = new HashMap<>();
@@ -70,29 +78,29 @@ public class NetworkClient {
         MultipartUtility form = null;
         try {
             form = new MultipartUtility(url, charset, headers);
-
-            File binaryFile = new File(attachmentFilePath);
-            form.addFilePart("file", binaryFile);
-            form.addFormField("sessionId", sessionId);
-            form.addFormField("hostname", getHostname());
-
-            String response = form.finish();
+            form.addFilePart("file", new File(attachmentFilePath));
+            form.addFilePart("file", new File(loggerPath));
+			
+			String response = form.finish();
         } catch (IOException e) {
             errorLogger.log("failed to upload - " + e.getMessage());
             throw e;
         }
-
     }
 
-    public void uploadFile(String filePath) throws IOException {
+    public void uploadFile(String filePath, String loggerPath) throws IOException {
 //        System.out.println("[unlogged] File to upload to [" + serverUrl + "]: " + filePath);
         long start = System.currentTimeMillis();
-        sendPOSTRequest(serverUrl + "/checkpoint/uploadArchive", filePath);
+        sendPOSTRequest(this.serverUrl + "/session/uploadArchive?sessionId=" + sessionId, filePath, loggerPath);
         long end = System.currentTimeMillis();
         long seconds = (end - start) / 1000;
         if (seconds > 2) {
             System.out.println("[unlogged] Upload took " + seconds + " seconds: " + filePath);
         }
     }
+
+	public String getServerUrl() {
+		return serverUrl;
+	}
 
 }

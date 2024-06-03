@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.Runtime;
+import io.unlogged.logging.ObjectMapperFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -12,7 +13,7 @@ import java.util.Map;
 public class AgentCommandServer extends NanoHTTPD {
 
     private final ServerMetadata serverMetadata;
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapperReactive();
     private AgentCommandExecutor agentCommandExecutor;
     private String pingResponseBody;
 
@@ -58,6 +59,10 @@ public class AgentCommandServer extends NanoHTTPD {
 //        System.err.println("[" + requestMethod + "] " + requestPath + ": " + postBody + " - " + requestBodyText);
         if (requestPath.equals("/ping")) {
             return newFixedLengthResponse(Response.Status.OK, "application/json", pingResponseBody);
+        }
+        if (requestPath.equals("/index.html")) {
+            return newChunkedResponse(Response.Status.OK, "application/json",
+                    this.getClass().getClassLoader().getResourceAsStream("index.html"));
         }
         try {
             AgentCommandRequest agentCommandRequest = objectMapper.readValue(

@@ -80,8 +80,8 @@ public class WeaveConfig {
 //        ignoreArrayInitializer = false;
 //        this.username = username;
 //        this.password = password;
-//
-//        this.sessionId = UUID.randomUUID().toString();
+
+		  // this.sessionId = UUID.randomUUID().toString();
 //        this.processId = getProcessId(new Random().nextInt());
 //
 //    }
@@ -146,8 +146,7 @@ public class WeaveConfig {
         ignoreArrayInitializer = false;
         this.username = weaveParameters.getUsername();
         this.password = weaveParameters.getPassword();
-
-        this.sessionId = UUID.randomUUID().toString();
+		this.sessionId = UUID.randomUUID().toString();
 //        this.processId = getProcessId(new Random().nextInt());
     }
 

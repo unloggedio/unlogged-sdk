@@ -59,8 +59,8 @@ public class WeaveParameters {
      */
     private boolean weaveSecurityManagerClass = false;
     private Runtime.Mode mode = Runtime.Mode.TESTING;
-    private int filesPerIndex = 100;
-    private String agentServerPort = "12100";
+    private int filesPerIndex = 10;
+    private String agentServerPort = "0";
 
     public WeaveParameters(String args) {
         if (args == null) args = "";
@@ -190,10 +190,8 @@ public class WeaveParameters {
         return includedNames;
     }
 
-
     public String getServerAddress() {
-
-        return serverAddress;
+		return serverAddress;
     }
 
     public String getUsername() {

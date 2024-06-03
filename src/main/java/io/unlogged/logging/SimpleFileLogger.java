@@ -5,12 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 
 public class SimpleFileLogger implements IErrorLogger {
-    public static final String ERROR_LOG_FILE = "log.txt";
-    private PrintStream logger;
+
+	private File logFile;
+	public static final String ERROR_LOG_FILE = "log.txt";
+	private PrintStream logger;
 
     public SimpleFileLogger(File outputDir) {
         try {
-            logger = new PrintStream(new File(outputDir, ERROR_LOG_FILE));
+			this.logFile = new File(outputDir, ERROR_LOG_FILE);
+            logger = new PrintStream(this.logFile);
         } catch (FileNotFoundException e) {
             logger = System.out;
             logger.println("[unlogged] failed to open " + ERROR_LOG_FILE + " in " + outputDir.getAbsolutePath());
@@ -35,4 +38,9 @@ public class SimpleFileLogger implements IErrorLogger {
             logger.close();
         }
     }
+
+	@Override
+	public String getPath() {
+		return this.logFile.getAbsolutePath();
+	}
 }

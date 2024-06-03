@@ -4,10 +4,7 @@ import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.IErrorLogger;
-import io.unlogged.logging.IEventLogger;
-import io.unlogged.logging.Logging;
-import io.unlogged.logging.SimpleFileLogger;
+import io.unlogged.logging.*;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
@@ -20,24 +17,16 @@ import io.unlogged.weaver.WeaveParameters;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
 
 /**
  * This class is the main program of SELogger as a javaagent.
  */
 public class Runtime {
 
-    public static final int AGENT_SERVER_PORT = 12100;
     private static Runtime instance;
     private static List<Pair<String, String>> pendingClassRegistrations = new ArrayList<>();
     private final ScheduledExecutorService probeReaderExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -55,16 +44,39 @@ public class Runtime {
      * @param args string arguments for weaver
      */
     private Runtime(String args) {
+//        System.err.println("UnloggedInit1" );
+
+        if ("true".equals(System.getProperty("UNLOGGED_DISABLE", "false"))) {
+            logger = Logging.initialiseDiscardLogger();
+            return;
+        }
+
+        if (System.getProperty("UNLOGGED_ARGS") != null) {
+            args = System.getProperty("UNLOGGED_ARGS");
+        }
+
+
+        if (System.getenv("UNLOGGED_ARGS") != null) {
+            args = System.getenv("UNLOGGED_ARGS");
+        }
 
         try {
+            // weave creation
             WeaveParameters weaveParameters = new WeaveParameters(args);
+            String agentServerPort1 = weaveParameters.getAgentServerPort();
+            if (agentServerPort1 == null || agentServerPort1.equalsIgnoreCase("null")) {
+                agentServerPort1 = "0";
+            }
+            int agentServerPort = Integer.parseInt(agentServerPort1);
 
-
-            ServerMetadata serverMetadata =
-                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION);
-
-            httpServer = new AgentCommandServer(AGENT_SERVER_PORT, serverMetadata);
-
+            String portFromEnv = System.getenv().get("UNLOGGED_AGENT_PORT");
+            if (portFromEnv != null) {
+                try {
+                    agentServerPort = Integer.parseInt(portFromEnv);
+                } catch (Exception e) {
+                    //
+                }
+            }
 
             File outputDir = new File(weaveParameters.getOutputDirname());
             if (!outputDir.exists()) {
@@ -85,19 +97,37 @@ public class Runtime {
 
             errorLogger = new SimpleFileLogger(outputDir);
 
-            errorLogger.log("Java version: " + System.getProperty("java.version"));
-            errorLogger.log("Agent version: " + Constants.AGENT_VERSION);
-            errorLogger.log("Params: " + args);
+            String hostname = NetworkClient.getHostname();
 
-            System.out.println("[unlogged]" +
-                    " session Id: [" + config.getSessionId() + "]" +
-                    " on hostname [" + NetworkClient.getHostname() + "]");
+            ServerMetadata serverMetadata =
+                    new ServerMetadata(weaveParameters.getIncludedNames().toString(), Constants.AGENT_VERSION, hostname,
+                            0,
+                            (weaveParameters.getServerAddress() == null || weaveParameters.getServerAddress()
+                                    .isEmpty() ? "local" : "remote"));
+
+            httpServer = new AgentCommandServer(agentServerPort, serverMetadata);
+
+            StringBuilder firstLogLine = new StringBuilder();
+
+            firstLogLine.append("Java version: " + System.getProperty("java.version") + "\n");
+            firstLogLine.append("Agent version: " + Constants.AGENT_VERSION + "\n");
+            firstLogLine.append("Params: " + args + "\n");
+
+            httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+            serverMetadata.setAgentServerUrl("http://localhost:" + httpServer.getListeningPort());
+            serverMetadata.setAgentServerPort(httpServer.getListeningPort());
+
+            firstLogLine.append(serverMetadata + "\n");
+            errorLogger.log(firstLogLine.toString());
+
+            System.out.println("[unlogged]" + " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
             switch (weaveParameters.getMode()) {
 
 
                 case DISCARD:
                     logger = Logging.initialiseDiscardLogger();
+                    break;
 
                 case PER_THREAD:
 
@@ -145,13 +175,11 @@ public class Runtime {
             }
 
 
-            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(logger.getObjectMapper(), logger));
-            httpServer.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+            httpServer.setAgentCommandExecutor(new AgentCommandExecutorImpl(
+                    ObjectMapperFactory.createObjectMapperReactive(), logger));
 
             java.lang.Runtime.getRuntime()
-                    .addShutdownHook(new Thread(() -> {
-                        close();
-                    }));
+                    .addShutdownHook(new Thread(this::close));
 
 
         } catch (Throwable thx) {
@@ -203,12 +231,46 @@ public class Runtime {
     public static void registerClass(String classInfoBytes, String probesToRecordBase64) {
 //        System.out.println(
 //                "New class registration [" + classInfoBytes.getBytes().length + "][" + probesToRecordBase64.getBytes().length + "]");
+        StackTraceElement callerClassAndMethodStack = new Exception().getStackTrace()[1];
+        try {
+            Class<?> callerClass = Class.forName(callerClassAndMethodStack.getClassName());
+            String args = "";
+            for (Method method : callerClass.getMethods()) {
+                if (method.isAnnotationPresent(Unlogged.class)) {
+                    Unlogged annotationData = method.getAnnotation(Unlogged.class);
+                    if (annotationData.enable()) {
+                        String includedPackageName = annotationData.includePackage()[0];
+                        if (includedPackageName == null || includedPackageName.isEmpty()) {
+                            includedPackageName = callerClassAndMethodStack.getClassName();
+                            if (includedPackageName.contains(".")) {
+                                includedPackageName = includedPackageName.substring(0,
+                                        includedPackageName.lastIndexOf("."));
+                            }
+                        }
+                        args =
+                                "i=" + includedPackageName +
+                                        (annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
+                                        (",agentserverport=" + annotationData.port());
+                    } else {
+                        args = "format=discard";
+                    }
+                    break;
+                }
+            }
+
+            if (args.isEmpty()) {
+                args = "i=" + callerClass.getPackage().getName();
+            }
+            getInstance(args);
+        } catch (ClassNotFoundException e) {
+//            throw new RuntimeException(e);
+        }
         if (instance != null) {
 
             byte[] decodedClassWeaveInfo = new byte[0];
             List<Integer> probesToRecord = null;
             try {
-                decodedClassWeaveInfo =  ByteTools.decompressBase64String(classInfoBytes);
+                decodedClassWeaveInfo = ByteTools.decompressBase64String(classInfoBytes);
                 byte[] decodedProbesToRecord = ByteTools.decompressBase64String(probesToRecordBase64);
                 probesToRecord = bytesToIntList(decodedProbesToRecord);
             } catch (IOException e) {

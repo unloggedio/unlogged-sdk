@@ -2,6 +2,7 @@ package io.unlogged.atomic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,21 +118,25 @@ public enum AssertionType {
     public boolean verify(JsonNode actualValue, JsonNode expectedValue) {
 
         try {
+            String expectedValueString = expectedValue instanceof TextNode ?
+                    expectedValue.textValue() : expectedValue.toString();
+            String actualValueString = actualValue instanceof TextNode ? actualValue.textValue() :
+                    actualValue.toString();
             switch (this) {
                 case EQUAL:
                     if (actualValue.isBoolean()) {
                         if (actualValue.booleanValue()) {
-                            if (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")) {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
                                 return true;
                             }
-                            if (expectedValue.toString().equals("0") || expectedValue.toString().equals("false")) {
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
                                 return false;
                             }
                         } else {
-                            if (expectedValue.toString().equals("1") || expectedValue.toString().equals("true")) {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
                                 return false;
                             }
-                            if (expectedValue.toString().equals("0") || expectedValue.toString().equals("false")) {
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
                                 return true;
                             }
                         }
@@ -139,49 +144,78 @@ public enum AssertionType {
                     if (expectedValue.isBoolean()) {
 
                         if (expectedValue.booleanValue()) {
-                            if (actualValue.toString().equals("1") || actualValue.toString().equals("true")) {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
                                 return true;
                             }
-                            if (actualValue.toString().equals("0") || actualValue.toString().equals("false")) {
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
                                 return false;
                             }
-                        } else  {
-                            if (actualValue.toString().equals("1") || actualValue.toString().equals("true")) {
+                        } else {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
                                 return false;
                             }
-                            if (actualValue.toString().equals("0") || actualValue.toString().equals("false")) {
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
                                 return true;
                             }
                         }
                     }
+                    if (actualValue instanceof TextNode || expectedValue instanceof TextNode) {
+                        return Objects.equals(actualValueString, expectedValueString);
+                    }
                     return Objects.equals(actualValue, expectedValue);
                 case EQUAL_IGNORE_CASE:
-                    return Objects.equals(actualValue.toString().toLowerCase(), expectedValue.toString().toLowerCase());
+                    return Objects.equals(actualValueString.toLowerCase(), expectedValueString.toLowerCase());
                 case NOT_EQUAL:
+                    if (actualValue.isBoolean()) {
+                        if (actualValue.booleanValue()) {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
+                                return false;
+                            }
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
+                                return true;
+                            }
+                        } else {
+                            if (expectedValueString.equals("1") || expectedValueString.equals("true")) {
+                                return true;
+                            }
+                            if (expectedValueString.equals("0") || expectedValueString.equals("false")) {
+                                return false;
+                            }
+                        }
+                    }
+                    if (expectedValue.isBoolean()) {
+
+                        if (expectedValue.booleanValue()) {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
+                                return false;
+                            }
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
+                                return true;
+                            }
+                        } else {
+                            if (actualValueString.equals("1") || actualValueString.equals("true")) {
+                                return true;
+                            }
+                            if (actualValueString.equals("0") || actualValueString.equals("false")) {
+                                return false;
+                            }
+                        }
+                    }
+                    if (actualValue instanceof TextNode || expectedValue instanceof TextNode) {
+                        return !Objects.equals(actualValueString, expectedValueString);
+                    }
                     return !Objects.equals(actualValue, expectedValue);
                 case FALSE:
                     return Objects.equals(actualValue.asBoolean(), false);
                 case TRUE:
                     return Objects.equals(actualValue.asBoolean(), true);
                 case LESS_THAN:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() < expectedValue.asDouble();
                 case GREATER_THAN:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() > expectedValue.asDouble();
                 case LESS_THAN_OR_EQUAL:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() <= expectedValue.asDouble();
                 case GREATER_THAN_OR_EQUAL:
-                    if (expectedValue == null) {
-                        return false;
-                    }
                     return actualValue.asDouble() >= expectedValue.asDouble();
                 case NULL:
                     return actualValue.isNull();
@@ -192,34 +226,34 @@ public enum AssertionType {
                 case NOT_NULL:
                     return !actualValue.isNull();
                 case MATCHES_REGEX:
-                    return Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
+                    return Pattern.compile(expectedValueString).matcher(actualValueString).matches();
                 case NOT_MATCHES_REGEX:
-                    return !Pattern.compile(expectedValue.toString()).matcher(actualValue.toString()).matches();
+                    return !Pattern.compile(expectedValueString).matcher(actualValueString).matches();
                 case CONTAINS_KEY:
-                    return actualValue.has(expectedValue.toString());
+                    return actualValue.has(expectedValueString);
                 case NOT_CONTAINS_KEY:
-                    return !actualValue.has(expectedValue.toString());
+                    return !actualValue.has(expectedValueString);
                 case CONTAINS_ITEM:
                     return arrayNodeContains((ArrayNode) actualValue, expectedValue);
                 case NOT_CONTAINS_ITEM:
                     return !arrayNodeContains((ArrayNode) actualValue, expectedValue);
                 case CONTAINS_STRING:
-                    return actualValue.toString().contains(expectedValue.toString());
+                    return actualValueString.contains(expectedValueString);
                 case NOT_CONTAINS_STRING:
-                    return !actualValue.toString().contains(expectedValue.toString());
+                    return !actualValueString.contains(expectedValueString);
 
                 case ENDS_WITH:
-                    return actualValue.toString().endsWith(expectedValue.toString());
+                    return actualValueString.endsWith(expectedValueString);
 
                 case NOT_ENDS_WITH:
-                    return !actualValue.toString().endsWith(expectedValue.toString());
+                    return !actualValueString.endsWith(expectedValueString);
 
 
                 case STARTS_WITH:
-                    return actualValue.toString().startsWith(expectedValue.toString());
+                    return actualValueString.startsWith(expectedValueString);
 
                 case NOT_STARTS_WITH:
-                    return !actualValue.toString().startsWith(expectedValue.toString());
+                    return !actualValueString.startsWith(expectedValueString);
 
             }
             return false;

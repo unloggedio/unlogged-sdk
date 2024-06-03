@@ -1,5 +1,6 @@
 package io.unlogged.runner;
 
+import io.unlogged.MethodSignatureParser;
 import io.unlogged.atomic.MethodUnderTest;
 import io.unlogged.command.AgentCommand;
 import io.unlogged.command.AgentCommandRequest;
@@ -30,7 +31,7 @@ public class MethodUtils {
             System.err.println("Method signature is null: " + methodUnderTest);
             return null;
         }
-        List<String> methodSignatureTypes = splitMethodDescriptor(methodUnderTest.getSignature());
+        List<String> methodSignatureTypes = MethodSignatureParser.parseMethodSignature(methodUnderTest.getSignature());
         // remove return type
         methodSignatureTypes.remove(methodSignatureTypes.size() - 1);
 
@@ -89,31 +90,6 @@ public class MethodUtils {
         return dottedName;
     }
 
-
-    public static List<String> splitMethodDescriptor(String desc) {
-        int beginIndex = desc.indexOf('(');
-        int endIndex = desc.lastIndexOf(')');
-        if ((beginIndex == -1 && endIndex != -1) || (beginIndex != -1 && endIndex == -1)) {
-            System.err.println(beginIndex);
-            System.err.println(endIndex);
-            throw new RuntimeException();
-        }
-        String x0;
-        if (beginIndex == -1 && endIndex == -1) {
-            x0 = desc;
-        } else {
-            x0 = desc.substring(beginIndex + 1, endIndex);
-        }
-        Pattern pattern = Pattern.compile(
-                "\\[*L[^;]+;|\\[[ZBCSIFDJ]|[ZBCSIFDJ]"); //Regex for desc \[*L[^;]+;|\[[ZBCSIFDJ]|[ZBCSIFDJ]
-        Matcher matcher = pattern.matcher(x0);
-        List<String> listMatches = new LinkedList<>();
-        while (matcher.find()) {
-            listMatches.add(matcher.group());
-        }
-        listMatches.add(desc.substring(endIndex + 1));
-        return listMatches;
-    }
 
 
 }

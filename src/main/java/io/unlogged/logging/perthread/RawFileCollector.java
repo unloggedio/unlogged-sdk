@@ -64,7 +64,7 @@ public class RawFileCollector implements Runnable {
         objectsToIndex = new ArrayBlockingQueue<>(1024 * 1024);
 
         this.outputDir = outputDir;
-        errorLogger.log("Created raw file collector, files per archive: " + filesPerArchive);
+//        errorLogger.log("Created raw file collector, files per archive: " + filesPerArchive);
         finalizeArchiveAndUpload();
         classWeaveFileRaw = new FileOutputStream(new File(outputDir + "/" + "class.weave.dat"));
         archiveCloser = new ArchiveCloser(archiveQueue, errorLogger);
@@ -97,7 +97,7 @@ public class RawFileCollector implements Runnable {
         try {
             while (true) {
                 long start = System.currentTimeMillis();
-                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
+//                errorLogger.log(start + " : run raw file collector cron: " + shutdown);
                 if (shutdown) {
                     return;
                 }
@@ -125,10 +125,10 @@ public class RawFileCollector implements Runnable {
     }
 
 
-    public void shutdown() throws IOException {
+    public void shutdown() {
         shutdown = true;
         errorLogger.log("shutting down raw file collector");
-        EXECUTOR_SERVICE.shutdown();
+        EXECUTOR_SERVICE.shutdownNow();
     }
 
     public void upload() throws IOException {
@@ -136,9 +136,9 @@ public class RawFileCollector implements Runnable {
             return;
         }
         try {
-            errorLogger.log("wait for log file");
+//            errorLogger.log("wait for log file");
             UploadFile logFile = fileList.poll(1, TimeUnit.SECONDS);
-            errorLogger.log("got log file");
+//            errorLogger.log("got log file");
             if (logFile == null) {
                 if (fileCount > 0 || shutdown) {
                     errorLogger.log(
@@ -146,7 +146,7 @@ public class RawFileCollector implements Runnable {
                     finalizeArchiveAndUpload();
                     return;
                 }
-                errorLogger.log("nothing to load: " + shutdown);
+//                errorLogger.log("nothing to load: " + shutdown);
                 return;
             }
 
@@ -154,7 +154,7 @@ public class RawFileCollector implements Runnable {
             fileList.drainTo(logFiles, filesPerArchive - archivedIndexWriter.fileCount());
             logFiles.add(logFile);
 
-            errorLogger.log("add [" + logFiles.size() + "] files");
+//            errorLogger.log("add [" + logFiles.size() + "] files");
             for (UploadFile file : logFiles) {
                 File fileToAddToArchive = new File(file.path);
                 archivedIndexWriter.writeFileEntry(file);
@@ -168,8 +168,8 @@ public class RawFileCollector implements Runnable {
         } catch (InterruptedException e) {
             errorLogger.log("file upload cron interrupted, shutting down");
         } finally {
-            errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
-                    .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
+//            errorLogger.log("finally check can archive [" + archivedIndexWriter.getArchiveFile()
+//                    .getName() + "]: " + archivedIndexWriter.fileCount() + " >= " + filesPerArchive);
             if (archivedIndexWriter.fileCount() >= filesPerArchive || shutdown) {
                 finalizeArchiveAndUpload();
             }
@@ -242,6 +242,7 @@ public class RawFileCollector implements Runnable {
     synchronized public void addClassWeaveInfo(byte[] byteArray) {
         try {
             classWeaveFileRaw.write(byteArray);
+            classWeaveFileRaw.flush();
         } catch (IOException e) {
             errorLogger.log("Failed to write class weave information: " + e.getMessage());
         }
@@ -265,10 +266,10 @@ public class RawFileCollector implements Runnable {
         public void run() {
             while (true) {
                 try {
-                    errorLogger.log("Waiting for next archive to close");
+//                    errorLogger.log("Waiting for next archive to close");
                     ArchivedIndexWriter archivedIndexWriterOld = archiveQueue.take();
                     try {
-                        errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile().getName());
+//                        errorLogger.log("closing archive: " + archivedIndexWriterOld.getArchiveFile().getName());
                         drainItemsToIndex(archivedIndexWriterOld);
                         archivedIndexWriterOld.drainQueueToIndex(EMPTY_LIST, typeInfoDocuments, EMPTY_STRING_LIST);
                         archivedIndexWriterOld.close();
@@ -277,11 +278,11 @@ public class RawFileCollector implements Runnable {
                         errorLogger.log(e);
                     }
 
-                    if (networkClient != null && !"localhost-token".equals(networkClient.getToken())) {
+                    if (networkClient != null && !networkClient.getServerUrl().equals("") && !networkClient.getServerUrl().equals("null")) {
                         File archiveFile = archivedIndexWriterOld.getArchiveFile();
                         try {
                             errorLogger.log("uploading file: " + archiveFile.getAbsolutePath());
-                            networkClient.uploadFile(archiveFile.getAbsolutePath());
+                            networkClient.uploadFile(archiveFile.getAbsolutePath(), errorLogger.getPath());
                         } catch (IOException e) {
                             errorLogger.log("failed to upload archive file: " + e.getMessage());
                         } finally {
@@ -293,6 +294,7 @@ public class RawFileCollector implements Runnable {
                     errorLogger.log("Archive closer worker was interrupted: " + e.getMessage());
                     break;
                 } catch (Exception somethingElse) {
+                    errorLogger.log("Archive closer worker was interrupted but not closing: " + somethingElse.getMessage());
                     errorLogger.log(somethingElse);
                 }
             }

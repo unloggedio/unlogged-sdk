@@ -1,6 +1,5 @@
 package io.unlogged.logging.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insidious.common.weaver.ClassInfo;
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
@@ -20,7 +19,6 @@ import java.util.List;
  */
 public class EventStreamAggregatedLogger implements IEventLogger {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final AggregatedFileLogger aggregatedLogger;
     //    private final TypeIdAggregatedStreamMap typeToId;
     private final ObjectIdAggregatedStream objectIdMap;
@@ -69,10 +67,13 @@ public class EventStreamAggregatedLogger implements IEventLogger {
     /**
      * Record an event and an object.
      * The object is translated into an object ID.
+     *
+     * @return
      */
-    public void recordEvent(int dataId, Object value) {
+    public Object recordEvent(int dataId, Object value) {
         long objectId = objectIdMap.getId(value);
         aggregatedLogger.writeEvent(dataId, objectId);
+        return value;
     }
 
     /**
@@ -249,13 +250,8 @@ public class EventStreamAggregatedLogger implements IEventLogger {
 //    }
 
     @Override
-    public void setRecording(boolean b) {
+    public void setRecordingPaused(boolean b) {
 
-    }
-
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return objectMapper;
     }
 
     @Override

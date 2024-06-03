@@ -62,6 +62,17 @@ if __name__=="__main__":
 				ReplayTest("Case - 595", TestResult.PASS),
 				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS)
 			]
+		),
+		Target(
+			"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+			"unlogged-spring-webflux-maven-demo",
+			"/pom.xml",
+			"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+			buildSystem.MAVEN,
+			[
+				ReplayTest("getStringFromObservable saved on 2024-03-28 12:51", TestResult.PASS),
+				ReplayTest("enrichDefaultPerson saved on 2024-04-02 16:07", TestResult.PASS)
+			]
 		)
 	]
 		

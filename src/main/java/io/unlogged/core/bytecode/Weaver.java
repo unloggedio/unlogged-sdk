@@ -128,6 +128,7 @@ public class Weaver {
                     classTransformer = new ClassTransformer(weaveLog, smallerConfig, target, typeHierarchy, this.unloggedProcessorConfig);
 //                    log("LogLevel.IgnoreArrayInitializer: " + container + "/" + className);
                 } catch (RuntimeException e2) {
+                    e2.printStackTrace();
                     if (e.getMessage() != null && e.getMessage().startsWith("Method too large")) {
                         weaveLog = new WeaveLog(classId, dataInfoProvider);
                         // Retry to generate further smaller bytecode by ignoring except for entry and exit events
@@ -146,6 +147,7 @@ public class Weaver {
             } else {
 //                log("Failed to weave class: " + className);
 //                log(e);
+                e.printStackTrace();
                 return new InstrumentedClass(target, new byte[0]);
                 // this jumps to catch (Throwable e) in this method
 //                    throw e;

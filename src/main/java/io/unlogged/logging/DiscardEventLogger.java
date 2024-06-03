@@ -7,7 +7,7 @@ import java.util.List;
 
 public class DiscardEventLogger implements IEventLogger {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = ObjectMapperFactory.createObjectMapper();
 
 
     @Override
@@ -21,8 +21,8 @@ public class DiscardEventLogger implements IEventLogger {
     }
 
     @Override
-    public void recordEvent(int dataId, Object value) {
-
+    public Object recordEvent(int dataId, Object value) {
+        return value;
     }
 
     @Override
@@ -76,14 +76,10 @@ public class DiscardEventLogger implements IEventLogger {
     }
 
     @Override
-    public void setRecording(boolean b) {
+    public void setRecordingPaused(boolean b) {
 
     }
 
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return objectMapper;
-    }
 
     @Override
     public ClassLoader getTargetClassLoader() {

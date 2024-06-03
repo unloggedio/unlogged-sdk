@@ -14,14 +14,15 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.unlogged.AgentCommandExecutorImpl;
 import io.unlogged.AgentCommandRawResponse;
+import io.unlogged.MethodSignatureParser;
 import io.unlogged.Runtime;
 import io.unlogged.atomic.*;
 import io.unlogged.command.AgentCommandRequest;
 import io.unlogged.command.AgentCommandResponse;
 import io.unlogged.command.ResponseType;
 import io.unlogged.logging.DiscardEventLogger;
+import io.unlogged.logging.ObjectMapperFactory;
 import io.unlogged.mocking.DeclaredMock;
-import io.unlogged.util.ClassTypeUtil;
 import junit.framework.AssertionFailedError;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
@@ -36,10 +37,10 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -59,6 +60,7 @@ public class UnloggedTestRunner extends Runner {
     private static boolean isLombokPresent;
 
     static {
+        System.setProperty("UNLOGGED_DISABLE", "true");
         try {
             Class<?> lombokBuilderAnnotation = Class.forName("lombok.Builder");
             isLombokPresent = true;
@@ -68,252 +70,45 @@ public class UnloggedTestRunner extends Runner {
             isLombokPresent = false;
         }
 
-        objectMapper = createObjectMapper();
+        objectMapper = ObjectMapperFactory.createObjectMapperReactive();
 
     }
 
     final private AtomicRecordService atomicRecordService = new AtomicRecordService();
     private final AgentCommandExecutorImpl commandExecutor;
     private final AtomicInteger testCounter = new AtomicInteger();
-    private final Class<?> testClass;
     private boolean isSpringPresent;
     private Method getBeanMethod;
     private Object applicationContext;
-    private final DiscardEventLogger eventLogger = new DiscardEventLogger() {
-        @Override
-        public Object getObjectByClassName(String className) {
-            if (applicationContext == null) {
-                return null;
-            }
-            try {
-                return getBeanMethod.invoke(applicationContext, Class.forName(className));
-            } catch (Throwable e) {
-                // throws exception when spring cannot create the bean
-                return null;
-            }
-        }
-    };
-    private Description testDescription;
-    private Map<String, Description> descriptionMap = new HashMap<>();
-    private Map<Description, StoredCandidate> descriptionStoredCandidateMap = new HashMap<>();
+    private final Description testDescription;
+    private final Map<String, Description> descriptionMap = new HashMap<>();
+    private final Map<Description, StoredCandidate> descriptionStoredCandidateMap = new HashMap<>();
     //    private Object springTestContextManager;
 
     public UnloggedTestRunner(Class<?> testClass) {
         super();
-        this.testClass = testClass;
-        this.commandExecutor = new AgentCommandExecutorImpl(objectMapper, eventLogger);
+        // throws exception when spring cannot create the bean
+        DiscardEventLogger eventLogger = new DiscardEventLogger() {
+            @Override
+            public Object getObjectByClassName(String className) {
+                if (applicationContext == null) {
+                    return null;
+                }
+                try {
+                    return getBeanMethod.invoke(applicationContext, Class.forName(className));
+                } catch (Throwable e) {
+                    // throws exception when spring cannot create the bean
+                    return null;
+                }
+            }
+        };
+        this.commandExecutor = new AgentCommandExecutorImpl(ObjectMapperFactory.createObjectMapperReactive(),
+                eventLogger);
         this.testDescription = Description.createTestDescription(testClass, "Unlogged test runner");
 
-        commandExecutor.enableSpringIntegration(this.testClass);
+        commandExecutor.enableSpringIntegration(testClass);
         collectTests();
         Runtime.getInstance("format=discard");
-    }
-
-    public static ObjectMapper createObjectMapper() {
-        // For 2.13.1
-        // Load JsonMappingException class force load so that we don't get a StackOverflow when we are in a cycle
-        JsonMappingException jme = new JsonMappingException(new DummyClosable(), "load class");
-        jme.prependPath(new JsonMappingException.Reference("from dummy"));
-        JsonMapper.Builder jacksonBuilder = JsonMapper.builder();
-
-        for (DeserializationFeature value : DeserializationFeature.values()) {
-            if (JACKSON_PROPERTY_NAMES_SET_FALSE.contains(value.name())) {
-                jacksonBuilder.configure(value, false);
-            }
-        }
-
-        jacksonBuilder.annotationIntrospector(new JacksonAnnotationIntrospector() {
-            @Override
-            public boolean hasIgnoreMarker(AnnotatedMember m) {
-                String fullName = m.getFullName();
-                if (m.getDeclaringClass().getCanonicalName().contains("_$$_")) {
-                    return true;
-                }
-                String rawTypeCanonicalName = m.getRawType().getCanonicalName();
-                if (rawTypeCanonicalName.equals("javassist.util.proxy.MethodHandler")) {
-                    return true;
-                }
-                if (fullName.contains(".$Proxy")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("java.lang.Thread")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("java.util.function.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("java.lang.reflect.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("jdk.internal.reflect.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("io.mongock.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("sun.reflect.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.equals("sun.nio.ch.Interruptible")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.equals("java.security.AccessControlContext")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.equals("java.lang.ClassLoader")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.equals("java.lang.Runnable")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("reactor.core.")) {
-                    return true;
-                }
-                if (fullName.startsWith("reactor.")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("io.netty.resolver")) {
-                    return true;
-                }
-                if (rawTypeCanonicalName.startsWith("org.reactivestreams.")) {
-                    return true;
-                }
-//                    System.out.println("hasIgnoreMarker: " + m.getFullName() + " => " + rawTypeCanonicalName);
-                return false;
-            }
-
-            @Override
-            public Object findSerializer(Annotated a) {
-                if (Objects.equals(a.getRawType(), Date.class)) {
-                    return null;
-                }
-                return super.findSerializer(a);
-            }
-
-            @Override
-            public JsonPOJOBuilder.Value findPOJOBuilderConfig(AnnotatedClass ac) {
-//                    System.err.println("Find POJO builder config: " + ac.getName());
-                if (ac.hasAnnotation(
-                        JsonPOJOBuilder.class)) {//If no annotation present use default as empty prefix
-                    return super.findPOJOBuilderConfig(ac);
-                }
-                return new JsonPOJOBuilder.Value("build", "");
-            }
-
-            @Override
-            public Class<?> findPOJOBuilder(AnnotatedClass ac) {
-//                    System.err.println("Find POJO builder: " + ac.getName());
-
-//                    if (isLombokPresent) {
-//                        System.err.println("Annotation found: " + ac.hasAnnotation(lombokBuilderAnnotation));
-//                    }
-
-                if (ac.getRawType().getCanonicalName().startsWith("java.")) {
-                    return null;
-                }
-
-                if (isLombokPresent) {
-                    try {
-                        String classFullyQualifiedName = ac.getName();
-                        String classSimpleName = classFullyQualifiedName.substring(
-                                classFullyQualifiedName.lastIndexOf(".") + 1);
-                        String lombokClassBuilderName = ac.getName() + "$" + classSimpleName + "Builder";
-//                            System.err.println("Lookup builder by nameclean: " + lombokClassBuilderName);
-                        if (ac.getRawType().getClassLoader() != null) {
-                            return ac.getRawType().getClassLoader().loadClass(lombokClassBuilderName);
-                        } else {
-                            return getClass().getClassLoader().loadClass(lombokClassBuilderName);
-                        }
-                    } catch (ClassNotFoundException e) {
-                        return super.findPOJOBuilder(ac);
-                    }
-                }
-                return super.findPOJOBuilder(ac);
-            }
-        });
-        DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
-        jacksonBuilder.defaultDateFormat(df);
-        jacksonBuilder.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        jacksonBuilder.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
-
-        try {
-            Field fieldWriteSelfReferencesAsNull = SerializationFeature.class.getDeclaredField(
-                    "WRITE_SELF_REFERENCES_AS_NULL");
-            // field found
-            jacksonBuilder.configure(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL, true);
-        } catch (NoSuchFieldException e) {
-            // no field WRITE_SELF_REFERENCES_AS_NULL
-        }
-
-
-        try {
-            Class.forName("javax.persistence.ElementCollection");
-            Class<?> hibernateClassPresent = Class.forName("org.hibernate.SessionFactory");
-            Class<?> hibernateModule = Class.forName(
-                    "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module");
-            com.fasterxml.jackson.databind.Module module = (com.fasterxml.jackson.databind.Module) hibernateModule.getDeclaredConstructor()
-                    .newInstance();
-            Class<?> featureClass = Class.forName(
-                    "com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module$Feature");
-            Method configureMethod = hibernateModule.getMethod("configure", featureClass, boolean.class);
-            configureMethod.invoke(module, featureClass.getDeclaredField("FORCE_LAZY_LOADING").get(null), true);
-            configureMethod.invoke(module,
-                    featureClass.getDeclaredField("REPLACE_PERSISTENT_COLLECTIONS").get(null), true);
-            configureMethod.invoke(module, featureClass.getDeclaredField("USE_TRANSIENT_ANNOTATION").get(null),
-                    false);
-            jacksonBuilder.addModule(module);
-//                System.out.println("Loaded hibernate module");
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
-//                e.printStackTrace();
-//                System.out.println("Failed to load hibernate module: " + e.getMessage());
-            // hibernate module not found
-            // add a warning in System.err here ?
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException |
-                 NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-
-        // potentially
-//            jacksonBuilder.findAndAddModules();
-        List<String> jacksonModules = Arrays.asList(
-                "com.fasterxml.jackson.datatype.jdk8.Jdk8Module",
-                "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
-                "com.fasterxml.jackson.datatype.joda.JodaModule",
-//                        "com.fasterxml.jackson.module.blackbird.BlackbirdModule",
-                "com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationModule",
-                "com.fasterxml.jackson.module.mrbean.MrBeanModule",
-//                        "com.fasterxml.jackson.module.afterburner.AfterburnerModule",
-                "com.fasterxml.jackson.module.paranamer.ParanamerModule",
-                "software.fitz.jackson.module.force.ForceDeserializerModule"
-        );
-        for (String jacksonModule : jacksonModules) {
-            try {
-                //checks for presence of this module class, if not present throws exception
-                Class<?> jdk8Module = Class.forName(jacksonModule);
-                jacksonBuilder.addModule((Module) jdk8Module.getDeclaredConstructor().newInstance());
-            } catch (ClassNotFoundException | UnsupportedClassVersionError e) {
-                // jdk8 module not found
-            } catch (InvocationTargetException
-                     | InstantiationException
-                     | IllegalAccessException
-                     | NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-//        try {
-//            Class<?> kotlinModuleClass = Class.forName("com.fasterxml.jackson.module.kotlin.KotlinModule");
-//            KotlinModule kotlinModule = new KotlinModule.Builder().build();
-//            jacksonBuilder.addModule(kotlinModule);
-//        } catch (ClassNotFoundException e) {
-//            // kotlin module for jackson not present on classpath
-//        }
-
-
-        JsonMapper objectMapperInstance = jacksonBuilder.build();
-        objectMapperInstance.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
-                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-        return objectMapperInstance;
     }
 
     @Override
@@ -374,14 +169,20 @@ public class UnloggedTestRunner extends Runner {
             for (String className : recordsMap.keySet()) {
                 AtomicRecord classRecords = recordsMap.get(className);
                 Map<String, List<StoredCandidate>> storedCandidateMap = classRecords.getStoredCandidateMap();
-//                System.err.println("running the tests from unlogged: " + classFileResource);
 
                 int candidateCount = storedCandidateMap.values().stream().mapToInt(Collection::size).sum();
                 if (candidateCount < 1) {
                     continue;
                 }
-                Description suiteDescription = Description.createSuiteDescription(Class.forName(className));
-//                    System.err.println(className );
+                Class<?> testClass1;
+                try {
+                    testClass1 = Class.forName(className);
+                } catch (ClassNotFoundException classNotFoundException) {
+                    System.err.println("Class not found: " + className);
+                    continue;
+                }
+                Description suiteDescription = Description.createSuiteDescription(testClass1);
+
                 testDescription.addChild(suiteDescription);
 
                 for (String methodHashKey : storedCandidateMap.keySet()) {
@@ -430,22 +231,6 @@ public class UnloggedTestRunner extends Runner {
         return testDescription1;
     }
 
-    private Description getSuiteDescription(MethodUnderTest method, String className) {
-        String key = className + "." + method.getName();
-        if (descriptionMap.containsKey(key)) {
-            return descriptionMap.get(key);
-        }
-        Description suiteDescription = null;
-        try {
-            suiteDescription = Description.createSuiteDescription(Class.forName(className));
-        } catch (ClassNotFoundException e) {
-            suiteDescription = Description.createSuiteDescription(className, (Serializable) method);
-
-        }
-        descriptionMap.put(key, suiteDescription);
-        return suiteDescription;
-    }
-
     private Throwable fireTest(
             Map<String, DeclaredMock> mocksById, StoredCandidate candidate) {
         MethodUnderTest methodUnderTest = candidate.getMethod();
@@ -454,6 +239,12 @@ public class UnloggedTestRunner extends Runner {
         if (mocksToUse != null) {
             for (String mockId : mocksToUse) {
                 DeclaredMock mockDefinition = mocksById.get(mockId);
+                if (mockDefinition == null) {
+                    return new UndeclaredThrowableException(
+                            new Throwable("Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId()),
+                            "Could not find mock " + mockId + " used in candidate: " + candidate.getCandidateId()
+                    );
+                }
                 mockList.add(mockDefinition);
             }
         }
@@ -553,15 +344,82 @@ public class UnloggedTestRunner extends Runner {
 //                    "] as expected in test candidate " +
 //                    "[" + candidate.getCandidateId() + "]" +
 //                    "[" + candidate.getName() + "]");
+            String className = methodUnderTest.getClassName();
+            if (className.contains(".")) {
+                className = className.substring(className.lastIndexOf(".") + 1);
+            }
+            String message = "Expected " + atomicAssertion.getExpression() + "([" + atomicAssertion.getExpectedValue() + "]) " +
+                    atomicAssertion.getAssertionType().toString() + "  actual " +
+                    "[" + expressedValue + "]\n\t when the return value from method " +
+                    "[" + className + "." + methodUnderTest.getName() + methodUnderTest.getSignature() + "]\n\t value " +
+                    "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
+                    "(" + atomicAssertion.getKey() + ")")) +
+                    "] as expected in test candidate " +
+                    "[" + candidate.getCandidateId() + "]" +
+                    "[" + candidate.getName() + "]";
+
+
+            List<String> methodParameterTypes = MethodSignatureParser.parseMethodSignature(
+                    methodUnderTest.getSignature());
+
+            List<Object> messageTemplateValues = new ArrayList<>();
+
+
+            messageTemplateValues.add(className + "." + methodUnderTest.getName() + "()");
+            messageTemplateValues.add(candidate.getCandidateId());
+            int parameterCount = methodParameterTypes.size() - 1;
+            messageTemplateValues.add(methodParameterTypes.get(parameterCount));
+            messageTemplateValues.add(candidate.getMockIds().size());
+
+            String messageTemplate = "\n\n" +
+                    "┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n" +
+                    "│ %-91s %-36s │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Returns: %-120s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Mocks: %-122s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ Parameters: %-117s│\n" +
+                    "│                                                                                                                                  │\n";
+
+            messageTemplateValues.add(parameterCount);
+            for (int i = 0; i < parameterCount; i++) {
+                String paramType = methodParameterTypes.get(i);
+                messageTemplate = messageTemplate +
+                        "│   %-127s│\n";
+                messageTemplateValues.add(paramType + ": " + candidate.getMethodArguments().get(i));
+            }
+            if (parameterCount > 0) {
+                messageTemplate +=
+                        "│                                                                                                                                  │\n"
+                ;
+            }
+
+            messageTemplate = messageTemplate +
+                    "│ Failed Assertion                                                                                                                 │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│  Key:            %-112s│\n" +
+                    "│  Expression:     %-112s│\n" +
+                    "│  Assertion:      %-112s│\n" +
+                    "│  Expected Value: %-112s│\n" +
+                    "│  Actual Value:   %-112s│\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│                                                                                                                                  │\n" +
+                    "│ %-88s                UnloggedReplayTestReport │\n" +
+                    "└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘";
+
+
+            messageTemplateValues.add(atomicAssertion.getKey());
+            messageTemplateValues.add(atomicAssertion.getExpression());
+            messageTemplateValues.add(atomicAssertion.getAssertionType());
+            messageTemplateValues.add(atomicAssertion.getExpectedValue());
+            messageTemplateValues.add(expressedValue);
+            messageTemplateValues.add(new Date().toString());
+
+
             AssertionFailedError thrownException = new AssertionFailedError(
-                    "Expected [" + atomicAssertion.getExpectedValue() + "] instead of actual " +
-                            "[" + expressedValue + "]\n\t when the return value from method " +
-                            "[" + methodUnderTest.getName() + "]()\n\t value " +
-                            "[" + (expression == Expression.SELF ? atomicAssertion.getKey() : (expression.name() +
-                            "(" + atomicAssertion.getKey() + ")")) +
-                            "] as expected in test candidate " +
-                            "[" + candidate.getCandidateId() + "]" +
-                            "[" + candidate.getName() + "]");
+                    String.format(messageTemplate, messageTemplateValues.toArray(new Object[0]))
+            );
 //            Failure failure = new Failure(testDescription, thrownException);
 //            throw thrownException;
             return thrownException;
@@ -577,7 +435,8 @@ public class UnloggedTestRunner extends Runner {
 
         List<String> methodArgumentValues = candidate.getMethodArguments();
         ArrayList<String> newArgumentValues = new ArrayList<>(methodArgumentValues.size());
-        List<String> methodSignatureTypes = ClassTypeUtil.splitMethodDesc(candidate.getMethod().getSignature());
+        List<String> methodSignatureTypes = MethodSignatureParser.parseMethodSignature(
+                candidate.getMethod().getSignature());
         // remove the return type
         String methodReturnType = methodSignatureTypes.remove(methodSignatureTypes.size() - 1);
         boolean processReturnValueAsFloatDouble = Objects.equals(methodReturnType, "F")
@@ -652,10 +511,16 @@ public class UnloggedTestRunner extends Runner {
             assertionResult.setPassing(false);
             return assertionResult;
         }
+        String responseClassName = executionResult.getResponseClassName();
+
+        List<String> params = MethodSignatureParser.parseMethodSignature(candidate.getMethod().getSignature());
+        responseClassName = params.get(params.size() - 1);
+
+
         return AssertionEngine.executeAssertions(
                 candidate.getTestAssertions(),
                 getResponseNode(String.valueOf(executionResult.getMethodReturnValue()),
-                        executionResult.getResponseClassName()
+                        responseClassName
                 ));
     }
 
@@ -689,6 +554,17 @@ public class UnloggedTestRunner extends Runner {
             if (methodReturnValue == null) {
                 return JsonNodeFactory.instance.nullNode();
             }
+
+            if (responseClassName.equals("char") || responseClassName.equals("C")) {
+                try {
+                    methodReturnValue =
+                            String.valueOf(objectMapper.readTree(methodReturnValue).textValue().codePointAt(0));
+                    return objectMapper.getNodeFactory().numberNode(Integer.valueOf(methodReturnValue));
+                } catch (JsonProcessingException e) {
+                    //
+                }
+            }
+
             return objectMapper.readTree(methodReturnValue);
         } catch (JsonProcessingException e) {
             // this shouldn't happen

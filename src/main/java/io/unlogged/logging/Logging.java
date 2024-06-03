@@ -5,11 +5,12 @@ import io.unlogged.logging.impl.EventStreamAggregatedLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
 import io.unlogged.logging.util.TypeIdAggregatedStreamMap;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.List;
 
 
 /**
@@ -58,7 +59,24 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(Object value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
+    }
+
+    /**
+     * A method to record an event associated to an object.
+     *
+     * @param value
+     * @param dataId
+     */
+    public static Mono<?> recordEvent(Mono<?> value, int dataId) {
+        // previousDataId = dataId;
+        return (Mono<?>) INSTANCE.recordEvent(dataId, value);
+    }
+
+    public static Flux<?> recordEvent(Flux<?> value, int dataId) {
+        // previousDataId = dataId;
+        return (Flux<?>) INSTANCE.recordEvent(dataId, value);
     }
 
     /**
@@ -69,6 +87,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(Throwable value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -79,6 +98,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(boolean value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -89,10 +109,12 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(byte value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
     public static void recordEvent(Integer value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (int) value);
         } else {
@@ -101,6 +123,7 @@ public class Logging {
     }
 
     public static void recordEvent(Long value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (long) value);
         } else {
@@ -109,6 +132,7 @@ public class Logging {
     }
 
     public static void recordEvent(Short value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (short) value);
         } else {
@@ -117,6 +141,7 @@ public class Logging {
     }
 
     public static void recordEvent(Byte value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (byte) value);
         } else {
@@ -125,6 +150,7 @@ public class Logging {
     }
 
     public static void recordEvent(Float value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (float) value);
         } else {
@@ -133,6 +159,7 @@ public class Logging {
     }
 
     public static void recordEvent(Double value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (double) value);
         } else {
@@ -141,6 +168,7 @@ public class Logging {
     }
 
     public static void recordEvent(Character value, int dataId) {
+        // previousDataId = dataId;
         if (value != null) {
             INSTANCE.recordEvent(dataId, (char) value);
         } else {
@@ -149,6 +177,7 @@ public class Logging {
     }
 
     public static void recordEvent(Boolean value, int dataId) {
+        // previousDataId = dataId;
         if (value == null || !value) {
             INSTANCE.recordEvent(dataId, 0);
         } else {
@@ -163,6 +192,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(char value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -173,6 +203,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(short value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -183,6 +214,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(int value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -193,6 +225,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(long value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -203,6 +236,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(float value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -213,6 +247,7 @@ public class Logging {
      * @param dataId
      */
     public static void recordEvent(double value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, value);
     }
 
@@ -221,7 +256,12 @@ public class Logging {
      *
      * @param dataId dataId of the probe which generated the event
      */
+    static int previousDataId = -1;
     public static void recordEvent(int dataId) {
+//        if (dataId == previousDataId) {
+//            System.out.println("lol");
+//        }
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, 0);
     }
 
@@ -233,6 +273,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayLoad(Object array, int index, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
     }
@@ -247,6 +288,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, byte value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -262,6 +304,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, char value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -277,6 +320,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, double value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -292,6 +336,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, float value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -307,6 +352,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, int value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -322,6 +368,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, long value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -337,6 +384,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, short value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -352,6 +400,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordArrayStore(Object array, int index, Object value, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         INSTANCE.recordEvent(dataId + 1, index);
         INSTANCE.recordEvent(dataId + 2, value);
@@ -365,6 +414,7 @@ public class Logging {
      * @param dataId specifies an event.
      */
     public static void recordMultiNewArray(Object array, int dataId) {
+        // previousDataId = dataId;
         INSTANCE.recordEvent(dataId, array);
         recordMultiNewArrayContents((Object[]) array, dataId);
     }

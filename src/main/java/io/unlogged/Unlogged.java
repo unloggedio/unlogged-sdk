@@ -19,10 +19,11 @@ public @interface Unlogged {
      */
 	
     String[] includePackage() default "";
-
     boolean enable() default true;
+	int port() default 0;
+	String serverEndpoint() default "";
 
-	String counter() default "1";
-
+	// frequency logging
 	UnloggedLoggingLevel unloggedLoggingLevel() default UnloggedLoggingLevel.COUNTER;
+	String counter() default "1";
 }

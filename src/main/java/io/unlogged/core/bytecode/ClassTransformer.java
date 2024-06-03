@@ -64,16 +64,19 @@ public class ClassTransformer extends ClassVisitor {
      */
     public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) {
         // Create a writer for the target class
-        this(weaver, config, new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy), unloggedProcessorConfig);
+        this(weaver, config,
+                new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy), unloggedProcessorConfig);
         // Start weaving, and store the result to a byte array
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();
         classLoaderIdentifier = TypeIdUtil.getClassLoaderIdentifier(weaver.getFullClassName());
+
     }
 
     /**
      * Initializes the object as a ClassVisitor.
-     *c
+     * c
+     *
      * @param weaver specifies the state of the weaver.
      * @param config specifies the configuration.
      * @param cw     specifies the class writer (MetracerClassWriter).
@@ -223,6 +226,16 @@ public class ClassTransformer extends ClassVisitor {
 		// calcuclate probe flag at method level 
 		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
 		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
+
+		if (name.equals("equals") 
+			|| name.equals("hashCode")
+			|| name.equals("onNext")
+			|| name.equals("onSubscribe")
+			|| name.equals("onError")
+			|| name.equals("currentContext")
+			|| name.equals("onComplete")) {
+			neverProbeMethodFlag = true;
+		}
 
 		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {

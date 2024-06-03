@@ -235,7 +235,7 @@ public class MethodParameters {
          * Initialize the object.
          */
         public ParameterList() {
-            super(Opcodes.ASM5);
+            super(Opcodes.ASM9);
         }
 
         /**

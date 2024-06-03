@@ -2,7 +2,6 @@ package io.unlogged;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -10,7 +9,9 @@ import io.unlogged.auth.RequestAuthentication;
 import io.unlogged.auth.UnloggedSpringAuthentication;
 import io.unlogged.command.*;
 import io.unlogged.logging.IEventLogger;
-import io.unlogged.mocking.*;
+import io.unlogged.mocking.DeclaredMock;
+import io.unlogged.mocking.MockHandler;
+import io.unlogged.mocking.MockInstance;
 import io.unlogged.util.ClassTypeUtil;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.NamingStrategy;
@@ -31,7 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
@@ -43,16 +44,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     private final ByteBuddy byteBuddyInstance = new ByteBuddy()
             .with(new NamingStrategy.SuffixingRandom("Unlogged"));
     private final Map<String, MockInstance> globalFieldMockMap = new HashMap<>();
+    private final Map<String, Object> ourOwnObjects = new HashMap<>();
+    private final ParameterFactory parameterFactory;
     Objenesis objenesis = new ObjenesisStd();
     private Object applicationContext;
     private Object springTestContextManager;
     private boolean isSpringPresent;
     private Method getBeanMethod;
+    private Method getBeanByBeanNameMethod;
     private Object springBeanFactory;
+    private Method getBeanDefinitionNamesMethod;
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
         this.objectMapper = objectMapper;
         this.logger = logger;
+        this.parameterFactory = new ParameterFactory(objenesis, objectMapper, byteBuddyInstance);
     }
 
     private static void closeHibernateSessionIfPossible(Object sessionInstance) {
@@ -76,44 +82,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         }
     }
 
-    public static Class<?>[] getAllInterfaces(Object o) {
-        try {
-            Set<Class<?>> results = new HashSet<>();
-            getAllInterfaces(o, results::add);
-            return results.toArray(new Class<?>[results.size()]);
-        } catch (IllegalArgumentException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public static void getAllInterfaces(Object o, Function<Class<?>, Boolean> accumulator) throws IllegalArgumentException {
-        if (null == o)
-            return;
-
-        if (null == accumulator)
-            throw new IllegalArgumentException("Accumulator cannot be null");
-
-        if (o instanceof Class) {
-            Class clazz = (Class) o;
-
-            if (clazz.isInterface()) {
-                if (accumulator.apply((Class) o)) {
-                    for (Class aClass : clazz.getInterfaces()) {
-                        getAllInterfaces(aClass, accumulator);
-                    }
-                }
-            } else {
-                if (null != clazz.getSuperclass())
-                    getAllInterfaces(clazz.getSuperclass(), accumulator);
-
-                for (Class aClass : clazz.getInterfaces()) {
-                    getAllInterfaces(aClass, accumulator);
-                }
-            }
-        } else {
-            getAllInterfaces(o.getClass(), accumulator);
-        }
-    }
 
     @Override
     public AgentCommandRawResponse executeCommandRaw(AgentCommandRequest agentCommandRequest) {
@@ -130,9 +98,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             requestType = AgentCommandRequestType.REPEAT_INVOKE;
         }
         try {
-            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
-                logger.setRecording(true);
-            }
+            logger.setRecordingPaused(true);
 
             this.loadContext();
             Object sessionInstance = tryOpenHibernateSessionIfHibernateExists();
@@ -197,7 +163,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 targetClassLoader = objectInstanceByClass != null ?
                         objectInstanceByClass.getClass().getClassLoader() : targetClassLoader1;
 
-                List<String> methodSignatureParts = ClassTypeUtil.splitMethodDesc(
+                List<String> methodSignatureParts = MethodSignatureParser.parseMethodSignature(
                         agentCommandRequest.getMethodSignature());
 
                 // DO NOT REMOVE this transformation
@@ -205,18 +171,60 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 List<String> methodParameters = agentCommandRequest.getMethodParameters();
 
-                Class<?>[] expectedMethodArgumentTypes = new Class[methodSignatureParts.size()];
+                JavaType[] expectedMethodArgumentTypes = new JavaType[methodSignatureParts.size()];
 
+                List<String> typeFromRequest = agentCommandRequest.getParameterTypes();
+                TypeFactory typeFactory = objectMapper.getTypeFactory();
                 for (int i = 0; i < methodSignatureParts.size(); i++) {
                     String methodSignaturePart = methodSignatureParts.get(i);
 //                System.err.println("Method parameter [" + i + "] type: " + methodSignaturePart);
-                    expectedMethodArgumentTypes[i] =
-                            ClassTypeUtil.getClassNameFromDescriptor(methodSignaturePart, targetClassLoader);
+                    String typeName = typeFromRequest.get(i);
+                    JavaType typeReference;
+                    try {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(methodSignaturePart, typeFactory);
+                    } catch (Exception e) {
+                        typeReference = ClassTypeUtil
+                                .getClassNameFromDescriptor(typeName, typeFactory);
+                    }
+                    expectedMethodArgumentTypes[i] = typeReference;
+                }
+
+
+                try {
+                    Class<?> rch = Class.forName("org.springframework.web.context.request.RequestContextHolder");
+                    String className = "org.springframework.web.context.request.RequestAttributes";
+                    Class<?> requestAttributesClass = Class.forName(
+                            className);
+
+                    Method setRequestAttributesMethod = rch.getMethod("setRequestAttributes", requestAttributesClass,
+                            boolean.class);
+
+
+                    String attributesClassName = "org.springframework.web.context.request.ServletRequestAttributes";
+                    Class<?> attributesClass = Class.forName(
+                            attributesClassName);
+                    Object requestAttributes = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
+                            attributesClassName,
+                            "{\"request\": " +
+                                    "{" +
+                                    "   \"requestURL\": \"https://localhost:8080/api\"," +
+                                    "   \"queryString\": \"?query=value\"," +
+                                    "   \"method\": \"GET\"," +
+                                    "   \"requestURI\": \"/api\"" +
+                                    "}" +
+                                    "}", attributesClass,
+                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
+                    );
+                    setRequestAttributesMethod.invoke(null, requestAttributes, true);
+
+                } catch (Throwable e) {
+
                 }
 
                 UnloggedSpringAuthentication authInstance = null;
                 UnloggedSpringAuthentication usa = null;
-                Object mockedContext = null;
+                Object mockedContext = new Object();
                 RequestAuthentication requestAuthentication = agentCommandRequest.getRequestAuthentication();
                 if (requestAuthentication != null && requestAuthentication.getPrincipalClassName() != null) {
 
@@ -316,9 +324,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 }
 
                 Object methodReturnValue;
-                if (isSpringPresent && mockedContext != null && springTestContextManager != null
-                        && springTestContextManager.getClass()
-                        .getCanonicalName().contains("AnnotationConfigReactiveWebServerApplicationContext")) {
+                if ((methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Mono") ||
+                        methodToExecute.getReturnType().getCanonicalName().startsWith("reactor.core.publisher.Flux"))
+                        && springTestContextManager != null
+                        && springTestContextManager.getClass().getCanonicalName()
+                        .contains("AnnotationConfigReactiveWebServerApplicationContext")) {
                     final Map<String, Object> resultContainer = new HashMap<>();
 
                     final Mono<?> securityContext = Mono.just(mockedContext);
@@ -332,7 +342,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     Mono.defer(() -> {
                                 try {
                                     // Invoke the method using reflection
+                                    logger.setRecordingPaused(false);
                                     Object returnValue = methodToExecute.invoke(finalObjectInstanceByClass, finalParameters);
+
 
                                     // Handle different return types
                                     if (returnValue instanceof Mono) {
@@ -348,7 +360,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             })
                             .contextWrite(ctx -> {
 //                                System.out.println("setting sec");
-                                return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                if (finalSECURITY_CONTEXT_KEY != null) {
+                                    return ctx.put(finalSECURITY_CONTEXT_KEY, securityContext);
+                                }
+                                return ctx;
                             }) // Set the security context
                             .doOnSuccess(result -> {
                                 resultContainer.put("returnValue", result);
@@ -357,6 +372,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                             .doOnError(error -> {
                                 resultContainer.put("exception", error);
                                 cdl.countDown(); // Count down on error
+                            })
+                            .doFinally(e -> {
+                                logger.setRecordingPaused(true);
                             })
                             .subscribe();
 
@@ -385,7 +403,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                         // failed to set auth for non reactive spring app
                     }
 
+                    logger.setRecordingPaused(false);
                     methodReturnValue = methodToExecute.invoke(objectInstanceByClass, parameters);
+                    logger.setRecordingPaused(true);
+
                 }
 //                reactorContextTestExecutionListener.afterTestMethod(null);
 
@@ -434,9 +455,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             agentCommandResponse.setResponseClassName(exceptionCause.getClass().getCanonicalName());
             agentCommandResponse.setResponseType(ResponseType.FAILED);
         } finally {
-            if (requestType.equals(AgentCommandRequestType.REPEAT_INVOKE)) {
-                logger.setRecording(false);
-            }
+            logger.setRecordingPaused(false);
         }
         return agentCommandRawResponse;
 
@@ -459,7 +478,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return rawResponse.getAgentCommandResponse();
     }
 
-	@Override
+    @Override
     public AgentCommandResponse injectMocks(AgentCommandRequest agentCommandRequest) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException {
 
         int fieldCount = 0;
@@ -467,121 +486,122 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         Map<String, List<DeclaredMock>> mocksBySourceClass = agentCommandRequest
                 .getDeclaredMocks().stream().collect(Collectors.groupingBy(DeclaredMock::getSourceClassName));
 
-
         for (String sourceClassName : mocksBySourceClass.keySet()) {
-            Object sourceClassInstance = logger.getObjectByClassName(sourceClassName);
-			
-			Class<? extends Object> classObject = null;
-            if (sourceClassInstance == null) {
 
-				this.loadContext();
-				if (applicationContext != null) {
-					// get list of bean names
-					// reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
-					Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-					Method getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanDefinitionNames");
-					String[] beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext);
+            List<Object> beansToInject = new ArrayList<>();
+            Class<?> targetClassObject = Class.forName(sourceClassName);
 
-					// get bean from beanName
-					List<Object> applicationBean = new ArrayList<>();
-					for (String beanName: beanNames) {
-						// reflection: Object bean = applicationContext.getBean(beanName)
-
-						Method getBeanMethod = applicationContextClass.getMethod("getBean", String.class);
-						Object bean = getBeanMethod.invoke(applicationContext, beanName);
-						applicationBean.add(bean);
-					}
-
-					// inject mocks
-					// TODO: improve search performance here
-					Class<? extends Object> classDefination = null;
-					for (Object bean: applicationBean) {
-						if (classDefination == null ) {
-							Object baseBeanObject = bean;
-							Class<? extends Object> beanClass = bean.getClass();
-
-							while (beanClass != Object.class) {
-								if (sourceClassName.equals(beanClass.getName())) {
-									sourceClassInstance = baseBeanObject;
-									classDefination = baseBeanObject.getClass();
-									break;
-								}
-								beanClass = beanClass.getSuperclass();
-							}
-						}
-					}
-					classObject = classDefination;
-				}
-				else {
-					// no instance found for this class
-					// nothing to inject mocks to
-					continue;
-				}
+            Object sourceClassInstance1 = logger.getObjectByClassName(sourceClassName);
+            if (sourceClassInstance1 != null) {
+                beansToInject.add(sourceClassInstance1);
             }
+
+
+            this.loadContext();
+
+            List<Object> objectsFromSpringObject = getObjectsFromSpringContext(targetClassObject);
+            beansToInject.addAll(objectsFromSpringObject);
+
+            if (beansToInject.size() == 0) {
+
+                // alas no object, lets create one
+
+                ClassLoader classLoader = sourceClassInstance1.getClass().getClassLoader();
+                Object anInstance = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
+                        sourceClassName, "{}", targetClassObject,
+                        objectMapper.getTypeFactory().withClassLoader(classLoader)
+                );
+                // we need to hold on to this object
+                ourOwnObjects.put(sourceClassName, anInstance); // its a leak
+                beansToInject.add(anInstance);
+
+
+            }
+
             List<DeclaredMock> declaredMocks = mocksBySourceClass.get(sourceClassName);
 
             Map<String, List<DeclaredMock>> mocksByField = declaredMocks.stream()
                     .collect(Collectors.groupingBy(DeclaredMock::getFieldName));
 
-			if (classObject == null) {
-				classObject = sourceClassInstance.getClass();
-			}
-			
-            ClassLoader targetClassLoader = classObject.getClassLoader();
-            String targetClassName = classObject.getCanonicalName();
+            for (Object targetObject : beansToInject) {
+                Class<?> classObject = targetObject.getClass();
+                ClassLoader targetClassLoader = targetObject.getClass().getClassLoader();
+                String targetClassName = classObject.getCanonicalName();
 
-            ClassLoadingStrategy<ClassLoader> strategy;
-            while (classObject != Object.class) {
-                classCount++;
-                Field[] availableFields = classObject.getDeclaredFields();
 
-                for (Field field : availableFields) {
-                    String fieldName = field.getName();
-                    if (!mocksByField.containsKey(fieldName)) {
-                        continue;
+                while (classObject != Object.class) {
+                    classCount++;
+                    Field[] availableFields = classObject.getDeclaredFields();
+
+                    for (Field field : availableFields) {
+                        String fieldName = field.getName();
+                        if (!mocksByField.containsKey(fieldName)) {
+                            continue;
+                        }
+                        List<DeclaredMock> declaredMocksForField = mocksByField.get(fieldName);
+
+                        String key = sourceClassName + "#" + fieldName;
+                        MockInstance existingMockInstance = globalFieldMockMap.get(key);
+
+                        field.setAccessible(true);
+                        Object originalFieldValue = null;
+                        try {
+                            originalFieldValue = field.get(targetObject);
+                        } catch (IllegalAccessException e) {
+                            // if it does happen, skip mocking of this field for now
+                            System.err.println("Failed to access field [" + targetClassName + "#" + fieldName + "] " +
+                                    "=> " + e.getMessage());
+                            continue;
+                        }
+
+                        if (existingMockInstance == null) {
+                            MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
+                                    parameterFactory, objenesis, originalFieldValue, targetObject,
+                                    targetClassLoader, field);
+                            Class<?> fieldType = field.getType();
+
+                            try {
+                                Class<?> fieldTypeFromMockDefinition = Class.forName(
+                                        declaredMocks.get(0).getFieldTypeName());
+                                if (fieldType.isAssignableFrom(fieldTypeFromMockDefinition)) {
+                                    fieldType = fieldTypeFromMockDefinition;
+                                }
+                            } catch (Exception e1) {
+                                //
+                            }
+
+                            Class<?> loadedMockedField;
+                            try {
+                                loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
+                                        fieldType);
+                            } catch (Throwable t) {
+                                // failed to create an instance of class
+                                System.err.println(
+                                        "Failed to create instance of class: " + fieldType.getCanonicalName() + " " + fieldName);
+                                continue;
+                            }
+                            Object mockedFieldInstance = objenesis.newInstance(loadedMockedField);
+                            existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler
+                            );
+                            globalFieldMockMap.put(key, existingMockInstance);
+
+                        } else {
+                            existingMockInstance.getMockHandler().setDeclaredMocks(declaredMocksForField);
+                        }
+
+                        try {
+                            field.set(targetObject, existingMockInstance.getMockedFieldInstance());
+                        } catch (IllegalAccessException e) {
+                            System.err.println("Failed to mock field [" + sourceClassName + "#" + fieldName + "] =>" +
+                                    e.getMessage());
+                        }
+                        fieldCount++;
                     }
-                    List<DeclaredMock> declaredMocksForField = mocksByField.get(fieldName);
-
-                    String key = sourceClassName + "#" + fieldName;
-                    MockInstance existingMockInstance = globalFieldMockMap.get(key);
-
-                    field.setAccessible(true);
-                    Object originalFieldValue = null;
-                    try {
-                        originalFieldValue = field.get(sourceClassInstance);
-                    } catch (IllegalAccessException e) {
-                        // if it does happen, skip mocking of this field for now
-                        System.err.println("Failed to access field [" + targetClassName + "#" + fieldName + "] " +
-                                "=> " + e.getMessage());
-                        continue;
-                    }
-
-                    if (existingMockInstance == null) {
-                        MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
-                                byteBuddyInstance, objenesis, originalFieldValue, sourceClassInstance,
-                                targetClassLoader, field);
-                        Class<?> fieldType = field.getType();
-
-                        DynamicType.Loaded<?> loadedMockedField;
-                        loadedMockedField = createInstanceUsingByteBuddy(targetClassLoader, mockHandler, fieldType);
-                        Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-                        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
-                        globalFieldMockMap.put(key, existingMockInstance);
-
-                    } else {
-                        existingMockInstance.getMockHandler().setDeclaredMocks(declaredMocksForField);
-                    }
-
-                    try {
-                        field.set(sourceClassInstance, existingMockInstance.getMockedFieldInstance());
-                    } catch (IllegalAccessException e) {
-                        System.err.println("Failed to mock field [" + sourceClassName + "#" + fieldName + "] =>" +
-                                e.getMessage());
-                    }
-                    fieldCount++;
+                    classObject = classObject.getSuperclass();
                 }
-                classObject = classObject.getSuperclass();
             }
+
+
         }
 
         AgentCommandResponse agentCommandResponse = new AgentCommandResponse();
@@ -591,12 +611,41 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return agentCommandResponse;
     }
 
+    private List<Object> getObjectsFromSpringContext(Class<?> targetClassObject) {
+        List<Object> beansToInject = new ArrayList<>();
+        if (applicationContext != null) {
+            // get list of bean names
+            // reflection: String[] beanNames = applicationContext.getBeanDefinitionNames()
+            String[] beanNames = new String[0];
+            try {
+                beanNames = (String[]) getBeanDefinitionNamesMethod.invoke(applicationContext,
+                        targetClassObject, true, true);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                // is this possible ?
+                throw new RuntimeException(e);
+            }
+            // get bean from beanName
+            for (String beanName : beanNames) {
+                // reflection: Object bean = applicationContext.getBean(beanName)
+                Object bean = null;
+                try {
+                    bean = getBeanByBeanNameMethod.invoke(applicationContext, beanName);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    // is this possible ?
+                    throw new RuntimeException(e);
+                }
+                beansToInject.add(bean);
+            }
+        }
+        return beansToInject;
+    }
 
-    private DynamicType.Loaded<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> classType) {
+
+    private Class<?> createInstanceUsingByteBuddy(ClassLoader targetClassLoader, MockHandler mockHandler, Class<?> classType) {
         ClassLoadingStrategy.Default strategy = ClassLoadingStrategy.Default.INJECTION;
         DynamicType.Loaded<?> loadedMockedField;
         if (classType.isInterface()) {
-            Class<?>[] implementedInterfaces = getAllInterfaces(classType);
+            Class<?>[] implementedInterfaces = parameterFactory.getAllInterfaces(classType);
             Set<String> implementedClasses = new HashSet<>();
             implementedClasses.add(classType.getCanonicalName());
 
@@ -610,6 +659,15 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 pendingImplementations.add(implementedInterface);
             }
 
+            String fameImplClassName = classType.getCanonicalName() + "$UnloggedFakeInterfaceImpl";
+            try {
+                Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
+                return alreadyExist;
+            } catch (Exception e) {
+                // good to create
+            }
+
+
             loadedMockedField = byteBuddyInstance
                     .subclass(Object.class)
                     .name(classType.getCanonicalName() + "$UnloggedFakeInterfaceImpl")
@@ -619,15 +677,22 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     .load(targetClassLoader, strategy);
 
         } else {
+            String fameImplClassName = classType.getCanonicalName() + "$UnloggedFakeImpl";
+            try {
+                Class<?> alreadyExist = targetClassLoader.loadClass(fameImplClassName);
+                return alreadyExist;
+            } catch (Exception e) {
+                // good to create
+            }
             loadedMockedField = byteBuddyInstance
                     .subclass(classType)
-                    .name(classType.getCanonicalName() + "$UnloggedFakeImpl")
+                    .name(fameImplClassName)
                     .method(isDeclaredBy(classType))
                     .intercept(MethodDelegation.to(mockHandler))
                     .make()
                     .load(targetClassLoader, strategy);
         }
-        return loadedMockedField;
+        return loadedMockedField.getLoaded();
     }
 
     @Override
@@ -825,9 +890,9 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                             if (fieldValue == null) {
                                 try {
-                                    fieldValue = createObjectInstanceFromStringAndTypeInformation(
-                                            field.getType().getCanonicalName(), objectMapper.getTypeFactory(), "{}",
-                                            field.getType()
+                                    fieldValue = parameterFactory.createObjectInstanceFromStringAndTypeInformation(
+                                            field.getType().getCanonicalName(), "{}", field.getType(),
+                                            objectMapper.getTypeFactory().withClassLoader(targetClassLoader)
                                     );
                                 } catch (Exception e) {
                                     fieldValue = null;
@@ -840,7 +905,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 //                            if (!fieldToSet.getType().isAssignableFrom(classTypeToBeMocked)) {
 //                                classTypeToBeMocked = fieldToSet.getType();
 //                            }
-                            existingMockInstance = createMockedInstance(targetClassLoader, objectInstanceByClass,
+                            existingMockInstance = parameterFactory.createMockedInstance(targetClassLoader,
+                                    objectInstanceByClass,
                                     field, declaredMocksForField, fieldValue, classTypeToBeMocked);
                             mockInstanceMap.put(key, existingMockInstance);
 
@@ -887,64 +953,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return map;
     }
 
-
-    private MockInstance createMockedInstance(
-            ClassLoader targetClassLoader,
-            Object objectInstanceByClass, Field field,
-            List<DeclaredMock> declaredMocksForField,
-            Object fieldValue, Class<?> fieldType) {
-        ClassLoadingStrategy<ClassLoader> strategy = ClassLoadingStrategy.Default.INJECTION;
-        MockInstance existingMockInstance;
-        if (objectInstanceByClass == null) {
-            if (field != null) {
-                System.out.println(
-                        "objectInstanceByClass is null: " + field.getType().getCanonicalName() + " " + field.getName());
-            } else {
-            }
-        }
-        MockHandler mockHandler = new MockHandler(declaredMocksForField, objectMapper,
-                byteBuddyInstance, objenesis, fieldValue, objectInstanceByClass, targetClassLoader, field);
-
-        DynamicType.Loaded<?> loadedMockedField;
-        if (fieldType.isInterface()) {
-            Class<?>[] implementedInterfaces = getAllInterfaces(fieldType);
-            Set<String> implementedClasses = new HashSet<>();
-            implementedClasses.add(fieldType.getCanonicalName());
-
-            List<Class<?>> pendingImplementations = new ArrayList<>();
-            pendingImplementations.add(fieldType);
-            for (Class<?> implementedInterface : implementedInterfaces) {
-                if (implementedClasses.contains(implementedInterface.getCanonicalName())) {
-                    continue;
-                }
-                implementedClasses.add(implementedInterface.getCanonicalName());
-                pendingImplementations.add(implementedInterface);
-            }
-
-            loadedMockedField = byteBuddyInstance
-                    .subclass(Object.class)
-                    .implement(pendingImplementations)
-                    .intercept(MethodDelegation.to(mockHandler))
-                    .make()
-                    .load(targetClassLoader, strategy);
-
-        } else {
-            loadedMockedField = byteBuddyInstance
-                    .subclass(fieldType)
-                    .method(isDeclaredBy(fieldType)).intercept(MethodDelegation.to(mockHandler))
-                    .make()
-                    .load(targetClassLoader, strategy);
-        }
-
-
-        Object mockedFieldInstance = objenesis.newInstance(loadedMockedField.getLoaded());
-
-        existingMockInstance = new MockInstance(mockedFieldInstance, mockHandler, loadedMockedField);
-        return existingMockInstance;
-    }
-
     private Method getMethodToExecute(Class<?> objectClass, String expectedMethodName,
-                                      Class<?>[] expectedMethodArgumentTypes)
+                                      JavaType[] expectedMethodArgumentTypes)
             throws NoSuchMethodException {
 
         StringBuilder className = new StringBuilder();
@@ -954,16 +964,14 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         while (objectClass != null && !objectClass.equals(Object.class)) {
 
             className.append(objectClass.getCanonicalName()).append(", ");
+            int argsCount = expectedMethodArgumentTypes.length;
             try {
-                methodToExecute = objectClass
-                        .getDeclaredMethod(expectedMethodName, expectedMethodArgumentTypes);
-            } catch (NoSuchMethodException ignored) {
-
-            }
-
-            try {
-                methodToExecute = objectClass
-                        .getMethod(expectedMethodName, expectedMethodArgumentTypes);
+                Class<?>[] paramClassNames = new Class[argsCount];
+                for (int i = 0; i < argsCount; i++) {
+                    Class<?> rawClass = expectedMethodArgumentTypes[i].getRawClass();
+                    paramClassNames[i] = rawClass;
+                }
+                methodToExecute = objectClass.getDeclaredMethod(expectedMethodName, paramClassNames);
             } catch (NoSuchMethodException ignored) {
 
             }
@@ -974,13 +982,13 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     String methodName = method.getName();
                     methodNamesList.add(methodName);
                     if (methodName.equals(expectedMethodName)
-                            && method.getParameterCount() == expectedMethodArgumentTypes.length) {
+                            && method.getParameterCount() == argsCount) {
 
                         Class<?>[] actualParameterTypes = method.getParameterTypes();
 
                         boolean match = true;
-                        for (int i = 0; i < expectedMethodArgumentTypes.length; i++) {
-                            Class<?> methodParameterType = expectedMethodArgumentTypes[i];
+                        for (int i = 0; i < argsCount; i++) {
+                            Class<?> methodParameterType = expectedMethodArgumentTypes[i].getRawClass();
                             Class<?> actualParamType = actualParameterTypes[i];
                             if (!actualParamType.getCanonicalName()
                                     .equals(methodParameterType.getCanonicalName())) {
@@ -1013,7 +1021,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         return methodToExecute;
     }
 
-    private Object serializeMethodReturnValue(Object methodReturnValue) throws JsonProcessingException {
+    public Object serializeMethodReturnValue(Object methodReturnValue) {
         if (methodReturnValue == null) {
             return null;
         }
@@ -1025,7 +1033,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             return methodReturnValue;
         } else {
             try {
-                if (methodReturnValue instanceof Flux) {
+                if (methodReturnValue.getClass().getCanonicalName().startsWith("reactor.core.publisher.Flux")) {
                     Flux<?> returnedFlux = (Flux<?>) methodReturnValue;
 
                     CountDownLatch cdl = new CountDownLatch(1);
@@ -1059,25 +1067,12 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                     cdl.await();
                     return returnValue.toString();
 
-                } else if (methodReturnValue instanceof Mono) {
+                } else if (methodReturnValue.getClass().getCanonicalName().startsWith("reactor.core.publisher.Mono")) {
                     Mono<?> returnedMono = (Mono<?>) methodReturnValue;
                     CountDownLatch cdl = new CountDownLatch(1);
                     StringBuffer returnValue = new StringBuffer();
 
-//                    returnedMono
-//                            .log()
-//                            .elapsed()
-//                                    .map(pair -> {
-//                                        try {
-//                                            returnValue.append(objectMapper.writeValueAsString(pair.getT2()));
-//                                        } catch (JsonProcessingException e) {
-//                                            throw new RuntimeException(e);
-//                                        } finally {
-//                                            cdl.countDown();
-//                                        }
-//                                        return pair.getT2();
-//                                    }).subscribe();
-
+                    Object finalMethodReturnValue = methodReturnValue;
                     returnedMono
                             .log()
                             .subscribe(e -> {
@@ -1087,7 +1082,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
@@ -1099,25 +1095,26 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                                     try {
                                         returnValue.append(objectMapper.writeValueAsString(ex));
                                     } catch (JsonProcessingException exc) {
-                                        returnValue.append(ex.getMessage());
+                                        returnValue.append("{\"className\": \"" + finalMethodReturnValue.getClass()
+                                                .getCanonicalName() + "\"}");
                                     }
                                 } finally {
                                     cdl.countDown();
                                 }
-                            }, () -> {
-                                cdl.countDown();
-                            });
+                            }, cdl::countDown);
                     cdl.await();
                     return returnValue.toString();
 
+                } else if (methodReturnValue instanceof Future) {
+                    methodReturnValue = ((Future<?>) methodReturnValue).get();
                 }
                 return objectMapper.writeValueAsString(methodReturnValue);
             } catch (Exception ide) {
-                return "Failed to serialize response object of " +
-                        "type: " + methodReturnValue.getClass().getCanonicalName();
+                return "{\"className\": \"" + methodReturnValue.getClass().getCanonicalName() + "\"}";
             }
         }
     }
+
 
     private Object[] buildParametersUsingTargetClass(
             ClassLoader targetClassLoader,
@@ -1133,8 +1130,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             String parameterTypeName = parameterTypes.get(i);
             Object parameterObject;
             try {
-                parameterObject = createObjectInstanceFromStringAndTypeInformation(parameterTypeName, typeFactory,
-                        methodParameterStringValue, parameterType);
+                parameterObject = parameterFactory.createObjectInstanceFromStringAndTypeInformation(parameterTypeName,
+                        methodParameterStringValue, parameterType, typeFactory);
             } catch (Exception e) {
                 System.err.println(
                         "Failed to create paramter of type [" + parameterTypeName + "] from source " + methodParameterStringValue + " => " + e.getMessage());
@@ -1145,184 +1142,6 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             parameters[i] = parameterObject;
         }
         return parameters;
-    }
-
-
-    private Object createObjectInstanceFromStringAndTypeInformation
-            (String stringParameterType, TypeFactory typeFactory, String methodParameter, Class<?> parameterType) throws JsonProcessingException {
-        Object parameterObject = null;
-        if (parameterType.getCanonicalName().equals("org.springframework.util.MultiValueMap")) {
-            try {
-                parameterObject = objectMapper.readValue(methodParameter,
-                        Class.forName("org.springframework.util.LinkedMultiValueMap"));
-            } catch (ClassNotFoundException e) {
-                // this should never happen
-            }
-        } else {
-            JavaType typeReference = null;
-            try {
-                if (stringParameterType != null) {
-                    typeReference = MockHandler.getTypeReference(typeFactory, stringParameterType);
-                }
-            } catch (Throwable e1) {
-                // failed to construct from the canonical name,
-                // happens when this is a generic type
-                // so we try to construct using type from the method param class
-
-            }
-            if (typeReference == null) {
-                typeReference = typeFactory.constructType(parameterType);
-            }
-            try {
-                parameterObject = objectMapper.readValue(methodParameter, typeReference);
-            } catch (Throwable e2) {
-                // a complicated type (no default args constructor), or interface which jackson cannot create ?
-                try {
-                    // can we try using objenesis ?
-                    parameterObject = createParameterUsingObjenesis(typeReference, methodParameter, typeFactory);
-                    // we might want to now construct the whole object tree deep down
-                } catch (Throwable e3) {
-                    // constructing using objenesis also failed
-                    // lets try extending or implementing the class ?
-                    parameterObject = createParameterUsingMocking(methodParameter, parameterType);
-                }
-            }
-        }
-        return parameterObject;
-    }
-
-    private Object createParameterUsingObjenesis(JavaType typeReference, String methodParameter, TypeFactory typeFactory)
-            throws JsonProcessingException, IllegalAccessException {
-        Class<?> rawClass = typeReference.getRawClass();
-        Object parameterObject = objenesis.newInstance(rawClass);
-        Class<?> currentClass = rawClass;
-        JsonNode providedValues = objectMapper.readTree(methodParameter);
-        while (!currentClass.equals(Object.class)) {
-            Field[] declaredFields = rawClass.getDeclaredFields();
-            for (Field declaredField : declaredFields) {
-                JsonNode fieldValueInNodeByName = providedValues.get(declaredField.getName());
-                Object valueToSet = getValueToSet(typeFactory, fieldValueInNodeByName, declaredField.getType());
-                declaredField.setAccessible(true);
-                declaredField.set(parameterObject, valueToSet);
-            }
-            currentClass = currentClass.getSuperclass();
-        }
-        return parameterObject;
-    }
-
-
-    private Object createParameterUsingMocking(String methodParameter, Class<?> parameterType) throws JsonProcessingException {
-        Class<?> currentClass;
-        List<DeclaredMock> mockList = new ArrayList<>();
-
-        JsonNode providedValues = objectMapper.readTree(methodParameter);
-        currentClass = parameterType;
-        while (currentClass != null && !currentClass.equals(Object.class)) {
-            Method[] definedMethods = currentClass.getDeclaredMethods();
-            for (Method definedMethod : definedMethods) {
-                String methodName = definedMethod.getName();
-                String potentialFieldName = null;
-                Class<?> valueType = null;
-                if (methodName.startsWith("get") && definedMethod.getParameterTypes().length == 0) {
-                    potentialFieldName = methodName.substring(3);
-                    valueType = definedMethod.getReturnType();
-//                            } else if (methodName.startsWith("set") && definedMethod.getParameterTypes().length == 1) {
-//                                valueType = definedMethod.getParameterTypes()[0];
-//                                potentialFieldName = methodName.substring(3);
-                } else if (methodName.startsWith("is") && definedMethod.getParameterTypes().length == 0) {
-                    valueType = definedMethod.getReturnType();
-                    potentialFieldName = methodName.substring(2);
-                }
-
-                if (potentialFieldName == null) {
-                    potentialFieldName = "5";
-                }
-
-                potentialFieldName = potentialFieldName.substring(0, 1).toLowerCase() + potentialFieldName.substring(1);
-
-                if (providedValues.has(potentialFieldName)) {
-                    JsonNode providedValue = providedValues.get(potentialFieldName);
-//                                Object valueToReturn = getValueToSet(typeFactory, providedValue, valueType);
-
-                    if (methodName.startsWith("get") || methodName.startsWith("is")) {
-                        ArrayList<ThenParameter> thenParameterList = new ArrayList<>();
-
-                        ReturnValue returnParameter;
-                        if (checkCanClassBeExtended(valueType)) {
-                            returnParameter = new ReturnValue(
-                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.MOCK);
-                        } else {
-                            returnParameter = new ReturnValue(
-                                    providedValue.toString(), valueType.getCanonicalName(), ReturnValueType.REAL);
-                        }
-
-                        DeclaredMock returnParamCallMock = new DeclaredMock();
-                        returnParameter.addDeclaredMock(returnParamCallMock);
-
-                        ThenParameter thenParameter = new ThenParameter(returnParameter, MethodExitType.NORMAL);
-
-                        thenParameterList.add(thenParameter);
-                        DeclaredMock dummyMockDefinition = new DeclaredMock(
-                                "generated mock for " + methodName, valueType.getCanonicalName(),
-                                potentialFieldName, methodName, new ArrayList<>(), thenParameterList
-                        );
-                        mockList.add(dummyMockDefinition);
-                    }
-                }
-            }
-            currentClass = currentClass.getSuperclass();
-        }
-
-        MockInstance parameterObject;
-        try {
-            parameterObject = createMockedInstance(parameterType.getClassLoader(), null,
-                    null, mockList, null, parameterType);
-        } catch (Exception e) {
-            // cant say that
-            // just failed to make an instance of this
-            // log something ?
-            return null;
-        }
-        return parameterObject.getMockedFieldInstance();
-    }
-
-    private boolean checkCanClassBeExtended(Class<?> fieldType) {
-        if (fieldType.isPrimitive()) {
-            return false;
-        }
-        if (fieldType.isArray()) {
-            return false;
-        }
-        if ((fieldType.getModifiers() & java.lang.reflect.Modifier.FINAL) != 0) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private Object getValueToSet(TypeFactory typeFactory, JsonNode fieldValueInNodeByName, Class<?> type) throws JsonProcessingException {
-        Object valueToSet = null;
-        if (int.class.equals(type) || Integer.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.intValue();
-        } else if (long.class.equals(type) || Long.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.longValue();
-        } else if (double.class.equals(type) || Double.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.doubleValue();
-        } else if (float.class.equals(type) || Float.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.floatValue();
-        } else if (boolean.class.equals(type) || Boolean.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.booleanValue();
-        } else if (short.class.equals(type) || Short.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.shortValue();
-        } else if (String.class.equals(type)) {
-            valueToSet = fieldValueInNodeByName.textValue();
-        } else if (StringBuilder.class.equals(type)) {
-            valueToSet = new StringBuilder(fieldValueInNodeByName.textValue());
-        } else {
-            valueToSet = createObjectInstanceFromStringAndTypeInformation(
-                    null, typeFactory, fieldValueInNodeByName.asText(), type);
-        }
-        return valueToSet;
     }
 
 
@@ -1363,16 +1182,39 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
             }
         }
         Constructor<?> noArgsConstructor = null;
-        try {
-            noArgsConstructor = loadedClass.getConstructor();
-            try {
-                newInstance = noArgsConstructor.newInstance();
-            } catch (InvocationTargetException | InstantiationException e) {
-//                throw new RuntimeException(e);
-            }
-        } catch (NoSuchMethodException e) {
-            //
+        noArgsConstructor = null;
+        Constructor<?>[] declaredConstructors = loadedClass.getDeclaredConstructors();
+        if (declaredConstructors.length > 0) {
+            noArgsConstructor = declaredConstructors[0];
         }
+        for (Constructor<?> declaredConstructor : declaredConstructors) {
+            if (declaredConstructor.getParameterCount() == 0) {
+                noArgsConstructor = declaredConstructor;
+                break;
+            }
+        }
+        try {
+            noArgsConstructor.setAccessible(true);
+
+            int paramCount = noArgsConstructor.getParameterCount();
+            Class<?>[] paramTypes = noArgsConstructor.getParameterTypes();
+            Object[] parameters = new Object[paramCount];
+            for (int i = 0; i < paramCount; i++) {
+                String typeName = paramTypes[i].getCanonicalName();
+                Object paramValue = buildMap.get(typeName);
+                if (paramValue == null) {
+                    paramValue = tryObjectConstruct(typeName, targetClassLoader, buildMap);
+                }
+                parameters[i] = paramValue;
+            }
+
+            logger.setRecordingPaused(false);
+            newInstance = noArgsConstructor.newInstance(parameters);
+            logger.setRecordingPaused(true);
+        } catch (Throwable e) {
+        }
+
+
         if (newInstance == null) {
             Method[] methods = loadedClass.getMethods();
             // try to get the instance of the class using Singleton.getInstance
@@ -1380,7 +1222,10 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
                 if (method.getParameterCount() == 0 && Modifier.isStatic(method.getModifiers())) {
                     if (method.getReturnType().equals(loadedClass)) {
                         try {
-                            return method.invoke(null);
+                            logger.setRecordingPaused(false);
+                            Object invoke = method.invoke(null);
+                            logger.setRecordingPaused(true);
+                            return invoke;
                         } catch (InvocationTargetException ex) {
                             // this method for potentially getting instance from static getInstance type method
                             // did not work
@@ -1392,20 +1237,21 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         if (newInstance == null) {
             try {
                 newInstance = objenesis.newInstance(loadedClass);
-            } catch (java.lang.InstantiationError | IllegalAccessError e) {
+            } catch (Throwable e) {
                 // failed to create using objenesis
             }
         }
 
         if (newInstance == null) {
             try {
-                MockHandler mockHandler = new MockHandler(new ArrayList<>(), objectMapper, byteBuddyInstance,
+                MockHandler mockHandler = new MockHandler(new ArrayList<>(), objectMapper, parameterFactory,
                         objenesis, null, null, targetClassLoader, null);
-                DynamicType.Loaded<?> newInstanceLoader = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
+                Class<?> newInstanceLoader = createInstanceUsingByteBuddy(targetClassLoader, mockHandler,
                         loadedClass);
-                newInstance = objenesis.newInstance(newInstanceLoader.getLoaded());
+                newInstance = objenesis.newInstance(newInstanceLoader);
 
             } catch (Exception exception) {
+                exception.printStackTrace();
                 // failed to create using bytebuddy also
                 //
             }
@@ -1604,36 +1450,58 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     }
 
     private Object setSpringApplicationContextAndLoadBeanFactory(Object applicationContext) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        if (applicationContext == null) {
-            return null;
+        try {
+            if (applicationContext == null) {
+                return null;
+            }
+            this.applicationContext = applicationContext;
+
+            Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+            getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
+            getBeanByBeanNameMethod = applicationContextClass.getMethod("getBean", String.class);
+            Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod(
+                    "getAutowireCapableBeanFactory");
+
+            springBeanFactory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
+                    .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
+            return springBeanFactory;
+        } catch (Throwable e) {
+            e.printStackTrace();
         }
-        this.applicationContext = applicationContext;
+        return null;
 
-        Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
-        getBeanMethod = applicationContextClass.getMethod("getBean", Class.class);
-        Method getAutowireCapableBeanFactoryMethod = applicationContextClass.getMethod("getAutowireCapableBeanFactory");
-
-        springBeanFactory = Class.forName("org.springframework.beans.factory.support.DefaultListableBeanFactory")
-                .cast(getAutowireCapableBeanFactoryMethod.invoke(applicationContext));
-        return springBeanFactory;
     }
 
-	private void loadContext() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-		if (this.springTestContextManager == null) {
-			this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
-					".reactive.context" +
-					".AnnotationConfigReactiveWebServerApplicationContext");
-			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-		}
+    private void loadContext() {
+        try {
+            if (this.applicationContext != null) {
+                // already loaded
+                return;
+            }
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName("org.springframework.boot.web" +
+                        ".reactive.context" +
+                        ".AnnotationConfigReactiveWebServerApplicationContext");
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
 
-		if (this.springTestContextManager == null) {
-			this.springTestContextManager = logger.getObjectByClassName(
-					"org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
-			);
-			setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
-		}
-	}
+            if (this.springTestContextManager == null) {
+                this.springTestContextManager = logger.getObjectByClassName(
+                        "org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext"
+                );
+                setSpringApplicationContextAndLoadBeanFactory(this.springTestContextManager);
+            }
 
+            if (applicationContext != null) {
+                Class<?> applicationContextClass = Class.forName("org.springframework.context.ApplicationContext");
+                getBeanDefinitionNamesMethod = applicationContextClass.getMethod("getBeanNamesForType", Class.class,
+                        boolean.class, boolean.class);
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+
+    }
 
 
     public void enableSpringIntegration(Class<?> testClass) {

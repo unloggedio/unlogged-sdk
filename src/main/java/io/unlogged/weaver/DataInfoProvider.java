@@ -32,6 +32,7 @@ public class DataInfoProvider {
         if (
                 eventType.equals(EventType.CALL_PARAM) ||
                         eventType.equals(EventType.METHOD_PARAM) ||
+                        eventType.equals(EventType.LABEL) ||
                         eventType.equals(EventType.CALL_RETURN) ||
                         eventType.equals(EventType.METHOD_NORMAL_EXIT) ||
                         eventType.equals(EventType.METHOD_EXCEPTIONAL_EXIT)
@@ -64,9 +65,12 @@ public class DataInfoProvider {
     }
 
     public void flushIdInformation() throws IOException {
-        DataOutputStream infoWriter = new DataOutputStream(new FileOutputStream(idsInfoOutputFile));
+        FileOutputStream out = new FileOutputStream(idsInfoOutputFile);
+        DataOutputStream infoWriter = new DataOutputStream(out);
         infoWriter.writeInt(classId.get());
         infoWriter.writeInt(methodId.get());
         infoWriter.writeInt(probeId.get());
+        out.flush();
+        out.close();
     }
 }

@@ -27,7 +27,7 @@ public interface IEventLogger {
      * @param dataId specifies an event and its bytecode location.
      * @param value  contains a value to be recorded.
      */
-    public void recordEvent(int dataId, Object value);
+    public Object recordEvent(int dataId, Object value);
 
     /**
      * Record an event occurrence and a value.
@@ -105,9 +105,8 @@ public interface IEventLogger {
 
     void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord);
 
-    void setRecording(boolean b);
+    void setRecordingPaused(boolean b);
 
-    ObjectMapper getObjectMapper();
 
     ClassLoader getTargetClassLoader();
 }

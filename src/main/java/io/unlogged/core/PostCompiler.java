@@ -50,7 +50,7 @@ public final class PostCompiler {
         for (PostCompilerTransformation transformation : transformations) {
             try {
                 byte[] next = transformation.applyTransformations(
-                        previous, fileName, diagnostics, classWeaveOutputStream, dataInfoProvider);
+                        previous, fileName, diagnostics, dataInfoProvider);
                 if (next != null) {
                     previous = next;
                 }
