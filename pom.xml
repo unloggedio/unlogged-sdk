@@ -10,7 +10,7 @@
 
     <artifactId>unlogged-sdk</artifactId>
     <groupId>video.bug</groupId>
-    <version>0.6.1</version>
+    <version>0.6.2</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -369,6 +369,14 @@
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>selogger.com.fasterxml.jackson</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.antlr</pattern>
+                            <shadedPattern>selogger.org.antlr</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.xerial</pattern>
+                            <shadedPattern>selogger.org.xerial</shadedPattern>
                         </relocation>
                     </relocations>
                     <filters>
