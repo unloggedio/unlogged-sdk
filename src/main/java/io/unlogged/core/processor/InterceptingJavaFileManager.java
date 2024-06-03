@@ -8,7 +8,9 @@ import javax.tools.JavaFileObject.Kind;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 
@@ -16,7 +18,7 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
     private final DiagnosticsReceiver diagnostics;
     private final UnloggedFileObjects.Compiler compiler;
     //    private final FileObject classWeaveDat;
-//    private final OutputStream classWeaveOutputStream;
+   private final OutputStream classWeaveOutputStream;
     //    private final FileObject probesToCaptureDat;
 //    private final FileOutputStream probesToCaptureOutputStream;
     private final File idsInfoOutputFile;
@@ -68,8 +70,8 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
                 }
             }
 
-//            File weaveOutputFile = new File(classesPath + "class.weave.dat");
-//            classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
+           File weaveOutputFile = new File(classesPath + "class.weave.dat");
+           classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
 
 
             File probesToCaptureOutputFile = new File(classesPath + "probes.dat");
@@ -121,6 +123,8 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
 
     @Override
     public void close() throws IOException {
+		classWeaveOutputStream.flush();
+        classWeaveOutputStream.close();
 //        probesToCaptureOutputStream.flush();
 //        probesToCaptureOutputStream.close();
         super.close();
