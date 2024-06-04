@@ -17,10 +17,13 @@ public @interface Unlogged {
      *
      * @return Array of strings, each one being a package name
      */
+	
     String[] includePackage() default "";
-
     boolean enable() default true;
-    int port() default 0;
-
+	int port() default 0;
 	String serverEndpoint() default "";
+
+	// frequency logging
+	UnloggedLoggingLevel unloggedLoggingLevel() default UnloggedLoggingLevel.COUNTER;
+	String counter() default "1";
 }

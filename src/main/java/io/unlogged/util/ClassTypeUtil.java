@@ -10,33 +10,33 @@ import java.util.regex.Pattern;
 
 public class ClassTypeUtil {
 
-    private ClassTypeUtil() {
+    public ClassTypeUtil() {
     }
 
-//    public static List<String> splitMethodDesc(String desc) {
-//        int beginIndex = desc.indexOf('(');
-//        int endIndex = desc.lastIndexOf(')');
-//        if ((beginIndex == -1 && endIndex != -1) || (beginIndex != -1 && endIndex == -1)) {
-//            System.err.println(beginIndex);
-//            System.err.println(endIndex);
-//            throw new RuntimeException();
-//        }
-//        String x0;
-//        if (beginIndex == -1 && endIndex == -1) {
-//            x0 = desc;
-//        } else {
-//            x0 = desc.substring(beginIndex + 1, endIndex);
-//        }
-//        Pattern pattern = Pattern.compile(
-//                "\\[*L[^;]+;|\\[[ZBCSIFDJ]|[ZBCSIFDJ]"); //Regex for desc \[*L[^;]+;|\[[ZBCSIFDJ]|[ZBCSIFDJ]
-//        Matcher matcher = pattern.matcher(x0);
-//        List<String> listMatches = new LinkedList<>();
-//        while (matcher.find()) {
-//            listMatches.add(matcher.group());
-//        }
-//        listMatches.add(desc.substring(endIndex + 1));
-//        return listMatches;
-//    }
+   public static List<String> splitMethodDesc(String desc) {
+       int beginIndex = desc.indexOf('(');
+       int endIndex = desc.lastIndexOf(')');
+       if ((beginIndex == -1 && endIndex != -1) || (beginIndex != -1 && endIndex == -1)) {
+           System.err.println(beginIndex);
+           System.err.println(endIndex);
+           throw new RuntimeException();
+       }
+       String x0;
+       if (beginIndex == -1 && endIndex == -1) {
+           x0 = desc;
+       } else {
+           x0 = desc.substring(beginIndex + 1, endIndex);
+       }
+       Pattern pattern = Pattern.compile(
+               "\\[*L[^;]+;|\\[[ZBCSIFDJ]|[ZBCSIFDJ]"); //Regex for desc \[*L[^;]+;|\[[ZBCSIFDJ]|[ZBCSIFDJ]
+       Matcher matcher = pattern.matcher(x0);
+       List<String> listMatches = new LinkedList<>();
+       while (matcher.find()) {
+           listMatches.add(matcher.group());
+       }
+       listMatches.add(desc.substring(endIndex + 1));
+       return listMatches;
+   }
 
 
     public static JavaType getClassNameFromDescriptor(String descriptor, TypeFactory typeFactory) {
@@ -104,6 +104,4 @@ public class ClassTypeUtil {
         return typeFactory.constructFromCanonical(descriptor);
 
     }
-
-
 }

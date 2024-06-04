@@ -1,16 +1,21 @@
 package io.unlogged.core.bytecode;
 
-import com.insidious.common.weaver.Descriptor;
-import com.insidious.common.weaver.EventType;
+import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
+import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
+
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -32,6 +37,11 @@ public class ClassTransformer extends ClassVisitor {
     private String sourceFileName;
     private byte[] weaveResult;
     private String classLoaderIdentifier;
+	private HashSet<String> methodList = new HashSet<>();
+	private HashMap<String, Long> classCounterMap = new HashMap<>();
+	private boolean hasStaticInitialiser;
+	private boolean alwaysProbeClassFlag = false;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -41,8 +51,8 @@ public class ClassTransformer extends ClassVisitor {
      * @param inputClass specifies a byte array containing the target class.
      * @throws IOException may be thrown if an error occurs during the weaving.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass, TypeHierarchy typeHierarchy) throws IOException {
-        this(weaver, config, new ClassReader(inputClass), typeHierarchy);
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, byte[] inputClass, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) throws IOException {
+        this(weaver, config, new ClassReader(inputClass), typeHierarchy, unloggedProcessorConfig);
     }
 
     /**
@@ -52,10 +62,10 @@ public class ClassTransformer extends ClassVisitor {
      * @param config specifies the configuration.
      * @param reader specifies a class reader to read the target class.
      */
-    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy) {
+    public ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassReader reader, TypeHierarchy typeHierarchy, UnloggedProcessorConfig unloggedProcessorConfig) {
         // Create a writer for the target class
         this(weaver, config,
-                new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy));
+                new FixedClassWriter(reader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES, typeHierarchy), unloggedProcessorConfig);
         // Start weaving, and store the result to a byte array
         reader.accept(this, ClassReader.EXPAND_FRAMES);
         weaveResult = classWriter.toByteArray();
@@ -71,17 +81,46 @@ public class ClassTransformer extends ClassVisitor {
      * @param config specifies the configuration.
      * @param cw     specifies the class writer (MetracerClassWriter).
      */
-    protected ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassWriter cw) {
+    protected ClassTransformer(WeaveLog weaver, WeaveConfig config, ClassWriter cw, UnloggedProcessorConfig unloggedProcessorConfig) {
         super(Opcodes.ASM9, cw);
         this.weavingInfo = weaver;
         this.config = config;
         this.classWriter = cw;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
     }
+
+	private MethodVisitor addProbe (MethodVisitor methodVisitorProbed, int access, String name, String desc, String[] exceptions) {
+		if (methodVisitorProbed != null) {
+			methodVisitorProbed = new TryCatchBlockSorter(methodVisitorProbed, access, name, desc, signature, exceptions);
+			MethodTransformer transformerProbed = new MethodTransformer(
+					weavingInfo, config, sourceFileName,
+					fullClassName, outerClassName, access,
+					name, desc, signature, exceptions, methodVisitorProbed
+			);
+
+			methodVisitorProbed = new JSRInliner(transformerProbed, access, name, desc, signature, exceptions);
+		}
+		return methodVisitorProbed;
+	}
+
 
     @Override
     public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-//		System.err.println("Visit annotation: " + descriptor + " on class: " + className);
-        return super.visitAnnotation(descriptor, visible);
+		// check for the annotation @UnloggedClass
+		if ("Lio/unlogged/UnloggedClass;".equals(descriptor)) {
+			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
+				@Override
+				public void visit(String key, Object value) {
+					// check for key string
+					if ("counter".equals(key)) {
+						long valueLong = Long.parseLong((String)value);
+						classCounterMap.put(className, valueLong);
+					}
+					super.visit(key, value);
+				}
+			};
+		}
+		return super.visitAnnotation(descriptor, visible);
     }
 
     @Override
@@ -144,10 +183,11 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
+		this.alwaysProbeClassFlag = ProbeFlagUtil.getAlwaysProbeClassFlag(access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
-    /**
+	/**
      * A call back from the ClassVisitor.
      * Record the source file name.
      */
@@ -181,32 +221,139 @@ public class ClassTransformer extends ClassVisitor {
      * Create an instance of a MethodVisitor that inserts logging code into a method.
      */
     @Override
-    public MethodVisitor visitMethod(int access, String name, String desc,
-                                     String signature, String[] exceptions) {
-        MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        if (name.equals("equals")
-                || name.equals("hashCode")
-                || name.equals("onNext")
-                || name.equals("onSubscribe")
-                || name.equals("onError")
-                || name.equals("currentContext")
-                || name.equals("onComplete")
-        ) {
-            return mv;
+    public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
+		
+		// calcuclate probe flag at method level 
+		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
+		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
+
+		if (name.equals("equals") 
+			|| name.equals("hashCode")
+			|| name.equals("onNext")
+			|| name.equals("onSubscribe")
+			|| name.equals("onError")
+			|| name.equals("currentContext")
+			|| name.equals("onComplete")) {
+			neverProbeMethodFlag = true;
+		}
+
+		// early exit for clinit. It is already defined in class with initial method
+		if (name.equals("<clinit>")) {
+			this.hasStaticInitialiser = true;
+			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
+
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
+			fieldVisitor.visitEnd();
+
+			methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
+			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
+			return methodVisitorProbed;
+		}
+
+		// early exit got method that are never probed
+		if (neverProbeMethodFlag) {
+			MethodVisitor methodVisitorUnModified = cv.visitMethod(access, name, desc, signature, exceptions);
+            return methodVisitorUnModified;
         }
-        if (mv != null
-        ) {
-            mv = new TryCatchBlockSorter(mv, access, name, desc, signature, exceptions);
-            MethodTransformer trans = new MethodTransformer(
-                    weavingInfo, config, sourceFileName,
-                    fullClassName, outerClassName, access,
-                    name, desc, signature, exceptions, mv
-            );
-            return new JSRInliner(trans, access, name, desc, signature, exceptions);
-        } else {
-            return null;
-        }
+		
+		// early exit for method that are always probed
+		if (alwaysProbeMethodFlag) {
+			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
+			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
+			return methodVisitorProbed;
+		}
+
+		this.methodList.add(name);
+		String nameProbed = name + Constants.probedValue;
+		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
+		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
+		
+		long classCounter = getCounter(this.classCounterMap, className);
+		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
+
+		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
     }
+
+	@Override
+    public void visitEnd() {
+		
+		if ((!this.hasStaticInitialiser) && (!this.alwaysProbeClassFlag)) {	
+			// staticInitialiser is not defined and needed, define one
+
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
+			fieldVisitor.visitEnd();
+
+			this.hasStaticInitialiser = true;
+			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
+			staticNew.visitCode();
+
+			// Instantiate HashMap<String, Integer>
+			staticNew.visitTypeInsn(Opcodes.NEW, Type.getInternalName(java.util.HashMap.class));
+			staticNew.visitInsn(Opcodes.DUP);
+			staticNew.visitMethodInsn(
+				Opcodes.INVOKESPECIAL,
+				Type.getInternalName(java.util.HashMap.class),
+				"<init>",
+				"()V",
+				false
+			);
+
+			// Store the instance in the static field mapStore
+			staticNew.visitFieldInsn(
+				Opcodes.PUTSTATIC,
+				fullClassName,
+				Constants.mapStoreCompileValue,
+				Type.getDescriptor(java.util.HashMap.class)
+			);
+
+			for (String localMethod: this.methodList) { 
+				staticNew.visitFieldInsn(
+					Opcodes.GETSTATIC,
+					this.fullClassName,
+					Constants.mapStoreCompileValue,
+					"Ljava/util/HashMap;"
+				);
+	
+				staticNew.visitLdcInsn(localMethod);
+				staticNew.visitLdcInsn(0L);
+
+				// cast long object to long primitive
+				staticNew.visitMethodInsn(
+					Opcodes.INVOKESTATIC,
+					Type.getInternalName(Long.class),
+					"valueOf",
+					"(J)Ljava/lang/Long;",
+					false
+				);
+	
+				staticNew.visitMethodInsn(
+					Opcodes.INVOKEVIRTUAL,
+					Type.getInternalName(java.util.HashMap.class),
+					"put",
+					"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+					false
+				);
+	
+				staticNew.visitInsn(Opcodes.POP);
+			}
+	
+			staticNew.visitInsn(Opcodes.RETURN);
+			staticNew.visitMaxs(0, 0);
+			staticNew.visitEnd();
+		}
+		
+		super.visitEnd();
+    }
+
+
+	private long getCounter (Map<String, Long> mapCounter, String key) {
+		if (mapCounter.get(key) == null) {
+			return (long)0;
+		}
+		else {
+			return mapCounter.get(key);
+		}
+	}
 
     public String[] getInterfaces() {
         return interfaces;

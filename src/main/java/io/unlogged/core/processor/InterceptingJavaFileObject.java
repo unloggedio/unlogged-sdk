@@ -39,17 +39,23 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 	private final String fileName;
 	private final DiagnosticsReceiver diagnostics;
 	private final Method decoderMethod;
+	private final OutputStream classWeaveOutputStream;
 	private final DataInfoProvider dataInfoProvider;
+	private final UnloggedProcessorConfig unloggedProcessorConfig;
 
 	public InterceptingJavaFileObject(JavaFileObject original, String fileName,
 									  DiagnosticsReceiver diagnostics,
 									  Method decoderMethod,
-									  DataInfoProvider dataInfoProvider) {
+									  OutputStream classWeaveOutputStream,
+									  DataInfoProvider dataInfoProvider,
+									  UnloggedProcessorConfig unloggedProcessorConfig) {
 		this.delegate = original;
 		this.fileName = fileName;
 		this.diagnostics = diagnostics;
 		this.decoderMethod = decoderMethod;
+		this.classWeaveOutputStream = classWeaveOutputStream;
 		this.dataInfoProvider = dataInfoProvider;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
 	}
 
 	@Override
@@ -57,8 +63,8 @@ final class InterceptingJavaFileObject implements UnloggedFileObject {
 		if (delegate.getName().contains("test-classes")) {
 			return delegate.openOutputStream();
 		}
-		return PostCompiler.wrapOutputStream(delegate.openOutputStream(), fileName, diagnostics,
-				dataInfoProvider);
+		return PostCompiler.wrapOutputStream(delegate.openOutputStream(), fileName, diagnostics, classWeaveOutputStream,
+				dataInfoProvider, this.unloggedProcessorConfig);
 	}
 
 	@Override

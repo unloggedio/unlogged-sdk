@@ -8,7 +8,9 @@ import javax.tools.JavaFileObject.Kind;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 
@@ -16,16 +18,18 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
     private final DiagnosticsReceiver diagnostics;
     private final UnloggedFileObjects.Compiler compiler;
     //    private final FileObject classWeaveDat;
-//    private final OutputStream classWeaveOutputStream;
+   private final OutputStream classWeaveOutputStream;
     //    private final FileObject probesToCaptureDat;
 //    private final FileOutputStream probesToCaptureOutputStream;
     private final File idsInfoOutputFile;
     private final DataInfoProvider dataInfoProvider;
+	private UnloggedProcessorConfig unloggedProcessorConfig;
 
-    InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics) {
+    InterceptingJavaFileManager(JavaFileManager original, DiagnosticsReceiver diagnostics, UnloggedProcessorConfig unloggedProcessorConfig) {
         super(original);
         this.compiler = UnloggedFileObjects.getCompiler(original);
         this.diagnostics = diagnostics;
+		this.unloggedProcessorConfig = unloggedProcessorConfig;
         try {
             // we need to make sure that we get a direct fileoutputstream created here for our class weave dat file
             // and not a buffered or proxy via BAOS since it will lead to OOM on big code bases
@@ -66,8 +70,8 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
                 }
             }
 
-//            File weaveOutputFile = new File(classesPath + "class.weave.dat");
-//            classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
+           File weaveOutputFile = new File(classesPath + "class.weave.dat");
+           classWeaveOutputStream = new FileOutputStream(weaveOutputFile, true);
 
 
             File probesToCaptureOutputFile = new File(classesPath + "probes.dat");
@@ -113,11 +117,14 @@ final class InterceptingJavaFileManager extends ForwardingJavaFileManager<JavaFi
         if (kind != Kind.CLASS) return fileObject;
 
         return UnloggedFileObjects.createIntercepting(
-                compiler, fileObject, className, diagnostics, dataInfoProvider);
+                compiler, fileObject, className, diagnostics,
+                classWeaveOutputStream, dataInfoProvider, this.unloggedProcessorConfig);
     }
 
     @Override
     public void close() throws IOException {
+		classWeaveOutputStream.flush();
+        classWeaveOutputStream.close();
 //        probesToCaptureOutputStream.flush();
 //        probesToCaptureOutputStream.close();
         super.close();
