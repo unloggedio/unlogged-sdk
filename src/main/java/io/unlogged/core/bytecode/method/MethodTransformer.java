@@ -13,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
+import io.unlogged.Constants;
 
 
 /**
@@ -89,6 +90,11 @@ public class MethodTransformer extends LocalVariablesSorter {
         this.sourceFileName = sourceFileName;
         // this.outerClassName = outerClassName; // not used
         this.access = access;
+
+		int suffixIndex = methodName.lastIndexOf(Constants.probedValue);
+		if (suffixIndex > 0) {
+			methodName = methodName.substring(0, suffixIndex);
+		}
         this.methodName = methodName;
         this.methodDesc = methodDesc;
 
