@@ -91,10 +91,10 @@ public class MethodTransformer extends LocalVariablesSorter {
         // this.outerClassName = outerClassName; // not used
         this.access = access;
 
-		int suffixIndex = methodName.lastIndexOf(Constants.probedValue);
-		if (suffixIndex > 0) {
-			methodName = methodName.substring(0, suffixIndex);
-		}
+        int probedStringLength = Constants.probedValue.length();
+        if (methodName.length() > probedStringLength) {
+            methodName = methodName.substring(probedStringLength);
+        }
         this.methodName = methodName;
         this.methodDesc = methodDesc;
 
