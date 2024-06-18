@@ -1,5 +1,23 @@
 package io.unlogged.core.bytecode;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.TypePath;
+import org.objectweb.asm.commons.TryCatchBlockSorter;
+
 import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
@@ -8,14 +26,6 @@ import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
-
-import org.objectweb.asm.*;
-import org.objectweb.asm.commons.TryCatchBlockSorter;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 
 /**
  * This class weaves logging code into a Java class file.
@@ -264,12 +274,12 @@ public class ClassTransformer extends ClassVisitor {
 		}
 
 		this.methodList.add(name);
-		String nameProbed = name + Constants.probedValue;
+		String nameProbed = Constants.probedValue + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
 		
 		long classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
+		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, nameProbed, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
 
 		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
     }

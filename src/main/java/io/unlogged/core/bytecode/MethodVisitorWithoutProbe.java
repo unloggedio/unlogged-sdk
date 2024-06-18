@@ -20,14 +20,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 
-	public MethodVisitorWithoutProbe(int api, String methodName, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
+	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
-		this.nameProbed = this.methodName + Constants.probedValue;
+		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
 	}
 

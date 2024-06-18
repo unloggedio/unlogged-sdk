@@ -7,7 +7,7 @@ public class Constants {
 
 	// frequency logging 
 	public static final String mapStoreCompileValue = "unlogged$$mapStore";
-	public static final String probedValue = "$$Unlogged$Probed";
+	public static final String probedValue = "Unlogged$Probed$$";
 	
     private Constants() {
     }
