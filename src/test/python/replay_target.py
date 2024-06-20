@@ -69,7 +69,21 @@ if __name__=="__main__":
                 ReplayTest("MongoOpsController.updatePojo - normal", TestResult.PASS),
                 ReplayTest("MongoOpsController.deleteById - normal", TestResult.PASS),
                 ReplayTest("FutureService.doSomething - normal", TestResult.PASS),
-                ReplayTest("FutureService.doSomethingOptional - normal", TestResult.PASS)
+                ReplayTest("FutureService.doSomethingOptional - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.getDefaultUser - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.getEmptyOptionalUser - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.create1 - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.createNullable - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.getPresentStatus - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.getEmptyStatus - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.ifPresent - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.orElseCase - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.orElseGet - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.getUserUsage - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.filterUserOptional - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.countNameLength - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.flatMapUsage - normal", TestResult.PASS),
+                ReplayTest("OptionalOpsController.chain - normal", TestResult.PASS)
 			]
 		),
 		Target(
