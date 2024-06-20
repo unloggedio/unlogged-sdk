@@ -111,5 +111,17 @@ if __name__=="__main__":
                 java_version=branch_java_version_map[branch_name]
             )
         )
+    target_list.append(
+        Target(
+            "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
+            "unlogged-spring-mvc-maven-demo",
+            "/pom.xml",
+            "/src/main/java/org/unlogged/mvc/demo/Application.java",
+            buildSystem.MAVEN,
+            projectType="Normal",
+            branch_name="main",
+            java_version="17"
+        )
+    )
     for local_target in target_list:
         compile_target(local_target)
