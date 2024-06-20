@@ -73,6 +73,21 @@ if __name__=="__main__":
 				ReplayTest("getStringFromObservable saved on 2024-03-28 12:51", TestResult.PASS),
 				ReplayTest("enrichDefaultPerson saved on 2024-04-02 16:07", TestResult.PASS)
 			]
+		),
+		Target(
+			"https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
+			"unlogged-spring-mvc-maven-demo",
+			"/pom.xml",
+			"/src/main/java/org/unlogged/mvc/demo/Application.java",
+			buildSystem.MAVEN,
+			[
+				ReplayTest("loadAllBooks - normal", TestResult.PASS),
+				ReplayTest("getBookById - normal", TestResult.PASS),
+				ReplayTest("getAllBooks - normal", TestResult.PASS),
+				ReplayTest("insertBook - normal", TestResult.PASS),
+				ReplayTest("updateBook - normal", TestResult.PASS),
+				ReplayTest("deleteBook - normal", TestResult.PASS)
+			]
 		)
 	]
 		
