@@ -4,10 +4,10 @@ import java.util.HashMap;
 
 import org.objectweb.asm.*;
 
-import io.unlogged.Constants;
 import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
+import io.unlogged.util.MapStoreName;
 
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
@@ -19,11 +19,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
+	private String mapName;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
+		this.mapName = MapStoreName.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
@@ -109,7 +111,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			Constants.mapStoreCompileValue,
+			this.mapName,
 			"Ljava/util/HashMap;"
 		);
 
@@ -121,7 +123,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
         mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			Constants.mapStoreCompileValue,
+			this.mapName,
 			"Ljava/util/HashMap;"
         );
 		
@@ -184,7 +186,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
 			this.fullClassName,
-			Constants.mapStoreCompileValue,
+			this.mapName,
 			"Ljava/util/HashMap;"
         );
 

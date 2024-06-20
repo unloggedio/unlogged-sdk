@@ -6,16 +6,18 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import io.unlogged.Constants;
+import io.unlogged.util.MapStoreName;
 
 public class InitStaticTransformer extends MethodVisitor {
 
 	private String fullClassName;
+	private final String mapName;
 	private HashSet<String> methodList;
 
 	public InitStaticTransformer(MethodVisitor mv, String fullClassName, HashSet<String> methodList) {
 		super(Opcodes.ASM7, mv);
 		this.fullClassName = fullClassName;
+		this.mapName = MapStoreName.getClassMapStore(fullClassName);
 		this.methodList = methodList;
 	}
 
@@ -37,8 +39,8 @@ public class InitStaticTransformer extends MethodVisitor {
 		// Store the instance in the static field mapStore
 		mv.visitFieldInsn(
 				Opcodes.PUTSTATIC,
-				fullClassName,
-				Constants.mapStoreCompileValue,
+				this.fullClassName,
+				this.mapName,
 				Type.getDescriptor(java.util.HashMap.class)
 		);
 
@@ -46,7 +48,7 @@ public class InitStaticTransformer extends MethodVisitor {
 			mv.visitFieldInsn(
 				Opcodes.GETSTATIC,
 				this.fullClassName,
-				Constants.mapStoreCompileValue,
+				this.mapName,
 				"Ljava/util/HashMap;"
 			);
 

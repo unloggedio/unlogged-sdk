@@ -1,10 +1,8 @@
 package io.unlogged.core.bytecode;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 import org.objectweb.asm.AnnotationVisitor;
@@ -24,6 +22,7 @@ import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.util.ProbeFlagUtil;
+import io.unlogged.util.MapStoreName;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -52,6 +51,7 @@ public class ClassTransformer extends ClassVisitor {
 	private boolean hasStaticInitialiser;
 	private boolean alwaysProbeClassFlag = false;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
+	private String mapName;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -183,6 +183,7 @@ public class ClassTransformer extends ClassVisitor {
                       String superName, String[] interfaces) {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
+		this.mapName = MapStoreName.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
         this.interfaces = interfaces;
@@ -252,7 +253,7 @@ public class ClassTransformer extends ClassVisitor {
 			this.hasStaticInitialiser = true;
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();
 
 			methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
@@ -290,7 +291,7 @@ public class ClassTransformer extends ClassVisitor {
 		if ((!this.hasStaticInitialiser) && (!this.alwaysProbeClassFlag)) {	
 			// staticInitialiser is not defined and needed, define one
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, Constants.mapStoreCompileValue, "Ljava/util/HashMap;", null, null);
+			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
 			fieldVisitor.visitEnd();
 
 			this.hasStaticInitialiser = true;
@@ -311,8 +312,8 @@ public class ClassTransformer extends ClassVisitor {
 			// Store the instance in the static field mapStore
 			staticNew.visitFieldInsn(
 				Opcodes.PUTSTATIC,
-				fullClassName,
-				Constants.mapStoreCompileValue,
+				this.fullClassName,
+				this.mapName,
 				Type.getDescriptor(java.util.HashMap.class)
 			);
 
@@ -320,7 +321,7 @@ public class ClassTransformer extends ClassVisitor {
 				staticNew.visitFieldInsn(
 					Opcodes.GETSTATIC,
 					this.fullClassName,
-					Constants.mapStoreCompileValue,
+					this.mapName,
 					"Ljava/util/HashMap;"
 				);
 	
