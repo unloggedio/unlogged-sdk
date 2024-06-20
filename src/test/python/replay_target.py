@@ -88,7 +88,27 @@ if __name__=="__main__":
                 ReplayTest("VarOpsController.getAUser - normal", TestResult.PASS),
                 ReplayTest("VarOpsController.varListAndMap - normal", TestResult.PASS),
                 ReplayTest("VarOpsController.getAsResponseEntity - normal", TestResult.PASS),
-                ReplayTest("VarOpsController.getCustomers - normal", TestResult.PASS)
+                ReplayTest("VarOpsController.getCustomers - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.getUserGroups - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.getUserList - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.forEachRun - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.forEachRunParallel - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.mapAndCollect - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.mapSet - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.mapVector - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.mapAndFilter - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.filterAndFindFirst - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.toArrayCollection_Usernames - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.flatmap_maxId - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.flatmap_minId - normal4", TestResult.PASS),
+                ReplayTest("StreamOpsController.peek_all - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.countUsersInGroups - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.limitUsers - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.distinctUsage - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.matchCases - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.reduceUsage - normal", TestResult.PASS),
+                ReplayTest("StreamOpsController.getSortedIdOrder - normal missing symbols", TestResult.PASS),
+                ReplayTest("StreamOpsController.groupBy - normal", TestResult.PASS)
 			]
 		),
 		Target(
