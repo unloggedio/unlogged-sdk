@@ -83,7 +83,12 @@ if __name__=="__main__":
                 ReplayTest("OptionalOpsController.filterUserOptional - normal", TestResult.PASS),
                 ReplayTest("OptionalOpsController.countNameLength - normal", TestResult.PASS),
                 ReplayTest("OptionalOpsController.flatMapUsage - normal", TestResult.PASS),
-                ReplayTest("OptionalOpsController.chain - normal", TestResult.PASS)
+                ReplayTest("OptionalOpsController.chain - normal", TestResult.PASS),
+                ReplayTest("VarOpsController.primitivesWrapped - normal", TestResult.PASS),
+                ReplayTest("VarOpsController.getAUser - normal", TestResult.PASS),
+                ReplayTest("VarOpsController.varListAndMap - normal", TestResult.PASS),
+                ReplayTest("VarOpsController.getAsResponseEntity - normal", TestResult.PASS),
+                ReplayTest("VarOpsController.getCustomers - normal", TestResult.PASS)
 			]
 		),
 		Target(
