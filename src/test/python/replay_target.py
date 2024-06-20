@@ -54,13 +54,22 @@ if __name__=="__main__":
 			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
 			buildSystem.MAVEN,
 			[
-				ReplayTest("test-pass", TestResult.PASS),
-				ReplayTest("test-fail", TestResult.FAIL),
-				ReplayTest("get default customer unit - pass", TestResult.PASS),
-				ReplayTest("Handling characters case - a", TestResult.PASS),
-				ReplayTest("Case to test #624", TestResult.PASS),
-				ReplayTest("Case - 595", TestResult.PASS),
-				ReplayTest("StartsWith should be the assertion type - 590", TestResult.PASS)
+                ReplayTest("FutureController.getFutureResult - normal", TestResult.PASS),
+                ReplayTest("FutureController.getFutureResultOptional - normal", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getDefaultModel - normal", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getUserModelMiniDto - normal", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getUserModelMiniDto - call from ModelMapper mocked", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getUserModelDto - normal", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getUserModelDtoWithProvider - normal", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getFromConverter - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.insertDefault - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.insertNew - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.getall - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.getById - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.updatePojo - normal", TestResult.PASS),
+                ReplayTest("MongoOpsController.deleteById - normal", TestResult.PASS),
+                ReplayTest("FutureService.doSomething - normal", TestResult.PASS),
+                ReplayTest("FutureService.doSomethingOptional - normal", TestResult.PASS)
 			]
 		),
 		Target(
