@@ -20,6 +20,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private String mapName;
+	private Boolean isStatic;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
@@ -31,6 +32,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
+		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
@@ -235,7 +237,6 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 
 		// call the line for invoking the probed method
-		boolean isStatic = (this.access & Opcodes.ACC_STATIC) != 0;
 		if (isStatic) {
 			mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
 		}
@@ -250,7 +251,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitInsn(returnOpcode);
 
 		// Exit label
-		mv.visitLabel(exitLabel);		
+		mv.visitLabel(exitLabel);
 		super.visitCode();
 	}
 
