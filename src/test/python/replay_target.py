@@ -122,7 +122,22 @@ if __name__=="__main__":
                 ReplayTest("ThreadingOpsController.executorServiceRunnable - normal", TestResult.PASS),
                 ReplayTest("ThreadingOpsController.scheduledThread - normal", TestResult.PASS),
                 ReplayTest("ThreadingOpsController.scheduledThreadFixedRate - normal", TestResult.PASS),
-                ReplayTest("ThreadingOpsController.scheduledThreadFixedDelay - normal", TestResult.PASS)
+                ReplayTest("ThreadingOpsController.scheduledThreadFixedDelay - normal", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.findAll - normal", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.findById - normal mocked", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.findById - normal integration", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.deleteById - normal mocked", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.deleteById - normal integration", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.insertNew - normal mocked", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.insertNew - normal integration", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.update - normal mocked", TestResult.PASS),
+                ReplayTest("PropertyControllerImpl.update - normal integration", TestResult.PASS),
+                ReplayTest("GlobalFilter.getGlobalFilterAdditive - normal", TestResult.PASS),
+                ReplayTest("PropertyServiceCEImpl.getAll - normal", TestResult.PASS),
+                ReplayTest("PropertyServiceCEImpl.getById - normal", TestResult.PASS),
+                ReplayTest("PropertyServiceCEImpl.deleteById - normal", TestResult.PASS),
+                ReplayTest("PropertyServiceCEImpl.insertNew - normal", TestResult.PASS),
+                ReplayTest("PropertyServiceCEImpl.updateExisting - normal", TestResult.PASS)
 			]
 		),
 		Target(
