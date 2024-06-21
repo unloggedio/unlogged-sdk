@@ -36,12 +36,17 @@ public class ProbeFlagUtil {
 	}
 
 	public static Boolean getNeverProbeMethodFlag (String methodName) {
-		if (methodName.equals("equals")) {
+
+		if (methodName.equals("equals") 
+			|| methodName.equals("hashCode")
+			|| methodName.equals("onNext")
+			|| methodName.equals("onSubscribe")
+			|| methodName.equals("onError")
+			|| methodName.equals("currentContext")
+			|| methodName.equals("onComplete")) {
 			return true;
 		}
-		else if (methodName.equals("hashCode")) {
-			return true;
-		}
+		
 		return false;
 	}
 }
