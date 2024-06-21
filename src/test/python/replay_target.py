@@ -108,7 +108,21 @@ if __name__=="__main__":
                 ReplayTest("StreamOpsController.matchCases - normal", TestResult.PASS),
                 ReplayTest("StreamOpsController.reduceUsage - normal", TestResult.PASS),
                 ReplayTest("StreamOpsController.getSortedIdOrder - normal missing symbols", TestResult.PASS),
-                ReplayTest("StreamOpsController.groupBy - normal", TestResult.PASS)
+                ReplayTest("StreamOpsController.groupBy - normal", TestResult.PASS),
+                ReplayTest("ResponseEntityOps.getOkString - normal", TestResult.PASS),
+                ReplayTest("ResponseEntityOps.getOkUser - normal", TestResult.PASS),
+                ReplayTest("ResponseEntityOps.getUserOf - normal", TestResult.PASS),
+                ReplayTest("ResponseEntityOps.createWithCode - normal", TestResult.PASS),
+                ReplayTest("SealedOpsController.getSquare - normal", TestResult.PASS),
+                ReplayTest("SealedOpsController.shapeSerial - normal", TestResult.PASS),
+                ReplayTest("SealedOpsController.getRectangle - normal", TestResult.PASS),
+                ReplayTest("SealedOpsController.getFilledRectangle - normal", TestResult.PASS),
+                ReplayTest("SealedOpsController.getCircle - normal", TestResult.PASS),
+                ReplayTest("ThreadingOpsController.executorServiceCallablesAny - normal", TestResult.PASS),
+                ReplayTest("ThreadingOpsController.executorServiceRunnable - normal", TestResult.PASS),
+                ReplayTest("ThreadingOpsController.scheduledThread - normal", TestResult.PASS),
+                ReplayTest("ThreadingOpsController.scheduledThreadFixedRate - normal", TestResult.PASS),
+                ReplayTest("ThreadingOpsController.scheduledThreadFixedDelay - normal", TestResult.PASS)
 			]
 		),
 		Target(
