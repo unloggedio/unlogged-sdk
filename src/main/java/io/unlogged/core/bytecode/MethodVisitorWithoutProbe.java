@@ -20,6 +20,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private String mapName;
+	private Boolean isStatic;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
@@ -31,12 +32,22 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
+		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
 
 		Type[] argumentTypes = Type.getArgumentTypes(this.desc);
-		int argIndex = 1;
+
+		// For static methods the arguments start from zeorth position and
+		// for dynamic methods "this" keyword is placed in zeroth position and other args are placed from first position
+		int argIndex;
+		if (this.isStatic) {
+			argIndex = 0;
+		}
+		else {
+			argIndex = 1;
+		}
 
 		for (int i = 0; i <= argumentTypes.length-1; i++) {
 			Type argType = argumentTypes[i];
@@ -235,8 +246,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 
 		// call the line for invoking the probed method
-		boolean isStatic = (this.access & Opcodes.ACC_STATIC) != 0;
 		if (isStatic) {
+			pushArgument(mv, false);
 			mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
 		}
 		else{
@@ -250,7 +261,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		mv.visitInsn(returnOpcode);
 
 		// Exit label
-		mv.visitLabel(exitLabel);		
+		mv.visitLabel(exitLabel);
 		super.visitCode();
 	}
 

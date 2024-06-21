@@ -238,16 +238,6 @@ public class ClassTransformer extends ClassVisitor {
 		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
 		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
 
-		if (name.equals("equals") 
-			|| name.equals("hashCode")
-			|| name.equals("onNext")
-			|| name.equals("onSubscribe")
-			|| name.equals("onError")
-			|| name.equals("currentContext")
-			|| name.equals("onComplete")) {
-			neverProbeMethodFlag = true;
-		}
-
 		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {
 			this.hasStaticInitialiser = true;
