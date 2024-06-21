@@ -12,10 +12,6 @@ public class ProbeFlagUtil {
 			// class is enum
 			return true;
 		}
-		if ((access & Opcodes.ACC_STATIC) != 0) {
-			// class is static
-			return true;
-		}
 		return false;
 	}
 
@@ -26,10 +22,6 @@ public class ProbeFlagUtil {
 		}
 		if ((access & Opcodes.ACC_ENUM) != 0) {
 			// method is enum (remove it)
-			return true;
-		}
-		if ((access & Opcodes.ACC_STATIC) != 0) {
-			// method is static
 			return true;
 		}
 		if (methodName.equals("<init>")) {
