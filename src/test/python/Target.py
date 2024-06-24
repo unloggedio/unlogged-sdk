@@ -6,6 +6,7 @@ import subprocess
 # define constants
 main_method_identifier = "public static void main"
 unlogged_annotation = "@Unlogged(port = " + "12100" + ")"
+unlogged_annotation_base_string = "Unlogged"
 unlogged_import = "import io.unlogged.Unlogged;"
 
 class ReplayTest:
@@ -106,7 +107,7 @@ class Target:
 			# check annotation
 			annotation_present = False
 			for line in file:
-				if (unlogged_annotation in line):
+				if (unlogged_annotation_base_string in line):
 					annotation_present = True
 		
 			# add annotation
