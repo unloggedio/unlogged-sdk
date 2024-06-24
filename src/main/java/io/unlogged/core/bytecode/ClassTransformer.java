@@ -264,7 +264,8 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 
-		this.methodList.add(name);
+		String methodCompoundName = MapStoreUtil.getMethodCompoundName(name, desc);
+		this.methodList.add(methodCompoundName);
 		String nameProbed = Constants.probedValue + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);

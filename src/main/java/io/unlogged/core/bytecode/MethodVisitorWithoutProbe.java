@@ -14,6 +14,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private String methodName;
 	private String fullClassName;
 	private String desc;
+	private String methodCompoundName;
 	private String nameProbed;
 	private long classCounter;
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
@@ -29,6 +30,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.mapName = MapStoreUtil.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
+		this.methodCompoundName = MapStoreUtil.getMethodCompoundName(this.methodName, this.desc);
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
@@ -116,7 +118,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: mapStore.put(methodName, mapStore.get(methodName) + 1);
+		// Start of block-A. This adds the line: mapStore.put(methodCompoundName, mapStore.get(methodCompoundName) + 1);
 
 		// load mapStore
 		mv.visitFieldInsn(
@@ -127,7 +129,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		);
 
 		// load string for mapStore
-		mv.visitLdcInsn(this.methodName);
+		mv.visitLdcInsn(this.methodCompoundName);
 
 		// Start of block-B. This adds the logic for  mapStore.get("methodName") + 1 and loads the value to stack
 		// load mapStore
@@ -138,8 +140,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 			"Ljava/util/HashMap;"
         );
 		
-		// load method name 
-		mv.visitLdcInsn(this.methodName);
+		// load method name
+		mv.visitLdcInsn(this.methodCompoundName);
 
 		// invoke get of mapStore for method name
         mv.visitMethodInsn(

@@ -8,4 +8,9 @@ public class MapStoreUtil {
 		String tempMapName = fullClassName.replace("/", "$") + "$" + Constants.mapStoreCompileValue;
 		return tempMapName;
 	}
+
+	public static String getMethodCompoundName(String name, String desc) {
+		String methodCompoundName = name + "$" + desc;
+		return methodCompoundName;
+	}
 }
