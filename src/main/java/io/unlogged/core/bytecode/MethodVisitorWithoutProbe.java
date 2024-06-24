@@ -30,10 +30,10 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.mapName = MapStoreUtil.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
-		this.methodCompoundName = MapStoreUtil.getMethodCompoundName(this.methodName, this.desc);
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
+		this.methodCompoundName = MapStoreUtil.getMethodCompoundName(this.methodName, this.desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
@@ -131,7 +131,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// load string for mapStore
 		mv.visitLdcInsn(this.methodCompoundName);
 
-		// Start of block-B. This adds the logic for  mapStore.get("methodName") + 1 and loads the value to stack
+		// Start of block-B. This adds the logic for  mapStore.get("methodCompoundName") + 1 and loads the value to stack
 		// load mapStore
         mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
@@ -191,7 +191,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// End of Block-A
 
 		// Start of block-C
-		// This adds the line for if (probecounter(methodCounter, divisor, argument list))
+		// This adds the line for if (Runtime.probecounter(methodCounter.get(methodCompoundName), divisor, argument list))
 		// add the if condition
 		Label exitLabel = new Label();
 
@@ -204,9 +204,9 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
         );
 
 		// load the method name 
-		mv.visitLdcInsn(this.methodName);
+		mv.visitLdcInsn(this.methodCompoundName);
 
-		// this is logic for: mapStore.get("methodName")
+		// this is logic for: mapStore.get("methodCompoundName")
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
