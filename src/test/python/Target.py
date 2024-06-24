@@ -5,7 +5,7 @@ import subprocess
 
 # define constants
 main_method_identifier = "public static void main"
-unlogged_annotation = "@Unlogged"
+unlogged_annotation = "@Unlogged(port = " + "12100" + ")"
 unlogged_import = "import io.unlogged.Unlogged;"
 
 class ReplayTest:
@@ -174,6 +174,7 @@ class Target:
 		if (len(replay_fail) == 0):
 			print ("All tests passed succesfully")
 			return False
+		
 		else:
 			print ("Replay tests have failed for " + self.test_repo_name + ". Fail count = " + str(len(replay_fail)))
 			for local_test in replay_fail:
