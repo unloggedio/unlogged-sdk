@@ -37,10 +37,11 @@ def replay_target (target):
 		raise Exception("Test for target failed execution: " + target.test_repo_name)
 
 	# assert and clean repo
-	target.check_replay()
+	local_error_state = target.check_replay()
 	docker_down_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml down"
 	os.system(docker_down_cmd)
 	os.system("rm -rf " + target.test_repo_name)
+	return local_error_state
 
 if __name__=="__main__":
 
@@ -323,5 +324,10 @@ if __name__=="__main__":
 		)
 	]
 		
+	error_state = False
 	for local_target in target_list:
-		replay_target(local_target)
+		error_state = error_state | replay_target(local_target)
+	if (error_state):
+		raise Exception("Test Failed")
+	else:
+		print ("Test Passed")
