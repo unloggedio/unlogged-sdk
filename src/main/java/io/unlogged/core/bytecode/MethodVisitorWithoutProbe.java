@@ -7,7 +7,7 @@ import org.objectweb.asm.*;
 import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
-import io.unlogged.util.MapStoreUtil;
+import io.unlogged.util.DistinctClassLogNameMap;
 
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
@@ -27,13 +27,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
-		this.mapName = MapStoreUtil.getClassMapStore(fullClassName);
+		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
-		this.methodCompoundName = MapStoreUtil.getMethodCompoundName(this.methodName, this.desc);
+		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.methodName, this.desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
