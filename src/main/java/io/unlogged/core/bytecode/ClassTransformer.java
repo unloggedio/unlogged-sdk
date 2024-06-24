@@ -22,7 +22,7 @@ import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.util.ProbeFlagUtil;
-import io.unlogged.util.MapStoreName;
+import io.unlogged.util.MapStoreUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -183,7 +183,7 @@ public class ClassTransformer extends ClassVisitor {
                       String superName, String[] interfaces) {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
-		this.mapName = MapStoreName.getClassMapStore(fullClassName);
+		this.mapName = MapStoreUtil.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
         this.interfaces = interfaces;
