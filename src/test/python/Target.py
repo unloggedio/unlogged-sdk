@@ -166,12 +166,10 @@ class Target:
 			print ("Test name = " + local_test)
 			print ("	Expected value = " + expected_response_dict[local_test].name)
 			print ("	Actual value = " + actual_response_dict[local_test].name)
+			print ("----")
 			
-			if (expected_response_dict[local_test] == actual_response_dict[local_test]):
-				print ("	The test executed as expected")
-			else:
-				replay_fail.append(test_name)
-				print("	The test did not executed as expected")
+			if (expected_response_dict[local_test] != actual_response_dict[local_test]):
+				replay_fail.append(local_test)
 	
 		if (len(replay_fail) == 0):
 			print ("All tests passed succesfully")
