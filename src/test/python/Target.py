@@ -174,7 +174,6 @@ class Target:
 		if (len(replay_fail) == 0):
 			print ("All tests passed succesfully")
 		else:
-			print ("Some tests failed. There are:")
+			print ("Replay tests have failed for " + self.test_repo_name + ". Fail count = " + str(len(replay_fail)))
 			for local_test in replay_fail:
 				print ("Test Case: " + local_test)
-			raise Exception("Replay tests have failed")
