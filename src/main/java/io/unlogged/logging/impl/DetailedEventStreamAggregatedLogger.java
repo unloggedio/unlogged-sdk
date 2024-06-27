@@ -45,34 +45,21 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     //    public static final Duration MILLI_1 = Duration.of(1, ChronoUnit.MILLIS);
     public static final String FAILED_TO_RECORD_MESSAGE =
             "{\"error\": \"failed to serialize object\", \"message\":\"";
-    public static final Duration ONE_MILLISECOND = Duration.ofMillis(1);
     private static boolean isReactive = false;
-    //    private final FSTConfiguration fstObjectMapper;
     private final AggregatedFileLogger aggregatedLogger;
-    //    private final TypeIdAggregatedStreamMap typeToId;
     private final ObjectIdAggregatedStream objectIdMap;
-    //    private final String includedPackage;
     private final Boolean DEBUG = Boolean.parseBoolean(System.getProperty("UNLOGGED_DEBUG"));
-    //    private final ThreadLocal<ByteArrayOutputStream> threadOutputBuffer =
-//            ThreadLocal.withInitial(ByteArrayOutputStream::new);
     private final ThreadLocal<Boolean> isRecording = ThreadLocal.withInitial(() -> false);
     final private boolean serializeValues = true;
-    //    private final Map<String, WeaveLog> classMap = new HashMap<>();
-//    private final Map<Integer, DataInfo> callProbes = new HashMap<>();
     private final Set<Integer> probesToRecord = new HashSet<>();
     private final Set<Long> valueToSkip = new HashSet<>();
     private final SerializationMode SERIALIZATION_MODE = SerializationMode.JACKSON;
-    private final ThreadLocal<ByteArrayOutputStream> output =
-            ThreadLocal.withInitial(() -> new ByteArrayOutputStream(1_000_000));
-    //    private final Set<String> classesToIgnore = new HashSet<>();
-//    private final Kryo kryo;
     private final Map<String, WeakReference<Object>> objectMap = new HashMap<>();
     private final ThreadLocal<ObjectMapper> objectMapper = ThreadLocal.withInitial(
             ObjectMapperFactory::createObjectMapperReactive);
     private final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
     private final Map<Integer, Integer> firstProbeId = new HashMap<>();
-    InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(
-            new DefaultCharArrayNodeFactory());
+    InvertedRadixTree<Boolean> invertedRadixTree = new ConcurrentInvertedRadixTree<>(new DefaultCharArrayNodeFactory());
     private ClassLoader targetClassLoader;
 
     /**

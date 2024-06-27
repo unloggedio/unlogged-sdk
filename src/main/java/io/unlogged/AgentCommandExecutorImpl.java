@@ -292,8 +292,11 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 Object[] parameters;
                 try {
+                    List<String> parsedSignature = MethodSignatureParser.parseMethodSignature(
+                            agentCommandRequest.getMethodSignature());
+                    parsedSignature.remove(parsedSignature.size() - 1); // remove return type
                     parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
-                            parameterTypesClass, agentCommandRequest.getParameterTypes());
+                            parameterTypesClass, parsedSignature);
                 } catch (InvalidDefinitionException ide1) {
                     if (!targetClassLoader.equals(targetClassLoader1)) {
                         parameters = buildParametersUsingTargetClass(targetClassLoader, methodParameters,
