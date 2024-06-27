@@ -16,8 +16,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
-
 public class MockHandler {
     private final ObjectMapper objectMapper;
 
@@ -62,6 +60,22 @@ public class MockHandler {
             JavaType subType = getTypeReference(typeFactory, classNameToBeConstructed.substring(0,
                     classNameToBeConstructed.length() - 2));
             return typeFactory.constructArrayType(subType);
+        }
+
+        // special handling for types which have a single generic type which is array type
+        if (classNameToBeConstructed.contains("<") && classNameToBeConstructed.contains("[]")) {
+            // TODO: the correct fix is to use the naming type java.lang.Class<[Lorg.unlogged.demo.resttemplate.Post;>
+            // that need to change in ClassUtils createDefaultMock which creates these names currently using
+            // canonicalName()
+            // java.lang.Class<org.unlogged.demo.resttemplate.Post[]>
+            String containerClassName = classNameToBeConstructed.substring(0, classNameToBeConstructed.indexOf("<"));
+            String containedClassName = classNameToBeConstructed.substring(classNameToBeConstructed.indexOf("<") + 1,
+                    classNameToBeConstructed.indexOf(">"));
+
+            JavaType containedType = getTypeReference(typeFactory, containedClassName);
+
+            return typeFactory.constructParametricType(getTypeReference(typeFactory, containerClassName).getRawClass(),
+                    containedType);
         }
         switch (classNameToBeConstructed) {
             case "J":
@@ -126,6 +140,20 @@ public class MockHandler {
                             break;
                         }
                     }
+                } else if (methodArguments[methodArguments.length - 1] instanceof Object[]) {
+                    Object[] varags = (Object[]) methodArguments[methodArguments.length - 1];
+                    if (declaredMock.getWhenParameter().size() == methodArguments.length + varags.length - 1) {
+                        List<ParameterMatcher> whenParameter = declaredMock.getWhenParameter();
+                        for (int i = 0; i < whenParameter.size() && i < (methodArguments.length - 1); i++) {
+                            ParameterMatcher parameterMatcher = whenParameter.get(i);
+                            Object argument = methodArguments[i];
+//                        System.out.println("Parameter matcher: " + parameterMatcher);
+                            mockMatched = isParameterMatched(parameterMatcher, argument);
+                            if (!mockMatched) {
+                                break;
+                            }
+                        }
+                    }
                 } else {
                     mockMatched = false;
                 }
@@ -176,7 +204,8 @@ public class MockHandler {
                             return returnValueInstance;
                         case EXCEPTION:
                             if (returnValueInstance == null) {
-                                returnValueInstance = new Exception("Object to be thrown from mock is null: " + declaredMock);
+                                returnValueInstance = new Exception(
+                                        "Object to be thrown from mock is null: " + declaredMock);
                             }
                             throw (Throwable) returnValueInstance;
                     }
