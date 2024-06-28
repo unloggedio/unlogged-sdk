@@ -22,7 +22,7 @@ import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
 import io.unlogged.util.ProbeFlagUtil;
-import io.unlogged.util.MapStoreName;
+import io.unlogged.util.DistinctClassLogNameMap;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -183,7 +183,7 @@ public class ClassTransformer extends ClassVisitor {
                       String superName, String[] interfaces) {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
-		this.mapName = MapStoreName.getClassMapStore(fullClassName);
+		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
         this.interfaces = interfaces;
@@ -264,7 +264,8 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 
-		this.methodList.add(name);
+		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(name, desc);
+		this.methodList.add(methodCompoundName);
 		String nameProbed = Constants.probedValue + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);

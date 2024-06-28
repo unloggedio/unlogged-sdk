@@ -6,7 +6,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import io.unlogged.util.MapStoreName;
+import io.unlogged.util.DistinctClassLogNameMap;
 
 public class InitStaticTransformer extends MethodVisitor {
 
@@ -17,7 +17,7 @@ public class InitStaticTransformer extends MethodVisitor {
 	public InitStaticTransformer(MethodVisitor mv, String fullClassName, HashSet<String> methodList) {
 		super(Opcodes.ASM7, mv);
 		this.fullClassName = fullClassName;
-		this.mapName = MapStoreName.getClassMapStore(fullClassName);
+		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
 		this.methodList = methodList;
 	}
 

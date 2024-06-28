@@ -7,13 +7,14 @@ import org.objectweb.asm.*;
 import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
-import io.unlogged.util.MapStoreName;
+import io.unlogged.util.DistinctClassLogNameMap;
 
 class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	private String methodName;
 	private String fullClassName;
 	private String desc;
+	private String methodCompoundName;
 	private String nameProbed;
 	private long classCounter;
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
@@ -26,12 +27,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
-		this.mapName = MapStoreName.getClassMapStore(fullClassName);
+		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
+		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.methodName, this.desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
@@ -116,7 +118,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: mapStore.put(methodName, mapStore.get(methodName) + 1);
+		// Start of block-A. This adds the line: mapStore.put(methodCompoundName, mapStore.get(methodCompoundName) + 1);
 
 		// load mapStore
 		mv.visitFieldInsn(
@@ -127,9 +129,9 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		);
 
 		// load string for mapStore
-		mv.visitLdcInsn(this.methodName);
+		mv.visitLdcInsn(this.methodCompoundName);
 
-		// Start of block-B. This adds the logic for  mapStore.get("methodName") + 1 and loads the value to stack
+		// Start of block-B. This adds the logic for  mapStore.get("methodCompoundName") + 1 and loads the value to stack
 		// load mapStore
         mv.visitFieldInsn(
 			Opcodes.GETSTATIC,
@@ -138,8 +140,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 			"Ljava/util/HashMap;"
         );
 		
-		// load method name 
-		mv.visitLdcInsn(this.methodName);
+		// load method name
+		mv.visitLdcInsn(this.methodCompoundName);
 
 		// invoke get of mapStore for method name
         mv.visitMethodInsn(
@@ -189,7 +191,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// End of Block-A
 
 		// Start of block-C
-		// This adds the line for if (probecounter(methodCounter, divisor, argument list))
+		// This adds the line for if (Runtime.probecounter(methodCounter.get(methodCompoundName), divisor, argument list))
 		// add the if condition
 		Label exitLabel = new Label();
 
@@ -202,9 +204,9 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
         );
 
 		// load the method name 
-		mv.visitLdcInsn(this.methodName);
+		mv.visitLdcInsn(this.methodCompoundName);
 
-		// this is logic for: mapStore.get("methodName")
+		// this is logic for: mapStore.get("methodCompoundName")
         mv.visitMethodInsn(
 			Opcodes.INVOKEVIRTUAL,
 			Type.getInternalName(java.util.HashMap.class),
