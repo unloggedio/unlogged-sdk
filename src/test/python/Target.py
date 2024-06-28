@@ -5,7 +5,8 @@ import subprocess
 
 # define constants
 main_method_identifier = "public static void main"
-unlogged_annotation = "@Unlogged"
+unlogged_annotation = "@Unlogged(port = " + "12100" + ")"
+unlogged_annotation_base_string = "Unlogged"
 unlogged_import = "import io.unlogged.Unlogged;"
 
 class ReplayTest:
@@ -106,7 +107,7 @@ class Target:
 			# check annotation
 			annotation_present = False
 			for line in file:
-				if (unlogged_annotation in line):
+				if (unlogged_annotation_base_string in line):
 					annotation_present = True
 		
 			# add annotation
@@ -166,17 +167,18 @@ class Target:
 			print ("Test name = " + local_test)
 			print ("	Expected value = " + expected_response_dict[local_test].name)
 			print ("	Actual value = " + actual_response_dict[local_test].name)
+			print ("----")
 			
-			if (expected_response_dict[local_test] == actual_response_dict[local_test]):
-				print ("	The test executed as expected")
-			else:
-				replay_fail.append(test_name)
-				print("	The test did not executed as expected")
+			if (expected_response_dict[local_test] != actual_response_dict[local_test]):
+				replay_fail.append(local_test)
 	
 		if (len(replay_fail) == 0):
 			print ("All tests passed succesfully")
+			return False
+		
 		else:
-			print ("Some tests failed. There are:")
+			print ("Replay tests have failed for " + self.test_repo_name + ". Fail count = " + str(len(replay_fail)))
 			for local_test in replay_fail:
 				print ("Test Case: " + local_test)
-			raise Exception("Replay tests have failed")
+
+			return True

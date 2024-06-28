@@ -63,7 +63,7 @@ def compile_target (target):
 		if "io.projectreactor" in dependencies:
 			raise Exception("Found reactor core in a Non reactive project " + target.test_repo_name + " - Failing")
 		else :
-			print("Reactor core not found on NonReactive project - Passsing")
+			print("Reactor core not found on NonReactive project - Passing")
 	else:
 		if "io.projectreactor" in dependencies:
 			print("Reactor core found on Reactive project - Passing")
