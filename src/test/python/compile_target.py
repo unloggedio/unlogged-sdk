@@ -45,9 +45,6 @@ def clone_and_build_fernflower():
 
 def compile_target (target):
 
-    # Clone and build Fernflower if not already done
-    clone_and_build_fernflower()
-
 	# clone target
 	os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
 	expected_java_version = target.java_version
@@ -100,7 +97,7 @@ def compile_target (target):
 
 def check_probe_insertion(target):
     # Paths for FutureController class file and decompiled output
-    class_file_path = os.path.join("target/classes/com/example/yourpackage", "FutureController.class")
+    class_file_path = os.path.join("target/classes/org/unlogged/demo/controller", "FutureController.class")
     decompiled_dir = os.path.join("decompiled", target.test_repo_name)
     os.makedirs(decompiled_dir, exist_ok=True)
 
@@ -160,29 +157,36 @@ if __name__=="__main__":
                 java_version=branch_java_version_map[branch_name]
             )
         )
-        target_list.append(
-            Target(
-                "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-                "unlogged-spring-webflux-maven-demo",
-                "/pom.xml",
-                "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-                buildSystem.MAVEN,
-                projectType="Reactive",
-                branch_name=branch_name,
-                java_version=branch_java_version_map[branch_name]
-            )
-        )
-    target_list.append(
-        Target(
-            "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
-            "unlogged-spring-mvc-maven-demo",
-            "/pom.xml",
-            "/src/main/java/org/unlogged/mvc/demo/Application.java",
-            buildSystem.MAVEN,
-            projectType="Normal",
-            branch_name="main",
-            java_version="17"
-        )
-    )
+    #     target_list.append(
+    #         Target(
+    #             "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+    #             "unlogged-spring-webflux-maven-demo",
+    #             "/pom.xml",
+    #             "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+    #             buildSystem.MAVEN,
+    #             projectType="Reactive",
+    #             branch_name=branch_name,
+    #             java_version=branch_java_version_map[branch_name]
+    #         )
+    #     )
+    # target_list.append(
+    #     Target(
+    #         "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
+    #         "unlogged-spring-mvc-maven-demo",
+    #         "/pom.xml",
+    #         "/src/main/java/org/unlogged/mvc/demo/Application.java",
+    #         buildSystem.MAVEN,
+    #         projectType="Normal",
+    #         branch_name="main",
+    #         java_version="17"
+    #     )
+    # )
+
+    # Clone and build Fernflower if not already done
+    clone_and_build_fernflower()
+
     for local_target in target_list:
         compile_target(local_target)
+
+    # Clean up Fernflower directory after processing all targets
+    os.system("rm -rf fernflower")
