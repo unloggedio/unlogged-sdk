@@ -4,6 +4,9 @@ from Target import Target
 from configEnum import buildSystem
 import subprocess
 
+# Path to Fernflower JAR file after building from source
+FERNFLOWER_JAR_PATH = "fernflower/build/libs/fernflower.jar"
+
 def set_java_home(java_home):
     os.environ["JAVA_HOME"] = java_home
     os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
@@ -25,7 +28,25 @@ def check_java_version(expected_version):
         raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
     print(f"Java version {version} matches expected version {expected_version} - Passing")
 
+def clone_and_build_fernflower():
+    # Clone Fernflower repository
+    if not os.path.exists("fernflower"):
+        subprocess.run(["git", "clone", "https://github.com/fesh0r/fernflower"])
+    else:
+        print("Fernflower repository already cloned")
+
+    # Build Fernflower using Gradle
+    os.chdir("fernflower")
+    result = subprocess.run(["./gradlew", "build"], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Fernflower build failed: {result.stderr}")
+    os.chdir("..")
+
+
 def compile_target (target):
+
+    # Clone and build Fernflower if not already done
+    clone_and_build_fernflower()
 
 	# clone target
 	os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
@@ -70,8 +91,48 @@ def compile_target (target):
 		else :
 			raise Exception("Reactor core not found in reactive project " + target.test_repo_name + " - Failing")
 
-	# delete target
+    # Check insertion of probe in FutureController class
+    check_probe_insertion(target)
+
+
+    # delete target
 	os.system("rm -rf " + target.test_repo_name)
+
+def check_probe_insertion(target):
+    # Paths for FutureController class file and decompiled output
+    class_file_path = os.path.join("target/classes/com/example/yourpackage", "FutureController.class")
+    decompiled_dir = os.path.join("decompiled", target.test_repo_name)
+    os.makedirs(decompiled_dir, exist_ok=True)
+
+    # Decompile the class file
+    decompile_class_file(class_file_path, decompiled_dir)
+
+    # Verify the logging statements in the decompiled file
+    java_file_path = os.path.join(decompiled_dir, "FutureController.java")
+    if os.path.exists(java_file_path):
+        verify_logs_in_file(java_file_path)
+    else:
+        raise Exception(f"Decompiled file {java_file_path} not found")
+
+def decompile_class_file(class_file, output_dir):
+    # Command to decompile using fernflower
+    decompiler_command = [
+        "java", "-jar", FERNFLOWER_JAR_PATH,
+        class_file, output_dir
+    ]
+    result = subprocess.run(decompiler_command, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Decompilation failed: {result.stderr}")
+    print(f"Decompilation successful for {class_file}")
+
+def verify_logs_in_file(java_file):
+    expected_log = 'Runtime.registerClass'  # Add your specific log statement to verify
+    with open(java_file, 'r') as file:
+        content = file.read()
+    if expected_log in content:
+        print(f"Log verification passed for: {java_file}")
+    else:
+        raise Exception(f"Log verification failed for: {java_file}")
 
 
 if __name__=="__main__":
