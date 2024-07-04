@@ -42,62 +42,59 @@ def clone_and_build_fernflower():
         raise Exception(f"Fernflower build failed: {result.stderr}")
     os.chdir("..")
 
+def compile_target(target):
+    # Clone target
+    os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
+    expected_java_version = target.java_version
+    set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
+    check_java_version(expected_java_version)
 
-def compile_target (target):
+    # Modify build system file
+    target.modify_main()
+    if target.buildSystem == buildSystem.MAVEN:
+        target.modify_pom(sdk_version)
+        compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
+    elif target.buildSystem == buildSystem.GRADLE:
+        target.modify_gradle(sdk_version)
+        compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
 
-	# clone target
-	os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
-	expected_java_version = target.java_version
-	set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
-	check_java_version(expected_java_version)
+    # Target compile
+    response_code = os.system(compile_command)
+    if response_code == 0:
+        print("Target compiled successfully: " + target.test_repo_name)
+    else:
+        raise Exception("Target did not compile: " + target.test_repo_name)
 
-	# modify build system file
-	target.modify_main()
-	if (target.buildSystem == buildSystem.MAVEN):
-		target.modify_pom(sdk_version)
-		compile_command = "cd " + target.test_repo_name + " && mvn clean compile"
-	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version)
-		compile_command = "cd " + target.test_repo_name + " && gradle clean compileJava"
+    os_cwd = os.getcwd()
+    program = 'mvn'
+    arg = 'dependency:tree'
+    if target.buildSystem == buildSystem.GRADLE:
+        program = 'gradle'
+        arg = 'dependencies'
 
-	# target compile
-	response_code = os.system(compile_command)
-	if (response_code == 0):
-		print ("Target compiled succesfully: " +  target.test_repo_name)
-	else:
-		raise Exception("Target did not compiled: " + target.test_repo_name)
+    dependencies = subprocess.run([program, arg], cwd=os_cwd + "/" + target.test_repo_name, capture_output=True, text=True).stdout
 
-	os_cwd = os.getcwd()
-	program = 'mvn'
-	arg = 'dependency:tree'
-	if target.buildSystem == buildSystem.GRADLE:
-		program = 'gradle'
-		arg = 'dependencies'
-
-	dependencies = subprocess.run([program, arg], cwd = os_cwd + "/" + target.test_repo_name,capture_output=True, text=True).stdout
-
-	if target.projectType == "Normal":
-		#Ensure reactive frameworks are not used on Non reactive repos
-		if "io.projectreactor" in dependencies:
-			raise Exception("Found reactor core in a Non reactive project " + target.test_repo_name + " - Failing")
-		else :
-			print("Reactor core not found on NonReactive project - Passing")
-	else:
-		if "io.projectreactor" in dependencies:
-			print("Reactor core found on Reactive project - Passing")
-		else :
-			raise Exception("Reactor core not found in reactive project " + target.test_repo_name + " - Failing")
+    if target.projectType == "Normal":
+        # Ensure reactive frameworks are not used on Non-reactive repos
+        if "io.projectreactor" in dependencies:
+            raise Exception("Found reactor core in a Non-reactive project " + target.test_repo_name + " - Failing")
+        else:
+            print("Reactor core not found on Non-Reactive project - Passing")
+    else:
+        if "io.projectreactor" in dependencies:
+            print("Reactor core found on Reactive project - Passing")
+        else:
+            raise Exception("Reactor core not found in reactive project " + target.test_repo_name + " - Failing")
 
     # Check insertion of probe in FutureController class
     check_probe_insertion(target)
 
-
-    # delete target
-	os.system("rm -rf " + target.test_repo_name)
+    # Delete target
+    os.system("rm -rf " + target.test_repo_name)
 
 def check_probe_insertion(target):
     # Paths for FutureController class file and decompiled output
-    class_file_path = os.path.join("target/classes/org/unlogged/demo/controller", "FutureController.class")
+    class_file_path = os.path.join(target.test_repo_name, "target/classes/org/unlogged/demo/controller", "FutureController.class")
     decompiled_dir = os.path.join("decompiled", target.test_repo_name)
     os.makedirs(decompiled_dir, exist_ok=True)
 
@@ -131,16 +128,15 @@ def verify_logs_in_file(java_file):
     else:
         raise Exception(f"Log verification failed for: {java_file}")
 
-
 if __name__=="__main__":
 
     sdk_version = sys.argv[1]
     branch_java_version_map = {
-        "java8" : "8",
-        "java11" : "11",
-        "java21" : "21",
-        "main" : "17"
-        }
+        "java8": "8",
+        "java11": "11",
+        "java21": "21",
+        "main": "17"
+    }
 
     target_list = []
 
@@ -157,32 +153,32 @@ if __name__=="__main__":
                 java_version=branch_java_version_map[branch_name]
             )
         )
-    #     target_list.append(
-    #         Target(
-    #             "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-    #             "unlogged-spring-webflux-maven-demo",
-    #             "/pom.xml",
-    #             "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-    #             buildSystem.MAVEN,
-    #             projectType="Reactive",
-    #             branch_name=branch_name,
-    #             java_version=branch_java_version_map[branch_name]
-    #         )
-    #     )
-    # target_list.append(
-    #     Target(
-    #         "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
-    #         "unlogged-spring-mvc-maven-demo",
-    #         "/pom.xml",
-    #         "/src/main/java/org/unlogged/mvc/demo/Application.java",
-    #         buildSystem.MAVEN,
-    #         projectType="Normal",
-    #         branch_name="main",
-    #         java_version="17"
-    #     )
-    # )
+        target_list.append(
+            Target(
+                "https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+                "unlogged-spring-webflux-maven-demo",
+                "/pom.xml",
+                "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+                buildSystem.MAVEN,
+                projectType="Reactive",
+                branch_name=branch_name,
+                java_version=branch_java_version_map[branch_name]
+            )
+        )
+    target_list.append(
+        Target(
+            "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
+            "unlogged-spring-mvc-maven-demo",
+            "/pom.xml",
+            "/src/main/java/org/unlogged/mvc/demo/Application.java",
+            buildSystem.MAVEN,
+            projectType="Normal",
+            branch_name="main",
+            java_version="17"
+        )
+    )
 
-    # Clone and build Fernflower if not already done
+    # Clone and build Fernflower
     clone_and_build_fernflower()
 
     for local_target in target_list:
