@@ -72,7 +72,7 @@ public class DiscardEventLogger implements IEventLogger {
 
     @Override
     public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
-
+        System.out.println("recordWeaveInfo type-2 called");
     }
 
     @Override

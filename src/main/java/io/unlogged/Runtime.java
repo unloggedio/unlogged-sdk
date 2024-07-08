@@ -231,6 +231,7 @@ public class Runtime {
     public static void registerClass(String classInfoBytes, String probesToRecordBase64) {
 //        System.out.println(
 //                "New class registration [" + classInfoBytes.getBytes().length + "][" + probesToRecordBase64.getBytes().length + "]");
+        System.out.println("enter registerClass");
         StackTraceElement callerClassAndMethodStack = new Exception().getStackTrace()[1];
         try {
             Class<?> callerClass = Class.forName(callerClassAndMethodStack.getClassName());
@@ -289,6 +290,10 @@ public class Runtime {
             }
 //            System.out.println("Register class ["+ classInfo.getClassId() +"][" + classInfo.getClassName() + "] => " + probesToRecord.size() +
 //                    " probes to record");
+
+            System.out.println("decodedClassWeaveInfo = " + decodedClassWeaveInfo);
+            System.out.println("classInfo = " + classInfo);
+            System.out.println("probesToRecord = " + probesToRecord);
             instance.logger.recordWeaveInfo(decodedClassWeaveInfo, classInfo, probesToRecord);
         } else {
 //            System.out.println("Adding class to pending registrations");

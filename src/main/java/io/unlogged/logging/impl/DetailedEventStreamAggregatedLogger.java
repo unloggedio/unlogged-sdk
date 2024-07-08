@@ -548,6 +548,7 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
 
     @Override
     public void recordWeaveInfo(byte[] byteArray, ClassInfo classIdEntry, List<Integer> probeIdsToRecord) {
+        System.out.println("recordWeaveInfo type-1 called");
         if (probeIdsToRecord.size() > 0) {
             Integer firstProbeIdThisBatch = probeIdsToRecord.get(0);
             for (Integer i : probeIdsToRecord) {
