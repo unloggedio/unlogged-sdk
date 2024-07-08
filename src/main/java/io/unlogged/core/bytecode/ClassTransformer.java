@@ -49,7 +49,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashSet<String> methodList = new HashSet<>();
 	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
-	private boolean alwaysProbeClassFlag = false;
+	private boolean addHashMap = true;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private String mapName;
 
@@ -194,7 +194,7 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
-		this.alwaysProbeClassFlag = ProbeFlagUtil.getAlwaysProbeClassFlag(access);
+		this.addHashMap = ProbeFlagUtil.getAddHashMap(access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -279,7 +279,7 @@ public class ClassTransformer extends ClassVisitor {
 	@Override
     public void visitEnd() {
 		
-		if ((!this.hasStaticInitialiser) && (!this.alwaysProbeClassFlag)) {	
+		if ((!this.hasStaticInitialiser) && (this.addHashMap)) {
 			// staticInitialiser is not defined and needed, define one
 
 			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
