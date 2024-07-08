@@ -16,15 +16,8 @@ public class ProbeFlagUtil {
 	}
 
 	public static boolean getalwaysProbeMethodFlag (String methodName, int access, String desc) {
-		if ((access & Opcodes.ACC_INTERFACE) != 0) {
-			// method is interface (remove it)
-			return true;
-		}
-		else if ((access & Opcodes.ACC_ENUM) != 0) {
-			// method is enum (remove it)
-			return true;
-		}
-		else if (methodName.equals("<init>")) {
+
+		if (methodName.equals("<init>")) {
 			// constructor method
 			return true;
 		}
