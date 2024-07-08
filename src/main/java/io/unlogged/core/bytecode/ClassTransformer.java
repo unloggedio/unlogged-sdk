@@ -234,9 +234,9 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
-		// calcuclate probe flag at method level 
 		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
 		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
+		// calculate probe flag at method level
 
 		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {

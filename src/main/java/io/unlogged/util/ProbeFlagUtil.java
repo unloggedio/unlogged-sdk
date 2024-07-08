@@ -15,7 +15,7 @@ public class ProbeFlagUtil {
 		return false;
 	}
 
-	public static boolean getalwaysProbeMethodFlag (String methodName, int access, String desc) {
+	public static boolean getAlwaysProbeMethodFlag(String methodName, int access, String desc) {
 
 		if (methodName.equals("<init>")) {
 			// constructor method
