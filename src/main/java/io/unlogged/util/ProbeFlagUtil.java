@@ -35,9 +35,9 @@ public class ProbeFlagUtil {
 		return false;
 	}
 
-	public static Boolean getNeverProbeMethodFlag (String methodName) {
+	public static Boolean getNeverProbeMethodFlag (String methodName, int access) {
 
-		if (methodName.equals("equals") 
+		if (methodName.equals("equals")
 			|| methodName.equals("hashCode")
 			|| methodName.equals("onNext")
 			|| methodName.equals("onSubscribe")
@@ -46,7 +46,12 @@ public class ProbeFlagUtil {
 			|| methodName.equals("onComplete")) {
 			return true;
 		}
-		
+		else if (((access & Opcodes.ACC_INTERFACE) != 0)
+				|| ((access & Opcodes.ACC_ENUM) != 0)
+				|| ((access & Opcodes.ACC_ABSTRACT) != 0)) {
+			return true;
+		}
+
 		return false;
 	}
 }
