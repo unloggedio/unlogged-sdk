@@ -49,7 +49,7 @@ public class ClassTransformer extends ClassVisitor {
 	private HashSet<String> methodList = new HashSet<>();
 	private HashMap<String, Long> classCounterMap = new HashMap<>();
 	private boolean hasStaticInitialiser;
-	private boolean alwaysProbeClassFlag = false;
+	private boolean addHashMap = true;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private String mapName;
 
@@ -194,7 +194,7 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
-		this.alwaysProbeClassFlag = ProbeFlagUtil.getAlwaysProbeClassFlag(access);
+		this.addHashMap = ProbeFlagUtil.getAddHashMap(access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -234,9 +234,10 @@ public class ClassTransformer extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
-		// calcuclate probe flag at method level 
-		Boolean alwaysProbeMethodFlag = this.alwaysProbeClassFlag || ProbeFlagUtil.getalwaysProbeMethodFlag(name, access, desc);
-		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name);
+		// calculate probe flag at method level
+		// We will always probe a default method in interface, because we cannot add a hashmap to the interface
+		Boolean alwaysProbeMethodFlag = !this.addHashMap || ProbeFlagUtil.getAlwaysProbeMethodFlag(name, access, desc);
+		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name, access);
 
 		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {
@@ -279,7 +280,7 @@ public class ClassTransformer extends ClassVisitor {
 	@Override
     public void visitEnd() {
 		
-		if ((!this.hasStaticInitialiser) && (!this.alwaysProbeClassFlag)) {	
+		if ((!this.hasStaticInitialiser) && (this.addHashMap)) {
 			// staticInitialiser is not defined and needed, define one
 
 			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
