@@ -332,11 +332,11 @@ public class ArchivedIndexWriter implements IndexOutputStream {
     }
 
     void copy(InputStream source, OutputStream target) throws IOException {
-        byte[] buf = new byte[8192];
-        int length;
-        while ((length = source.read(buf)) > 0) {
-            target.write(buf, 0, length);
-        }
+//        byte[] buf = new byte[8192];
+//        int length;
+//        while ((length = source.read(buf)) > 0) {
+//            target.write(buf, 0, length);
+//        }
     }
 
     public void addValueId(long value) {
