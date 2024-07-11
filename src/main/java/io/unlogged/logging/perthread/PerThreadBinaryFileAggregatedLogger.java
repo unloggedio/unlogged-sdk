@@ -1,6 +1,7 @@
 package io.unlogged.logging.perthread;
 
 import com.insidious.common.UploadFile;
+import com.insidious.common.cqengine.TypeInfoDocument;
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.FileNameGenerator;
@@ -9,6 +10,7 @@ import io.unlogged.logging.util.NetworkClient;
 import java.io.*;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,7 +29,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     /**
      * The number of events stored in a single file.
      */
-    public static final int MAX_EVENTS_PER_FILE = 100 * 1000;
+    public static final int MAX_EVENTS_PER_FILE = 100 * 1000 * 1000 * 10;
     public static final int WRITE_BYTE_BUFFER_SIZE = 1024 * 10 * 16;
     /**
      * This object records the number of threads observed by SELogger.
@@ -252,7 +254,8 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 //
 //            out.write(buffer, 0, 17);
 //            getThreadEventCount(currentThreadId).addAndGet(1);
-        fileCollector.indexObjectTypeEntry(id, (int) typeId);
+//        fileCollector.indexObjectTypeEntry(id, (int) typeId);
+        OtelConfig.makeSpan(String.valueOf(id), String.valueOf(typeId));
 
 //        } catch (IOException e) {
 //            errorLogger.log(e);
@@ -314,7 +317,8 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             buffer[32] = (byte) (0);
 
 
-            getStreamForThread(currentThreadId).write(buffer);
+//            getStreamForThread(currentThreadId).write(buffer);
+            OtelConfig.makeSpan("buffer", buffer);
 
 //            fileCollector.addValueId(valueId);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
@@ -337,11 +341,13 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     }
 
     public void writeNewTypeRecord(int typeId, String typeName, byte[] toString) {
-        fileCollector.indexTypeEntry(typeId, typeName, toString);
+//        fileCollector.indexTypeEntry(typeId, typeName, toString);
+        OtelConfig.makeSpan("typeInfo", new TypeInfoDocument(typeId, typeName, toString));
     }
 
     public void writeWeaveInfo(byte[] byteArray) {
-        fileCollector.addClassWeaveInfo(byteArray);
+//        fileCollector.addClassWeaveInfo(byteArray);
+        OtelConfig.makeSpan("weaveInfo", byteArray);
     }
 
     public void shutdown() throws IOException, InterruptedException {
@@ -384,7 +390,8 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             dos.write(toByteArray);
 
 
-            getStreamForThread(currentThreadId).write(boasTh.toByteArray());
+//            getStreamForThread(currentThreadId).write(boasTh.toByteArray());
+            OtelConfig.makeSpan("boasTh-1", boasTh.toByteArray());
             if (getThreadEventCountAddAndGet(currentThreadId, 1) >= MAX_EVENTS_PER_FILE) {
                 prepareNextFile(currentThreadId);
             }
@@ -417,7 +424,8 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
             outputStream.flush();
 
 
-            getStreamForThread(currentThreadId).write(baosTh.toByteArray());
+//            getStreamForThread(currentThreadId).write(baosTh.toByteArray());
+            OtelConfig.makeSpan("boasTh-2", baosTh.toByteArray());
 
             getThreadEventCountAddAndGet(currentThreadId, 1);
 //            valueIdFilterSet.get(currentThreadId).add(valueId);
