@@ -245,7 +245,8 @@ if __name__=="__main__":
                 ReplayTest("PropertyServiceCEImpl.deleteById - normal", TestResult.PASS),
                 ReplayTest("PropertyServiceCEImpl.insertNew - normal", TestResult.PASS),
                 ReplayTest("PropertyServiceCEImpl.updateExisting - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.utils.ReferralUtils.generateReferralCode - normal", TestResult.PASS)
+                ReplayTest("org.unlogged.demo.utils.ReferralUtils.generateReferralCode - normal", TestResult.PASS),
+                ReplayTest("ClassUserController.setAndGetUser - recursive setter bug freq logging", TestResult.PASS)
 			]
 		)
 		# Target(
