@@ -16,7 +16,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
-import io.unlogged.Constants;
 import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
@@ -52,6 +51,7 @@ public class ClassTransformer extends ClassVisitor {
 	private boolean addHashMap = true;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private String mapName;
+	private String probedMethodPrefix;
 
     /**
      * This constructor weaves the given class and provides the result.
@@ -183,6 +183,7 @@ public class ClassTransformer extends ClassVisitor {
                       String superName, String[] interfaces) {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
+		this.probedMethodPrefix = DistinctClassLogNameMap.getProbedMethodPrefix(fullClassName);
 		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
@@ -269,7 +270,7 @@ public class ClassTransformer extends ClassVisitor {
 
 		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(name, desc);
 		this.methodList.add(methodCompoundName);
-		String nameProbed = Constants.probedValue + name;
+		String nameProbed = this.probedMethodPrefix + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
 		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
 		
