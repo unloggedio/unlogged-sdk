@@ -3,6 +3,7 @@ package io.unlogged.core.bytecode.method;
 import com.insidious.common.weaver.Descriptor;
 import com.insidious.common.weaver.EventType;
 import io.unlogged.core.bytecode.WeaveConfig;
+import io.unlogged.util.DistinctClassLogNameMap;
 import io.unlogged.weaver.WeaveLog;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.LocalVariablesSorter;
@@ -13,7 +14,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
-import io.unlogged.Constants;
 
 
 /**
@@ -91,7 +91,7 @@ public class MethodTransformer extends LocalVariablesSorter {
         // this.outerClassName = outerClassName; // not used
         this.access = access;
 
-        int probedStringLength = Constants.probedValue.length();
+        int probedStringLength = DistinctClassLogNameMap.getProbedMethodPrefix(className).length();
         if (methodName.length() > probedStringLength) {
             methodName = methodName.substring(probedStringLength);
         }

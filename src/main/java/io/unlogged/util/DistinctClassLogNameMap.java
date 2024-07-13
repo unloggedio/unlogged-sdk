@@ -13,4 +13,10 @@ public class DistinctClassLogNameMap {
 		String methodCompoundName = name + "$" + desc;
 		return methodCompoundName;
 	}
+
+	public static String getProbedMethodPrefix(String fullClassName) {
+		String fullClassPart = fullClassName.replace("/", "$");
+		String classPrefix = Constants.probedValue + fullClassPart + "$";
+		return classPrefix;
+	}
 }
