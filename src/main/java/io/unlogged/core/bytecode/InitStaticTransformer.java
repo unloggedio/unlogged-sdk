@@ -25,8 +25,11 @@ public class InitStaticTransformer extends MethodVisitor {
 	public void visitCode() {
 		mv.visitCode();
 
+		for (String localMethod: this.methodList) {
 
+			// This adds the line: Runtime.registerMethod(methodName)
 			mv.visitLdcInsn(localMethod);
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "registerMethod", "(Ljava/lang/String;)V", false);
 		}
 
 		mv.visitMaxs(0, 0);
