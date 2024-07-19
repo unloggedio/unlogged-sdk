@@ -245,7 +245,7 @@ public class ClassTransformer extends ClassVisitor {
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
 			if (this.addHashMap) {
-				methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
+				methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, this.methodList);
 			}
 
 			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
