@@ -327,6 +327,14 @@ public class Runtime {
         return bytesToIntList(probeToRecordBytes);
     }
 
+    /**
+     * Selective Logging methods
+     */
+
+    public static void registerMethod(String methodName) {
+        System.out.println("register method = " + methodName);
+        frequencyMap.put(methodName, 0);
+    }
 
     private static boolean frequencyLogging (long methodCounter, long divisor) {
         if ((methodCounter-1) % divisor == 0){
