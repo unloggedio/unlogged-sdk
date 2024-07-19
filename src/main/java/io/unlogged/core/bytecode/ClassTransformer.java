@@ -12,7 +12,6 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
@@ -286,31 +285,10 @@ public class ClassTransformer extends ClassVisitor {
 		if ((!this.hasStaticInitialiser) && (this.addHashMap)) {
 			// staticInitialiser is not defined and needed, define one
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
-			fieldVisitor.visitEnd();
-
 			this.hasStaticInitialiser = true;
 			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
 			staticNew.visitCode();
 
-			// Instantiate HashMap<String, Integer>
-			staticNew.visitTypeInsn(Opcodes.NEW, Type.getInternalName(java.util.HashMap.class));
-			staticNew.visitInsn(Opcodes.DUP);
-			staticNew.visitMethodInsn(
-				Opcodes.INVOKESPECIAL,
-				Type.getInternalName(java.util.HashMap.class),
-				"<init>",
-				"()V",
-				false
-			);
-
-			// Store the instance in the static field mapStore
-			staticNew.visitFieldInsn(
-				Opcodes.PUTSTATIC,
-				this.fullClassName,
-				this.mapName,
-				Type.getDescriptor(java.util.HashMap.class)
-			);
 
 			for (String localMethod: this.methodList) { 
 				staticNew.visitFieldInsn(
