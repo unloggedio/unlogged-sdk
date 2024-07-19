@@ -334,11 +334,10 @@ public class Runtime {
 	}
 
 	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
-		System.out.println("--------");
+		// This method is not called ATM. It will be used in arg based selective logging. 
 		for (Object localArgument : arguments) {
 			System.out.println(localArgument);
 		}
-		System.out.println("--------");
 		
 		return frequencyLogging(methodCounter, divisor);
 	}
