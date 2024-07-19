@@ -245,8 +245,6 @@ public class ClassTransformer extends ClassVisitor {
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
 			if (this.addHashMap) {
-				FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
-				fieldVisitor.visitEnd();
 				methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
 			}
 
