@@ -118,41 +118,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: mapStore.put(methodCompoundName, mapStore.get(methodCompoundName) + 1);
 
-		// load mapStore
-		mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-		);
-
-		// load string for mapStore
-		mv.visitLdcInsn(this.methodCompoundName);
-
-
-		// cast long primitive to long object
-		mv.visitMethodInsn(
-			Opcodes.INVOKESTATIC,
-			Type.getInternalName(Long.class),
-			"valueOf",
-			"(J)Ljava/lang/Long;",
-			false
-		);
-		
-		// call the put method
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"put",
-			"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-		);
-
-		// Pop the result (discard it)
-		mv.visitInsn(Opcodes.POP);
-		// End of Block-A
 
 		// Start of block-C
 		// This adds the line for if (Runtime.probecounter(methodCounter.get(methodCompoundName), divisor, argument list))
