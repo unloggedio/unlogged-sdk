@@ -289,9 +289,11 @@ public class ClassTransformer extends ClassVisitor {
 			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
 			staticNew.visitCode();
 
+			for (String localMethod: this.methodList) {
 
-			for (String localMethod: this.methodList) { 
+                // This adds the line: Runtime.registerMethod(methodName)
 				staticNew.visitLdcInsn(localMethod);
+                staticNew.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "registerMethod", "(Ljava/lang/String;)V", false);
 			}
 	
 			staticNew.visitInsn(Opcodes.RETURN);
