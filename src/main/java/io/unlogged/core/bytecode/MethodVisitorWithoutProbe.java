@@ -122,9 +122,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// add the if condition
 		Label exitLabel = new Label();
 
-		// load the method name 
+		// load methodName and divisor
 		mv.visitLdcInsn(this.methodCompoundName);
-		// resolve the value of divisor for frequency logging
 		long divisor = getDivisor();
 		mv.visitLdcInsn(divisor);
 
@@ -140,7 +139,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		}
 
 		// call the probeCounter method
-		String probeCounterDesc = "(JJ" + descParsedString + ")Z";
+		String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
 		
 		// add the exit jump
