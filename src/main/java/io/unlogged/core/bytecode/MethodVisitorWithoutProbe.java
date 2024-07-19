@@ -131,42 +131,6 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		// load string for mapStore
 		mv.visitLdcInsn(this.methodCompoundName);
 
-		// Start of block-B. This adds the logic for  mapStore.get("methodCompoundName") + 1 and loads the value to stack
-		// load mapStore
-        mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-        );
-		
-		// load method name
-		mv.visitLdcInsn(this.methodCompoundName);
-
-		// invoke get of mapStore for method name
-        mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"get",
-			"(Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-        );
-
-		// cast long object to long primitive
-		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(Long.class),
-			"longValue",
-			"()J",
-			false
-		);
-
-
-		// increment the mapStore counter 
-		mv.visitLdcInsn(1L);
-		mv.visitInsn(Opcodes.LADD);
-		// End of Block-B
 
 		// cast long primitive to long object
 		mv.visitMethodInsn(
