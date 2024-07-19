@@ -20,14 +20,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
-	private String mapName;
 	private Boolean isStatic;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
-		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
