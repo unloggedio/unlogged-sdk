@@ -119,42 +119,11 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	@Override
 	public void visitCode() {
 
-
-		// Start of block-C
-		// This adds the line for if (Runtime.probecounter(methodCounter.get(methodCompoundName), divisor, argument list))
 		// add the if condition
 		Label exitLabel = new Label();
 
-		// load the map
-		mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-        );
-
 		// load the method name 
 		mv.visitLdcInsn(this.methodCompoundName);
-
-		// this is logic for: mapStore.get("methodCompoundName")
-        mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"get",
-			"(Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-        );
-
-		// cast long object to long primitive
-		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(Long.class),
-			"longValue",
-			"()J",
-			false
-		);
-
 		// resolve the value of divisor for frequency logging
 		long divisor = getDivisor();
 		mv.visitLdcInsn(divisor);
