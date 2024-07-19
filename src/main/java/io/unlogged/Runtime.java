@@ -327,14 +327,6 @@ public class Runtime {
         return bytesToIntList(probeToRecordBytes);
     }
 
-	private static boolean frequencyLogging (long methodCounter, long divisor) {
-		if ((methodCounter-1) % divisor == 0){
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
 
 	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
 		// This method is not called ATM. It will be used in arg based selective logging. 
@@ -349,6 +341,15 @@ public class Runtime {
 	public static boolean probeCounter(long methodCounter, long divisor) {
 		return frequencyLogging(methodCounter, divisor);
 	}
+    private static boolean frequencyLogging (long methodCounter, long divisor) {
+        if ((methodCounter-1) % divisor == 0){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
 
     /**
      * Close data streams if necessary
