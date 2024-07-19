@@ -267,7 +267,7 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 
-		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(name, desc);
+		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.fullClassName, name, desc);
 		this.methodList.add(methodCompoundName);
 		String nameProbed = this.probedMethodPrefix + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);

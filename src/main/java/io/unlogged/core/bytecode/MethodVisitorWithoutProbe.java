@@ -33,7 +33,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
-		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.methodName, this.desc);
+		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(fullClassName, methodName, desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
