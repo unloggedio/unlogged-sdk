@@ -291,34 +291,7 @@ public class ClassTransformer extends ClassVisitor {
 
 
 			for (String localMethod: this.methodList) { 
-				staticNew.visitFieldInsn(
-					Opcodes.GETSTATIC,
-					this.fullClassName,
-					this.mapName,
-					"Ljava/util/HashMap;"
-				);
-	
 				staticNew.visitLdcInsn(localMethod);
-				staticNew.visitLdcInsn(0L);
-
-				// cast long object to long primitive
-				staticNew.visitMethodInsn(
-					Opcodes.INVOKESTATIC,
-					Type.getInternalName(Long.class),
-					"valueOf",
-					"(J)Ljava/lang/Long;",
-					false
-				);
-	
-				staticNew.visitMethodInsn(
-					Opcodes.INVOKEVIRTUAL,
-					Type.getInternalName(java.util.HashMap.class),
-					"put",
-					"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-					false
-				);
-	
-				staticNew.visitInsn(Opcodes.POP);
 			}
 	
 			staticNew.visitInsn(Opcodes.RETURN);
