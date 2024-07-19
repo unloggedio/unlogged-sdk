@@ -48,7 +48,6 @@ public class ClassTransformer extends ClassVisitor {
 	private boolean hasStaticInitialiser;
 	private boolean addHashMap = true;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
-	private String mapName;
 	private String probedMethodPrefix;
 
     /**
@@ -182,7 +181,6 @@ public class ClassTransformer extends ClassVisitor {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
 		this.probedMethodPrefix = DistinctClassLogNameMap.getProbedMethodPrefix(fullClassName);
-		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
         this.interfaces = interfaces;
