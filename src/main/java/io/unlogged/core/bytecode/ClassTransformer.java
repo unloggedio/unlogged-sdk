@@ -9,7 +9,6 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.TypePath;
@@ -288,7 +287,6 @@ public class ClassTransformer extends ClassVisitor {
 			staticNew.visitCode();
 
 			for (String localMethod: this.methodList) {
-
                 // This adds the line: Runtime.registerMethod(methodName)
 				staticNew.visitLdcInsn(localMethod);
                 staticNew.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "registerMethod", "(Ljava/lang/String;)V", false);
