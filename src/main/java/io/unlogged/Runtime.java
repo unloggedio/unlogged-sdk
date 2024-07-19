@@ -328,19 +328,6 @@ public class Runtime {
     }
 
 
-	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
-		// This method is not called ATM. It will be used in arg based selective logging. 
-		for (Object localArgument : arguments) {
-			System.out.println(localArgument);
-		}
-		
-		return frequencyLogging(methodCounter, divisor);
-	}
-	
-
-	public static boolean probeCounter(long methodCounter, long divisor) {
-		return frequencyLogging(methodCounter, divisor);
-	}
     private static boolean frequencyLogging (long methodCounter, long divisor) {
         if ((methodCounter-1) % divisor == 0){
             return true;
@@ -350,6 +337,24 @@ public class Runtime {
         }
     }
 
+    public static boolean probeCounter(String methodName, long divisor) {
+        System.out.println("probeCounter is called");
+        System.out.println("methodName = " + methodName);
+        System.out.println("divisor = " + divisor);
+
+        int counter = frequencyMap.get(methodName) + 1;
+        frequencyMap.put(methodName, counter);
+        return frequencyLogging(counter, divisor);
+    }
+
+    public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
+        // This method is not called ATM. It will be used in arg based selective logging.
+        for (Object localArgument : arguments) {
+            System.out.println(localArgument);
+        }
+
+        return frequencyLogging(methodCounter, divisor);
+    }
 
     /**
      * Close data streams if necessary
