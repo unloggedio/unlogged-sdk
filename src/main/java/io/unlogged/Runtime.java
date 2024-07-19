@@ -18,6 +18,7 @@ import io.unlogged.weaver.WeaveParameters;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,6 +38,8 @@ public class Runtime {
      */
     private IEventLogger logger = Logging.initialiseDiscardLogger();
     private long lastProbesLoadTime;
+
+    private static HashMap<String, Integer> frequencyMap = new HashMap<>();
 
     /**
      * Process command line arguments and prepare an output directory
