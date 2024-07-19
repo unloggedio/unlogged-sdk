@@ -332,7 +332,6 @@ public class Runtime {
      */
 
     public static void registerMethod(String methodName) {
-        System.out.println("register method = " + methodName);
         frequencyMap.put(methodName, 0);
     }
 
@@ -346,10 +345,6 @@ public class Runtime {
     }
 
     public static boolean probeCounter(String methodName, long divisor) {
-        System.out.println("probeCounter is called");
-        System.out.println("methodName = " + methodName);
-        System.out.println("divisor = " + divisor);
-
         int counter = frequencyMap.get(methodName) + 1;
         frequencyMap.put(methodName, counter);
         return frequencyLogging(counter, divisor);
