@@ -20,20 +20,18 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private HashMap<String, Long> methodCounter = new HashMap<String, Long>();
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
-	private String mapName;
 	private Boolean isStatic;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
 		this.methodName = methodName;
 		this.fullClassName = fullClassName;
-		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
 		this.access = access;
 		this.desc = desc;
 		this.classCounter = classCounter;
 		this.nameProbed = nameProbed;
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
-		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.methodName, this.desc);
+		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(fullClassName, methodName, desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
 	}
 
@@ -118,114 +116,12 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	@Override
 	public void visitCode() {
-		// Start of block-A. This adds the line: mapStore.put(methodCompoundName, mapStore.get(methodCompoundName) + 1);
 
-		// load mapStore
-		mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-		);
-
-		// load string for mapStore
-		mv.visitLdcInsn(this.methodCompoundName);
-
-		// Start of block-B. This adds the logic for  mapStore.get("methodCompoundName") + 1 and loads the value to stack
-		// load mapStore
-        mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-        );
-		
-		// load method name
-		mv.visitLdcInsn(this.methodCompoundName);
-
-		// invoke get of mapStore for method name
-        mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"get",
-			"(Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-        );
-
-		// cast long object to long primitive
-		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(Long.class),
-			"longValue",
-			"()J",
-			false
-		);
-
-
-		// increment the mapStore counter 
-		mv.visitLdcInsn(1L);
-		mv.visitInsn(Opcodes.LADD);
-		// End of Block-B
-
-		// cast long primitive to long object
-		mv.visitMethodInsn(
-			Opcodes.INVOKESTATIC,
-			Type.getInternalName(Long.class),
-			"valueOf",
-			"(J)Ljava/lang/Long;",
-			false
-		);
-		
-		// call the put method
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"put",
-			"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-		);
-
-		// Pop the result (discard it)
-		mv.visitInsn(Opcodes.POP);
-		// End of Block-A
-
-		// Start of block-C
-		// This adds the line for if (Runtime.probecounter(methodCounter.get(methodCompoundName), divisor, argument list))
 		// add the if condition
 		Label exitLabel = new Label();
 
-		// load the map
-		mv.visitFieldInsn(
-			Opcodes.GETSTATIC,
-			this.fullClassName,
-			this.mapName,
-			"Ljava/util/HashMap;"
-        );
-
-		// load the method name 
+		// load methodName and divisor
 		mv.visitLdcInsn(this.methodCompoundName);
-
-		// this is logic for: mapStore.get("methodCompoundName")
-        mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(java.util.HashMap.class),
-			"get",
-			"(Ljava/lang/Object;)Ljava/lang/Object;",
-			false
-        );
-
-		// cast long object to long primitive
-		mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Long.class));
-		mv.visitMethodInsn(
-			Opcodes.INVOKEVIRTUAL,
-			Type.getInternalName(Long.class),
-			"longValue",
-			"()J",
-			false
-		);
-
-		// resolve the value of divisor for frequency logging
 		long divisor = getDivisor();
 		mv.visitLdcInsn(divisor);
 
@@ -241,7 +137,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		}
 
 		// call the probeCounter method
-		String probeCounterDesc = "(JJ" + descParsedString + ")Z";
+		String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
 		
 		// add the exit jump

@@ -9,10 +9,8 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 
@@ -50,7 +48,6 @@ public class ClassTransformer extends ClassVisitor {
 	private boolean hasStaticInitialiser;
 	private boolean addHashMap = true;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
-	private String mapName;
 	private String probedMethodPrefix;
 
     /**
@@ -184,7 +181,6 @@ public class ClassTransformer extends ClassVisitor {
 //		System.err.println("Visit class ["+ name + "]");
         this.fullClassName = name;
 		this.probedMethodPrefix = DistinctClassLogNameMap.getProbedMethodPrefix(fullClassName);
-		this.mapName = DistinctClassLogNameMap.getClassMapStore(fullClassName);
         this.weavingInfo.setFullClassName(fullClassName);
         int index = name.lastIndexOf(PACKAGE_SEPARATOR);
         this.interfaces = interfaces;
@@ -246,9 +242,7 @@ public class ClassTransformer extends ClassVisitor {
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
 			if (this.addHashMap) {
-				FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
-				fieldVisitor.visitEnd();
-				methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, fullClassName, this.methodList);
+				methodVisitorProbed = new InitStaticTransformer(methodVisitorProbed, this.methodList);
 			}
 
 			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
@@ -268,7 +262,7 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 
-		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(name, desc);
+		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.fullClassName, name, desc);
 		this.methodList.add(methodCompoundName);
 		String nameProbed = this.probedMethodPrefix + name;
 		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
@@ -286,61 +280,14 @@ public class ClassTransformer extends ClassVisitor {
 		if ((!this.hasStaticInitialiser) && (this.addHashMap)) {
 			// staticInitialiser is not defined and needed, define one
 
-			FieldVisitor fieldVisitor = visitField(Opcodes.ACC_STATIC, this.mapName, "Ljava/util/HashMap;", null, null);
-			fieldVisitor.visitEnd();
-
 			this.hasStaticInitialiser = true;
 			MethodVisitor staticNew = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
 			staticNew.visitCode();
 
-			// Instantiate HashMap<String, Integer>
-			staticNew.visitTypeInsn(Opcodes.NEW, Type.getInternalName(java.util.HashMap.class));
-			staticNew.visitInsn(Opcodes.DUP);
-			staticNew.visitMethodInsn(
-				Opcodes.INVOKESPECIAL,
-				Type.getInternalName(java.util.HashMap.class),
-				"<init>",
-				"()V",
-				false
-			);
-
-			// Store the instance in the static field mapStore
-			staticNew.visitFieldInsn(
-				Opcodes.PUTSTATIC,
-				this.fullClassName,
-				this.mapName,
-				Type.getDescriptor(java.util.HashMap.class)
-			);
-
-			for (String localMethod: this.methodList) { 
-				staticNew.visitFieldInsn(
-					Opcodes.GETSTATIC,
-					this.fullClassName,
-					this.mapName,
-					"Ljava/util/HashMap;"
-				);
-	
+			for (String localMethod: this.methodList) {
+                // This adds the line: Runtime.registerMethod(methodName)
 				staticNew.visitLdcInsn(localMethod);
-				staticNew.visitLdcInsn(0L);
-
-				// cast long object to long primitive
-				staticNew.visitMethodInsn(
-					Opcodes.INVOKESTATIC,
-					Type.getInternalName(Long.class),
-					"valueOf",
-					"(J)Ljava/lang/Long;",
-					false
-				);
-	
-				staticNew.visitMethodInsn(
-					Opcodes.INVOKEVIRTUAL,
-					Type.getInternalName(java.util.HashMap.class),
-					"put",
-					"(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-					false
-				);
-	
-				staticNew.visitInsn(Opcodes.POP);
+                staticNew.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "registerMethod", "(Ljava/lang/String;)V", false);
 			}
 	
 			staticNew.visitInsn(Opcodes.RETURN);

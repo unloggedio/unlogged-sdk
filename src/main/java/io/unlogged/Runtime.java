@@ -18,6 +18,7 @@ import io.unlogged.weaver.WeaveParameters;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,6 +38,8 @@ public class Runtime {
      */
     private IEventLogger logger = Logging.initialiseDiscardLogger();
     private long lastProbesLoadTime;
+
+    private static HashMap<String, Integer> frequencyMap = new HashMap<>();
 
     /**
      * Process command line arguments and prepare an output directory
@@ -324,29 +327,37 @@ public class Runtime {
         return bytesToIntList(probeToRecordBytes);
     }
 
-	private static boolean frequencyLogging (long methodCounter, long divisor) {
-		if ((methodCounter-1) % divisor == 0){
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
+    /**
+     * Selective Logging methods
+     */
 
-	public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
-		System.out.println("--------");
-		for (Object localArgument : arguments) {
-			System.out.println(localArgument);
-		}
-		System.out.println("--------");
-		
-		return frequencyLogging(methodCounter, divisor);
-	}
-	
+    public static void registerMethod(String methodName) {
+        frequencyMap.put(methodName, 0);
+    }
 
-	public static boolean probeCounter(long methodCounter, long divisor) {
-		return frequencyLogging(methodCounter, divisor);
-	}
+    private static boolean frequencyLogging (long methodCounter, long divisor) {
+        if ((methodCounter-1) % divisor == 0){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public static boolean probeCounter(String methodName, long divisor) {
+        int counter = frequencyMap.get(methodName) + 1;
+        frequencyMap.put(methodName, counter);
+        return frequencyLogging(counter, divisor);
+    }
+
+    public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
+        // This method is not called ATM. It will be used in arg based selective logging.
+        for (Object localArgument : arguments) {
+            System.out.println(localArgument);
+        }
+
+        return frequencyLogging(methodCounter, divisor);
+    }
 
     /**
      * Close data streams if necessary
