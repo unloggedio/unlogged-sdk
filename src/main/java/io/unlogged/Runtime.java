@@ -2,6 +2,7 @@ package io.unlogged;
 
 import com.insidious.common.weaver.ClassInfo;
 import fi.iki.elonen.NanoHTTPD;
+import io.unlogged.Runtime;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
 import io.unlogged.logging.*;
@@ -14,7 +15,6 @@ import io.unlogged.util.ByteTools;
 import io.unlogged.util.StreamUtil;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
-
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
