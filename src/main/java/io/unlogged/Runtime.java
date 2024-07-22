@@ -39,7 +39,7 @@ public class Runtime {
     private IEventLogger logger = Logging.initialiseDiscardLogger();
     private long lastProbesLoadTime;
 
-    private static HashMap<String, Integer> frequencyMap = new HashMap<>();
+    private static HashMap<String, Long> frequencyMap = new HashMap<>();
 
     /**
      * Process command line arguments and prepare an output directory
@@ -332,7 +332,7 @@ public class Runtime {
      */
 
     public static void registerMethod(String methodName) {
-        frequencyMap.put(methodName, 0);
+        frequencyMap.put(methodName, 0L);
     }
 
     private static boolean frequencyLogging (long methodCounter, long divisor) {
@@ -345,13 +345,13 @@ public class Runtime {
     }
 
     public static boolean probeCounter(String methodName, long divisor) {
-        int counter = frequencyMap.get(methodName) + 1;
+        long counter = frequencyMap.get(methodName) + 1L;
         frequencyMap.put(methodName, counter);
         return frequencyLogging(counter, divisor);
     }
 
     public static boolean probeCounter(long methodCounter, long divisor, Object... arguments) {
-        // This method is not called ATM. It will be used in arg based selective logging.
+        // This method is not called ATM. It is built for arg-based selective logging.
         for (Object localArgument : arguments) {
             System.out.println(localArgument);
         }
