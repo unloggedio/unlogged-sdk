@@ -53,6 +53,8 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
     private Method getBeanMethod;
     private Method getBeanByBeanNameMethod;
     private Object springBeanFactory;
+    private Object springTransactionStatus;
+    private Object platformTransactionManagerBean;
     private Method getBeanDefinitionNamesMethod;
 
     public AgentCommandExecutorImpl(ObjectMapper objectMapper, IEventLogger logger) {
@@ -1343,7 +1345,7 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         Object sessionInstance = null;
         if (hibernateSessionFactory != null) {
             try {
-
+                // start a transaction from Hibernate Session that is created from reflection
 
 //            System.err.println("Hibernate session factory: " + hibernateSessionFactory);
                 Method openSessionMethod = hibernateSessionFactory.getClass().getMethod("openSession");
@@ -1358,6 +1360,37 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
 
                 Method beginTransactionMethod = sessionInstance.getClass().getMethod("beginTransaction");
                 beginTransactionMethod.invoke(sessionInstance);
+
+                // start a transaction from PlatformTransactionManagerBean from spring
+                // this uses the hibernate session that is created from the spring process
+
+                // load platformTransactionManagerBean
+                Class<?> PlatformTransactionManagerClass = Class.forName(
+                        "org.springframework.transaction.PlatformTransactionManager");
+                this.platformTransactionManagerBean = getBeanMethod.invoke(applicationContext,
+                        PlatformTransactionManagerClass);
+
+                // Instantiate DefaultTransactionDefinition
+                Constructor<?> DefaultTransactionDefinitionConstructor = Class.forName("org.springframework.transaction.support.DefaultTransactionDefinition")
+                        .getDeclaredConstructor();
+                DefaultTransactionDefinitionConstructor.setAccessible(true);
+                Object def = DefaultTransactionDefinitionConstructor.newInstance();
+
+                // transaction name
+                Method setNameMethod = def.getClass().getMethod("setName", java.lang.String.class);
+                setNameMethod.invoke(def,  "unlogged-direct-invoke-transaction");
+
+                // propagation behaviour (default is generally set to PROPAGATION_REQUIRED, though not guaranteed)
+                Class<?> transactionDefinitionClass = Class.forName("org.springframework.transaction.TransactionDefinition");
+                Field propagationRequiredField = transactionDefinitionClass.getDeclaredField("PROPAGATION_REQUIRED");
+                propagationRequiredField.setAccessible(true);
+                int propagationBehavior = (int) propagationRequiredField.get(null);
+                Method setPropogationBehaviourMethod = def.getClass().getMethod("setPropagationBehavior", int.class);
+                setPropogationBehaviourMethod.invoke(def, propagationBehavior);
+
+                Method getTransactionMethod = this.platformTransactionManagerBean.getClass().getMethod("getTransaction",
+                        Class.forName("org.springframework.transaction.TransactionDefinition"));
+                this.springTransactionStatus = getTransactionMethod.invoke(this.platformTransactionManagerBean, def);
 
             } catch (Exception e) {
                 // failed to create hibernate session
