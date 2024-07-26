@@ -63,12 +63,17 @@ public class AgentCommandExecutorImpl implements AgentCommandExecutor {
         this.parameterFactory = new ParameterFactory(objenesis, objectMapper, byteBuddyInstance);
     }
 
-    private static void closeHibernateSessionIfPossible(Object sessionInstance) {
+    private void closeHibernateSessionIfPossible(Object sessionInstance) {
         if (sessionInstance != null) {
 
             try {
+                // close transaction managed by platformTransactionManagerBean of spring
+                // This is managed by the hibernate session created from spring
+                Method transactionCommitMethod = this.platformTransactionManagerBean.getClass().getMethod("commit",
+                        Class.forName("org.springframework.transaction.TransactionStatus"));
+                transactionCommitMethod.invoke(this.platformTransactionManagerBean, this.springTransactionStatus);
 
-
+                // close transaction managed by hibernate session created from reflection
                 Method getTransactionMethod = sessionInstance.getClass().getMethod("getTransaction");
                 Object transactionInstance = getTransactionMethod.invoke(sessionInstance);
 //            System.err.println("Transaction to commit: " + transactionInstance);
