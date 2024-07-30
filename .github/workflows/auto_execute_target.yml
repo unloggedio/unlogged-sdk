@@ -39,6 +39,7 @@ jobs:
           python3 ./src/test/python/autoexecute_ci.py ${{ env.RELEASE_VERSION }}
 
       - name: Store reports
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: AutoExecutorReports
