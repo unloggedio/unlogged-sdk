@@ -75,7 +75,7 @@ public class AutoExecutorCITest {
                 .getResource(testResourcesPath + "webflux-demo-unit-resources.xlsx");
         testConfig.put("Integration", pathToIntegrationResources);
         testConfig.put("Unit", pathToMockResources);
-        setupLogger("unlogged-spring-maven-demo");
+        setupLogger("unlogged-spring-webflux-maven-demo");
         runTests(testConfig);
     }
 
