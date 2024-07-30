@@ -1,6 +1,5 @@
 package io.unlogged.autoexecutor;
 
-
 import io.unlogged.autoexecutor.testutils.autoCIUtils.AgentClientLite;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.AssertionUtils;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.ParseUtils;
@@ -20,15 +19,37 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class AutoExecutorCITest {
 
+    private final Logger logger = Logger.getLogger("AutoExecutorLog");
+    private FileHandler fh;
     final private String testResourcesPath = "auto-test-resources/";
     final private boolean printOnlyFailing = false;
+
+    private void setupLogger(String project) {
+        String autoExecutorResourcesPath = Thread.currentThread().getContextClassLoader()
+                .getResource(testResourcesPath).getPath();
+        String reportsPath = autoExecutorResourcesPath + "AutoExecutorReports/";
+        new File(reportsPath).mkdirs();
+        try {
+            fh = new FileHandler(reportsPath + project + "_report.txt", true);
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+            logger.info("Starting AutoExecutor For : " + project);
+        } catch (Exception e) {
+
+        }
+    }
 
     //mvn test -Dtest=AutoExecutorCITest#startUnloggedMavenDemoTest
     @Test
@@ -40,6 +61,7 @@ public class AutoExecutorCITest {
                 .getResource(testResourcesPath + "maven-demo-mocked-resources.xlsx");
         testConfig.put("Integration", pathToIntegrationResources);
         testConfig.put("Unit", pathToMockResources);
+        setupLogger("unlogged-spring-maven-demo");
         runTests(testConfig);
     }
 
@@ -53,6 +75,7 @@ public class AutoExecutorCITest {
                 .getResource(testResourcesPath + "webflux-demo-unit-resources.xlsx");
         testConfig.put("Integration", pathToIntegrationResources);
         testConfig.put("Unit", pathToMockResources);
+        setupLogger("unlogged-spring-maven-demo");
         runTests(testConfig);
     }
 
@@ -61,27 +84,27 @@ public class AutoExecutorCITest {
         AgentClientLite agentClientLite = new AgentClientLite();
         boolean isConnected = agentClientLite.isConnected();
         if (!isConnected) {
-            System.out.println("Cannot connect to agent, skipping AutoExecutor tests");
+            System.out.println("Skipping : Agent not connected");
+            logger.info("Skipping autoExecutor Run, Agent not connected");
             return;
         }
 
         List<TestResultSummary> resultSummaries = new ArrayList<>();
 
         for (String testMode : testConfigs.keySet()) {
-            System.out.println("\n-----" + testMode + " mode testing-----\n");
+            logger.info("\n-----" + testMode + " mode testing-----\n");
             TestResultSummary summary = executeMethods(testConfigs.get(testMode), agentClientLite);
             summary.setMode(testMode);
             resultSummaries.add(summary);
         }
 
-        System.out.println("\n-----Test Summary-----\n");
+        logger.info("\n-----Test Summary-----\n");
         boolean overallStatus = true;
         for (TestResultSummary resultSummary : resultSummaries) {
-            System.out.println("    " + resultSummary.getMode() + " Mode ->");
-            System.out.println("    Total number of cases run : " + resultSummary.getNumberOfCases());
-            System.out.println("    Number of Passing cases : " + resultSummary.getPassingCasesCount());
-            System.out.println("    Number of Failing cases : " + resultSummary.getFailingCasesCount());
-            System.out.println("    Failing tests (Row numbers) : " + resultSummary.getFailingCases().toString());
+            logger.info("\n    " + resultSummary.getMode() + " Mode ->" + "\n"
+                    + "    Total number of cases run : " + resultSummary.getNumberOfCases() + "\n"
+                    + "    Number of Failing cases : " + resultSummary.getFailingCasesCount() + "\n"
+                    + "    Failing tests (Row numbers) : " + resultSummary.getFailingCases().toString());
             if (resultSummary.getFailingCasesCount() > 0) {
                 overallStatus = false;
             }
@@ -184,22 +207,17 @@ public class AutoExecutorCITest {
                         shouldPrint = false;
                     }
                     if (shouldPrint) {
-                        System.out.println(">   [Case " + count + " (Row)] is [" + ((result.isPassing()) ? "Passing]]" : "Failing]]"));
-                        System.out.println("    Classname : " + targetClassname);
-                        System.out.println("    MethodName : " + methodName);
-                        System.out.println("    Implementation : " + selectedImplementation);
-                        System.out.println("    Assertion type : " + result.getAssertionType());
-                        System.out.println("    Message : " + result.getMessage());
-                        if (caseComment != null) {
-                            System.out.println("    Case Comment : " + caseComment);
-                        }
-                        if (!result.isPassing()) {
-                            System.out.println("    Raw Response : " + limitResponseSize(String.valueOf(agentCommandResponse.getMethodReturnValue())));
-                        }
-                        System.out.println("\n");
+                        logger.info(">\n    [Case " + count + " (Row)] is [" + ((result.isPassing()) ? "Passing]]" : "Failing]]") + "\n"
+                                + "    Classname : " + targetClassname + "\n"
+                                + "    MethodName : " + methodName + "\n"
+                                + "    Implementation : " + selectedImplementation + "\n"
+                                + "    Assertion type : " + result.getAssertionType() + "\n"
+                                + "    Message : " + result.getMessage() + "\n"
+                                + "    Case Comment : " + caseComment
+                                + (!result.isPassing() ? "\n    Raw Response : " + limitResponseSize(String.valueOf(agentCommandResponse.getMethodReturnValue())) : ""));
                     }
                 } catch (IOException e) {
-                    System.out.println("Execution failed " + e);
+                    logger.warning("Execution failed " + e);
                 }
             }
         }

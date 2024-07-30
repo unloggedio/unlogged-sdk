@@ -37,3 +37,10 @@ jobs:
       - name: Run testing script
         run: |
           python3 ./src/test/python/autoexecute_ci.py ${{ env.RELEASE_VERSION }}
+
+      - name: Store reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: AutoExecutorReports
+          path: |
+            **/target/test-classes/auto-test-resources/AutoExecutorReports/
