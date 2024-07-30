@@ -72,4 +72,4 @@ if __name__=="__main__":
 
     failing_suite_count = result_stats.count(False)
     if failing_suite_count > 0:
-        raise ("There are "+ str(failing_suite_count) +" failing test suites in AutoExecutor CI Pipeline")
+        raise Exception(f"There are {failing_suite_count} failing test suites in AutoExecutor CI Pipeline")
