@@ -267,8 +267,17 @@ public class ClassTransformer extends ClassVisitor {
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
 			methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
 			
-			long classCounter = getCounter(this.classCounterMap, className);
-			MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, nameProbed, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
+			MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(
+				api, 
+				name,
+				nameProbed, 
+				fullClassName, 
+				access, 
+				desc, 
+				getCounter(this.classCounterMap, className), 
+				super.visitMethod(access, name , desc, signature, exceptions), 
+				this.unloggedProcessorConfig
+			);
 
 			return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
 		}
