@@ -5,7 +5,9 @@ import org.objectweb.asm.Opcodes;
 public class ProbeFlagUtil {
 
 	public static boolean getAddHashMap(int access) {
+		// TODO: remove this filter
 		// decide if a Hashmap is to be added in static call of the class
+		// always probe a default method in interface, because we cannot add a hashmap to the interface
 
 		if (((access & Opcodes.ACC_INTERFACE) != 0)
 			|| ((access & Opcodes.ACC_ENUM) != 0)){

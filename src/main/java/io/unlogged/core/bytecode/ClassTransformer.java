@@ -232,7 +232,6 @@ public class ClassTransformer extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {	
 		
 		// calculate probe flag at method level
-		// We will always probe a default method in interface, because we cannot add a hashmap to the interface
 		Boolean alwaysProbeMethodFlag = !this.addHashMap || ProbeFlagUtil.getAlwaysProbeMethodFlag(name, access, desc);
 		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name, access);
 
