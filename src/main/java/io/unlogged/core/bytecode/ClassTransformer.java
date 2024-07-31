@@ -18,8 +18,8 @@ import io.unlogged.core.bytecode.method.JSRInliner;
 import io.unlogged.core.bytecode.method.MethodTransformer;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.logging.util.TypeIdUtil;
-import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.util.DistinctClassLogNameMap;
+import io.unlogged.util.ProbeFlagUtil;
 import io.unlogged.weaver.TypeHierarchy;
 import io.unlogged.weaver.WeaveLog;
 
@@ -235,8 +235,8 @@ public class ClassTransformer extends ClassVisitor {
 		Boolean alwaysProbeMethodFlag = !this.addHashMap || ProbeFlagUtil.getAlwaysProbeMethodFlag(name, access, desc);
 		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name, access);
 
-		// early exit for clinit. It is already defined in class with initial method
 		if (name.equals("<clinit>")) {
+			// early exit for clinit. It is already defined in class with initial method
 			this.hasStaticInitialiser = true;
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 
@@ -247,30 +247,31 @@ public class ClassTransformer extends ClassVisitor {
 			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
 			return methodVisitorProbed;
 		}
-
-		// early exit got method that are never probed
-		if (neverProbeMethodFlag) {
+		else if (neverProbeMethodFlag) {
+			// early exit got method that are never probed
 			MethodVisitor methodVisitorUnModified = cv.visitMethod(access, name, desc, signature, exceptions);
             return methodVisitorUnModified;
         }
-		
-		// early exit for method that are always probed
-		if (alwaysProbeMethodFlag) {
+		else if (alwaysProbeMethodFlag) {
+			// early exit for method that are always probed
 			MethodVisitor methodVisitorProbed = super.visitMethod(access, name, desc, signature, exceptions);
 			methodVisitorProbed = addProbe(methodVisitorProbed, access, name, desc, exceptions);
 			return methodVisitorProbed;
 		}
+		else {
+			// inject dual method block
+			String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.fullClassName, name, desc);
+			this.methodList.add(methodCompoundName);
+			String nameProbed = this.probedMethodPrefix + name;
 
-		String methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(this.fullClassName, name, desc);
-		this.methodList.add(methodCompoundName);
-		String nameProbed = this.probedMethodPrefix + name;
-		MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
-		methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
-		
-		long classCounter = getCounter(this.classCounterMap, className);
-		MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, nameProbed, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
+			MethodVisitor methodVisitorProbed = super.visitMethod(access, nameProbed , desc, signature, exceptions);
+			methodVisitorProbed = addProbe(methodVisitorProbed, access, nameProbed, desc, exceptions);
+			
+			long classCounter = getCounter(this.classCounterMap, className);
+			MethodVisitorWithoutProbe methodVisitorWithoutProbe = new MethodVisitorWithoutProbe(api, name, nameProbed, fullClassName, access, desc, classCounter, super.visitMethod(access, name , desc, signature, exceptions), this.unloggedProcessorConfig);
 
-		return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
+			return new DualMethodVisitor(methodVisitorWithoutProbe, methodVisitorProbed);
+		}
     }
 
 	@Override
