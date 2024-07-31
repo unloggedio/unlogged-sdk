@@ -121,56 +121,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		return divisor;
 	}
 
-	@Override
-	public void visitCode() {
-
-		// add the if condition
-		Label exitLabel = new Label();
-
-		// load methodName and divisor
-		mv.visitLdcInsn(this.methodCompoundName);
-		long divisor = getDivisor();
-		mv.visitLdcInsn(divisor);
-
-		String descParsedString = "";
-		if (this.unloggedProcessorConfig.getUnloggedLoggingLevel() == UnloggedLoggingLevel.ARGUMENT) {
-			// load arguments of method in stack and define the desc of calling method
-			pushArgument(mv, true);
-			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
-			
-			for (int i=0;i<=descSize-2;i++) {
-				descParsedString = descParsedString + "Ljava/lang/Object;";
-			}
-		}
-
-		// call the probeCounter method
-		String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
-		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
-		
-		// add the exit jump
-		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
-
-		// call the line for invoking the probed method
-		if (isStatic) {
-			pushArgument(mv, false);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
-		}
-		else{
-			visitVarInsn(Opcodes.ALOAD, 0);
-			pushArgument(mv, false);
-			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
-		}
-		
-		// Return the result from the method
-		int returnOpcode = getReturnOpcode(this.desc);
-		mv.visitInsn(returnOpcode);
-
-		// Exit label
-		mv.visitLabel(exitLabel);
-		super.visitCode();
-	}
-
-	public static int getReturnOpcode(String descriptor) {
+	private static int getReturnOpcode(String descriptor) {
         Type returnType = Type.getReturnType(descriptor);
 
         if (returnType.getSort() == Type.VOID) {
@@ -193,6 +144,57 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
             throw new IllegalArgumentException("Unsupported return type: " + returnType.getClassName());
         }
     }
+
+	@Override
+	public void visitCode() {
+		long divisor = getDivisor();
+		if (divisor != -1) {
+			// add the if condition
+			Label exitLabel = new Label();
+
+			// load methodName and divisor
+			mv.visitLdcInsn(this.methodCompoundName);
+			mv.visitLdcInsn(divisor);
+
+			String descParsedString = "";
+			if (this.unloggedProcessorConfig.getUnloggedLoggingLevel() == UnloggedLoggingLevel.ARGUMENT) {
+				// load arguments of method in stack and define the desc of calling method
+				pushArgument(mv, true);
+				int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
+				
+				for (int i=0;i<=descSize-2;i++) {
+					descParsedString = descParsedString + "Ljava/lang/Object;";
+				}
+			}
+
+			// call the probeCounter method
+			String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
+
+			// add the exit jump
+			mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
+
+			// call the line for invoking the probed method
+			if (isStatic) {
+				pushArgument(mv, false);
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
+			}
+			else{
+				visitVarInsn(Opcodes.ALOAD, 0);
+				pushArgument(mv, false);
+				mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
+			}
+
+			// Return the result from the method
+			int returnOpcode = getReturnOpcode(this.desc);
+			mv.visitInsn(returnOpcode);
+
+			// Exit label
+			mv.visitLabel(exitLabel);
+		}
+
+		super.visitCode();
+	}
 
 	@Override
 	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
