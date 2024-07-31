@@ -5,6 +5,7 @@ import java.util.HashMap;
 import org.objectweb.asm.*;
 
 import io.unlogged.UnloggedLoggingLevel;
+import io.unlogged.UnloggedMode;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
 import io.unlogged.util.DistinctClassLogNameMap;
@@ -99,7 +100,13 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
     }
 
 	private long getDivisor(){
-		long divisor = this.unloggedProcessorConfig.getDefaultCounter();
+		long divisor = 1;
+		if (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.All) {
+			divisor = this.unloggedProcessorConfig.getDefaultCounter();
+		}
+		else if (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedOnly) {
+			divisor = -1;
+		}
 
 		// write classCounter if defined 
 		if (this.classCounter != (long)0) {
