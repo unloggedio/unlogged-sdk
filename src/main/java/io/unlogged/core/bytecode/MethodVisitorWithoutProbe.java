@@ -101,7 +101,8 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 
 	private long getDivisor(){
 		long divisor = 1;
-		if (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.All) {
+		if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAll) ||
+		 (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren)) {
 			divisor = this.unloggedProcessorConfig.getDefaultCounter();
 		}
 		else if (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedOnly) {
