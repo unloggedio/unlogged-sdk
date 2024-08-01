@@ -52,7 +52,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
-	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(1, UnloggedLoggingLevel.COUNTER, UnloggedMode.All);
+	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(1, UnloggedLoggingLevel.COUNTER, UnloggedMode.LogAll);
 
 
     public UnloggedProcessor() {
@@ -378,7 +378,7 @@ public class UnloggedProcessor extends AbstractProcessor {
 			long defaultCounter = Long.parseLong(unlogged.counter());
             this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
 			this.unloggedProcessorConfig.setUnloggedLoggingLevel(unlogged.unloggedLoggingLevel());
-            this.unloggedProcessorConfig.setUnloggedMode(unlogged.unloggedMode());
+            this.unloggedProcessorConfig.setUnloggedMode(unlogged.mode());
 		}
 
         if (roundEnv.processingOver()) {
