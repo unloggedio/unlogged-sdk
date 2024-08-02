@@ -72,8 +72,8 @@ public class MarkdownReportGenerator {
                 .append("```mermaid\n" +
                         "%%{init: {'theme': 'default', 'themeVariables': {'pie1': '#238636', 'pie2': '#da3633'}}}%%\n" +
                         "pie title Status Chart\n" +
-                        "    \"Passing\" : " + testResultSummary.getFailingCasesCount() + "\n" +
-                        "    \"Failing\" : " + testResultSummary.getPassingCasesCount() + "\n" +
+                        "    \"Passing\" : " + testResultSummary.getPassingCasesCount() + "\n" +
+                        "    \"Failing\" : " + testResultSummary.getFailingCasesCount() + "\n" +
                         "```").append("\n")
                 .append("</details>").append("\n\n");
         return pieChartBuilder.toString();

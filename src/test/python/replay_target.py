@@ -16,7 +16,7 @@ def replay_target (target):
 		target.modify_gradle(sdk_version)
 	
 	# server start
-	docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
+	docker_up_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml up -d"
 	val_1 = os.system(docker_up_cmd)
 
 	proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
@@ -38,7 +38,7 @@ def replay_target (target):
 
 	# assert and clean repo
 	local_error_state = target.check_replay()
-	docker_down_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml down"
+	docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
 	os.system(docker_down_cmd)
 	os.system("rm -rf " + target.test_repo_name)
 	return local_error_state
