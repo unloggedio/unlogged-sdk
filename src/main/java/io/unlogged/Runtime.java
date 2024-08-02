@@ -1,11 +1,29 @@
 package io.unlogged;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import com.insidious.common.weaver.ClassInfo;
+
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.Runtime;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.*;
+import io.unlogged.logging.IErrorLogger;
+import io.unlogged.logging.IEventLogger;
+import io.unlogged.logging.Logging;
+import io.unlogged.logging.ObjectMapperFactory;
+import io.unlogged.logging.SimpleFileLogger;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
@@ -15,13 +33,6 @@ import io.unlogged.util.ByteTools;
 import io.unlogged.util.StreamUtil;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
-import java.io.*;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -358,6 +369,17 @@ public class Runtime {
 
         return frequencyLogging(methodCounter, divisor);
     }
+
+	/**
+	 * Thread Depth calculation method 
+	 */
+	public static void methodStart() {
+		instance.logger.modifyThreadDepth(1);
+	}
+
+	public static void methodEnd() {
+		instance.logger.modifyThreadDepth(-1);
+	}
 
     /**
      * Close data streams if necessary
