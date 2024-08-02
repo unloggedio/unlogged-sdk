@@ -14,19 +14,19 @@ def autoexecute_target(target):
     elif (target.buildSystem == buildSystem.GRADLE):
         target.modify_gradle(sdk_version)
 
-    docker_up_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml up -d"
+    docker_up_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml up -d"
     os.system(docker_up_cmd)
 
     proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
     (out_stream, err_stream) = proc.communicate()
 
     # wait till project has started
-    time.sleep(120)
+    time.sleep(140)
 
     test_command = "mvn test -Dtest=AutoExecutorCITest#"+target.autoexecutor_test_method
     status = os.system(test_command)
 
-    docker_down_cmd = "cd " + target.test_repo_name + " && docker-compose -f conf/docker-compose.yml down"
+    docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
     os.system(docker_down_cmd)
     os.system("rm -rf " + target.test_repo_name)
 

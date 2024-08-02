@@ -41,6 +41,15 @@ public class MarkdownReportGenerator {
         writeFile(project + "-summary", stringBuilder.toString(), path);
     }
 
+    public static void generateReportForSkippedTest(String project, String path) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("## Project : `" + project + "`")
+                .append("\n\n")
+                .append("Not running tests as Agent is not connected.")
+                .append("\n\n");
+        writeFile(project + "-summary", stringBuilder.toString(), path);
+    }
+
     private static void writeFile(String filename, String contents, String path) {
         try {
             File file = new File(path + filename + ".md");

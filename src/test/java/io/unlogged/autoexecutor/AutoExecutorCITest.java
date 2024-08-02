@@ -91,8 +91,8 @@ public class AutoExecutorCITest {
         AgentClientLite agentClientLite = new AgentClientLite();
         boolean isConnected = agentClientLite.isConnected();
         if (!isConnected) {
-            System.out.println("Skipping : Agent not connected");
             logger.info("Skipping autoExecutor Run, Agent not connected");
+            MarkdownReportGenerator.generateReportForSkippedTest(testconfig.getProjectId(), getReportsPath());
             return;
         }
 
