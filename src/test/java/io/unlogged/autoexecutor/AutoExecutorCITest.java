@@ -1,10 +1,12 @@
 package io.unlogged.autoexecutor;
 
+import io.unlogged.autoexecutor.report.MarkdownReportGenerator;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.AgentClientLite;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.AssertionUtils;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.ParseUtils;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.XlsxUtils;
 import io.unlogged.autoexecutor.testutils.entity.AutoAssertionResult;
+import io.unlogged.autoexecutor.testutils.entity.TestConfig;
 import io.unlogged.autoexecutor.testutils.entity.TestResultSummary;
 import io.unlogged.autoexecutor.testutils.entity.TestUnit;
 import io.unlogged.command.AgentCommand;
@@ -33,12 +35,16 @@ public class AutoExecutorCITest {
     private final Logger logger = Logger.getLogger("AutoExecutorLog");
     private FileHandler fh;
     final private String testResourcesPath = "auto-test-resources/";
+    final private String testReportsPath = "AutoExecutorReports/";
     final private boolean printOnlyFailing = false;
 
+    private String getReportsPath() {
+        return Thread.currentThread().getContextClassLoader()
+                .getResource(testResourcesPath).getPath() + testReportsPath;
+    }
+
     private void setupLogger(String project) {
-        String autoExecutorResourcesPath = Thread.currentThread().getContextClassLoader()
-                .getResource(testResourcesPath).getPath();
-        String reportsPath = autoExecutorResourcesPath + "AutoExecutorReports/";
+        String reportsPath = getReportsPath();
         new File(reportsPath).mkdirs();
         try {
             fh = new FileHandler(reportsPath + project + "_report.txt", true);
@@ -54,6 +60,7 @@ public class AutoExecutorCITest {
     //mvn test -Dtest=AutoExecutorCITest#startUnloggedMavenDemoTest
     @Test
     public void startUnloggedMavenDemoTest() {
+        String projectId = "unlogged-spring-maven-demo";
         TreeMap<String, URL> testConfig = new TreeMap<>();
         URL pathToIntegrationResources = Thread.currentThread().getContextClassLoader()
                 .getResource(testResourcesPath + "maven-demo-integration-resources.xlsx");
@@ -61,13 +68,14 @@ public class AutoExecutorCITest {
                 .getResource(testResourcesPath + "maven-demo-mocked-resources.xlsx");
         testConfig.put("Integration", pathToIntegrationResources);
         testConfig.put("Unit", pathToMockResources);
-        setupLogger("unlogged-spring-maven-demo");
-        runTests(testConfig);
+        setupLogger(projectId);
+        runTests(new TestConfig(projectId, testConfig));
     }
 
     //mvn test -Dtest=AutoExecutorCITest#startWebfluxDemoTest
     @Test
     public void startWebfluxDemoTest() {
+        String projectId = "unlogged-spring-webflux-maven-demo";
         TreeMap<String, URL> testConfig = new TreeMap<>();
         URL pathToIntegrationResources = Thread.currentThread().getContextClassLoader()
                 .getResource(testResourcesPath + "webflux-demo-integration-resources.xlsx");
@@ -75,25 +83,24 @@ public class AutoExecutorCITest {
                 .getResource(testResourcesPath + "webflux-demo-unit-resources.xlsx");
         testConfig.put("Integration", pathToIntegrationResources);
         testConfig.put("Unit", pathToMockResources);
-        setupLogger("unlogged-spring-webflux-maven-demo");
-        runTests(testConfig);
+        setupLogger(projectId);
+        runTests(new TestConfig(projectId, testConfig));
     }
 
-
-    public void runTests(TreeMap<String, URL> testConfigs) {
+    public void runTests(TestConfig testconfig) {
         AgentClientLite agentClientLite = new AgentClientLite();
         boolean isConnected = agentClientLite.isConnected();
         if (!isConnected) {
-            System.out.println("Skipping : Agent not connected");
             logger.info("Skipping autoExecutor Run, Agent not connected");
+            MarkdownReportGenerator.generateReportForSkippedTest(testconfig.getProjectId(), getReportsPath());
             return;
         }
 
         List<TestResultSummary> resultSummaries = new ArrayList<>();
 
-        for (String testMode : testConfigs.keySet()) {
+        for (String testMode : testconfig.getModeToResourceMap().keySet()) {
             logger.info("\n-----" + testMode + " mode testing-----\n");
-            TestResultSummary summary = executeMethods(testConfigs.get(testMode), agentClientLite);
+            TestResultSummary summary = executeMethods(testconfig.getModeToResourceMap().get(testMode), agentClientLite);
             summary.setMode(testMode);
             resultSummaries.add(summary);
         }
@@ -109,6 +116,7 @@ public class AutoExecutorCITest {
                 overallStatus = false;
             }
         }
+        MarkdownReportGenerator.generateAndWriteMarkdownReport(testconfig.getProjectId(), getReportsPath(), resultSummaries);
         Assertions.assertTrue(overallStatus);
     }
 
