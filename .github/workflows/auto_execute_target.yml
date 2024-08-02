@@ -45,3 +45,30 @@ jobs:
           name: AutoExecutorReports
           path: |
             **/target/test-classes/auto-test-resources/AutoExecutorReports/
+
+      - name: Summarize Job summary - start
+        if: always()
+        run: |
+          echo "# AutoExecutor CI results" >> $GITHUB_STEP_SUMMARY
+          echo "**SDK version** : ${{ env.RELEASE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Read maven-demo's markdown report
+        id: maventest
+        uses: jaywcjlove/github-action-read-file@main
+        with:
+          localfile: target/test-classes/unlogged-spring-maven-demo-summary.md
+        if: always()
+
+      - name: Read webflux-demo's markdown report
+        id: webfluxtest
+        uses: jaywcjlove/github-action-read-file@main
+        with:
+          localfile: target/test-classes/unlogged-spring-maven-demo-summary.md
+        if: always()
+
+      - name: Add report contents
+        run: |
+          echo "${{ steps.maventest.outputs.content }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.webfluxtest.outputs.content }}" >> $GITHUB_STEP_SUMMARY
+        if: always()
+
