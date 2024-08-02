@@ -50,7 +50,7 @@ jobs:
         if: always()
         run: |
           echo "# AutoExecutor CI results" >> $GITHUB_STEP_SUMMARY
-          echo "**SDK version** : ${{ env.RELEASE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**SDK version** : `${{ env.RELEASE_VERSION }}`" >> $GITHUB_STEP_SUMMARY
 
       - name: Read maven-demo's markdown report
         id: maventest
