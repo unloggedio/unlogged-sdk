@@ -22,6 +22,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private Boolean isStatic;
+	private Boolean annotatedMethod;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
@@ -34,6 +35,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
 		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(fullClassName, methodName, desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
+		this.annotatedMethod = (classCounter!=0);
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
@@ -175,6 +177,10 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 			// add the exit jump
 			mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
 
+			if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren) && (this.annotatedMethod)) {
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "methodStart", "()V", false);			
+			}
+
 			// call the line for invoking the probed method
 			if (isStatic) {
 				pushArgument(mv, false);
@@ -184,6 +190,10 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 				visitVarInsn(Opcodes.ALOAD, 0);
 				pushArgument(mv, false);
 				mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
+			}
+
+			if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren) && (this.annotatedMethod)) {
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "methodEnd", "()V", false);			
 			}
 
 			// Return the result from the method
@@ -201,6 +211,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
 		// check for the annotation @UnloggedMethod
 		if ("Lio/unlogged/UnloggedMethod;".equals(descriptor)) {
+			this.annotatedMethod = true;
 			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
 				@Override
 				public void visit(String key, Object value) {
@@ -213,6 +224,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 				}
 			};
 		}
+		
 		return super.visitAnnotation(descriptor, visible);
 	}
 }
