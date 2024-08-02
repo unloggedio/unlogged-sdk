@@ -56,14 +56,14 @@ jobs:
         id: maventest
         uses: jaywcjlove/github-action-read-file@main
         with:
-          localfile: target/test-classes/unlogged-spring-maven-demo-summary.md
+          localfile: target/test-classes/auto-test-resources/AutoExecutorReports/unlogged-spring-maven-demo-summary.md
         if: always()
 
       - name: Read webflux-demo's markdown report
         id: webfluxtest
         uses: jaywcjlove/github-action-read-file@main
         with:
-          localfile: target/test-classes/unlogged-spring-maven-demo-summary.md
+          localfile: target/test-classes/auto-test-resources/AutoExecutorReports/unlogged-spring-webflux-maven-demo-summary.md
         if: always()
 
       - name: Add report contents
