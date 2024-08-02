@@ -22,4 +22,6 @@ public interface AggregatedFileLogger {
     void errorLog(String message);
 
     void errorLog(Throwable throwable);
+
+	void modifyThreadDepth(long delta);
 }

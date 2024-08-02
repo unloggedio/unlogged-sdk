@@ -1,18 +1,30 @@
 package io.unlogged.logging.perthread;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.channels.ClosedChannelException;
+import java.nio.file.Files;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.insidious.common.UploadFile;
+
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.FileNameGenerator;
 import io.unlogged.logging.util.NetworkClient;
-
-import java.io.*;
-import java.nio.channels.ClosedChannelException;
-import java.nio.file.Files;
-import java.util.Map;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is a stream specialized to write a sequence of events into files.
@@ -81,6 +93,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     private DataOutputStream fileIndex;
     private int offloadTaskQueueReadIndex;
     private ThreadLocal<ByteArrayOutputStream> baos = ThreadLocal.withInitial(ByteArrayOutputStream::new);
+	private long threadDepth = 0;
 
     /**
      * Create an instance of stream.
@@ -262,9 +275,14 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     }
 
     public void writeEvent(int probeId, long valueId) {
-        long timestamp = System.nanoTime();
-        int currentThreadId = threadId.get();
+        
+		if (this.threadDepth == 0) {
+			// early exit, do not print probed data now
+			return;
+		}
 
+		long timestamp = System.nanoTime();
+        int currentThreadId = threadId.get();
         try {
 
             byte[] buffer = threadLocalByteBuffer.get();
@@ -365,8 +383,14 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
      */
     @Override
     public void writeEvent(int probeId, long valueId, byte[] toByteArray) {
-        long timestamp = System.nanoTime();
-        int currentThreadId = threadId.get();
+        
+		if (this.threadDepth == 0) {
+			// early exit, do not print probed data now
+			return;
+		}
+
+		long timestamp = System.nanoTime();
+		int currentThreadId = threadId.get();
 
         try {
 
@@ -397,9 +421,14 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     @Override
     public void writeEvent(int probeId, long valueId, ByteArrayOutputStream outputStream) {
-        long timestamp = System.nanoTime();
-        int currentThreadId = threadId.get();
 
+		if (this.threadDepth == 0) {
+			// early exit, do not print probed data now
+			return;
+		}
+
+        long timestamp = System.nanoTime();
+		int currentThreadId = threadId.get();
         try {
 
             ByteArrayOutputStream baosTh = baos.get();
@@ -448,6 +477,11 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
         }
         return count.get(currentThreadId);
     }
+
+	@Override
+	public void modifyThreadDepth(long delta) {
+		this.threadDepth += delta;
+	}
 
     public int getThreadEventCountAddAndGet(int currentThreadId, int incVal) {
         if (!count.containsKey(currentThreadId)) {
