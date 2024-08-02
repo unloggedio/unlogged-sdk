@@ -1,12 +1,13 @@
 package io.unlogged.logging.impl;
 
+import java.util.Date;
+import java.util.List;
+
 import com.insidious.common.weaver.ClassInfo;
+
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
-
-import java.util.Date;
-import java.util.List;
 
 /**
  * This class is an implementation of IEventLogger that records
@@ -259,5 +260,8 @@ public class EventStreamAggregatedLogger implements IEventLogger {
         return null;
     }
 
-
+	@Override
+	public void modifyThreadDepth(long delta) {
+		aggregatedLogger.modifyThreadDepth(delta);
+	}
 }

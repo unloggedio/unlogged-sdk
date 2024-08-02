@@ -1,5 +1,19 @@
 package io.unlogged.logging.impl;
 
+import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,6 +21,7 @@ import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFa
 import com.googlecode.concurrenttrees.radixinverted.ConcurrentInvertedRadixTree;
 import com.googlecode.concurrenttrees.radixinverted.InvertedRadixTree;
 import com.insidious.common.weaver.ClassInfo;
+
 import io.unlogged.logging.IEventLogger;
 import io.unlogged.logging.ObjectMapperFactory;
 import io.unlogged.logging.SerializationMode;
@@ -14,17 +29,6 @@ import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.ObjectIdAggregatedStream;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.io.ByteArrayOutputStream;
-import java.lang.ref.WeakReference;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
 
 
 /**
@@ -561,5 +565,8 @@ public class DetailedEventStreamAggregatedLogger implements IEventLogger {
     public void registerClass(Integer id, Class<?> type) {
     }
 
-
+	@Override
+	public void modifyThreadDepth(long delta) {
+		aggregatedLogger.modifyThreadDepth(delta);
+	}
 }

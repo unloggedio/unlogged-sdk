@@ -1,10 +1,9 @@
 package io.unlogged.logging;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.insidious.common.weaver.ClassInfo;
-
 import java.util.List;
+
+import com.insidious.common.weaver.ClassInfo;
 
 /**
  * This interface defines a set of methods for recording runtime events.
@@ -109,4 +108,6 @@ public interface IEventLogger {
 
 
     ClassLoader getTargetClassLoader();
+
+	void modifyThreadDepth(long delta);
 }
