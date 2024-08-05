@@ -28,5 +28,5 @@ public @interface Unlogged {
 	String counter() default "1";
 
 	// log mode
-	UnloggedMode mode() default UnloggedMode.LogAll;
+	UnloggedMode unloggedMode() default UnloggedMode.LogAll;
 }
