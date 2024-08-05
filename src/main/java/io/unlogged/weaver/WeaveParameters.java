@@ -1,14 +1,15 @@
 package io.unlogged.weaver;
 
 
-import io.unlogged.Runtime;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import io.unlogged.Runtime;
+import io.unlogged.UnloggedMode;
 
 
 /**
@@ -42,6 +43,7 @@ public class WeaveParameters {
     private String password;
     private String weaveOption = WeaveConfig.KEY_RECORD_ALL;
     private boolean outputJson = false;
+	private UnloggedMode unloggedMode = UnloggedMode.LogAll;
     /**
      * Dump woven class files (mainly for debugging)
      */
@@ -146,7 +148,18 @@ public class WeaveParameters {
                 } else if (opt.startsWith("latest") || opt.startsWith("nearomni") || opt.startsWith("near-omni")) {
                     mode = Runtime.Mode.FIXED_SIZE;
                 }
-            }
+            } else if (arg.startsWith("unloggedMode=")) {
+				String stringValue = arg.substring("unloggedMode=".length());
+				if (stringValue.equals("LogAll")) {
+					this.unloggedMode = UnloggedMode.LogAll;
+				}
+				else if (stringValue.equals("LogAnnotatedOnly")) {
+					this.unloggedMode = UnloggedMode.LogAnnotatedOnly;
+				}
+				else if (stringValue.equals("LogAnnotatedWithChildren")) {
+					this.unloggedMode = UnloggedMode.LogAnnotatedWithChildren;
+				}
+			}
         }
     }
 
@@ -225,4 +238,12 @@ public class WeaveParameters {
     public void setAgentServerPort(String agentServerPort) {
         this.agentServerPort = agentServerPort;
     }
+
+	public UnloggedMode getUnloggedMode() {
+		return this.unloggedMode;
+	}
+
+	public void setUnloggedMode(UnloggedMode unloggedMode) {
+		this.unloggedMode = unloggedMode;
+	}
 }

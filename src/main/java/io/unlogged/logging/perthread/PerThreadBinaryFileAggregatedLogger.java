@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.insidious.common.UploadFile;
 
+import io.unlogged.UnloggedMode;
 import io.unlogged.logging.IErrorLogger;
 import io.unlogged.logging.util.AggregatedFileLogger;
 import io.unlogged.logging.util.FileNameGenerator;
@@ -94,6 +95,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     private int offloadTaskQueueReadIndex;
     private ThreadLocal<ByteArrayOutputStream> baos = ThreadLocal.withInitial(ByteArrayOutputStream::new);
 	private long threadDepth = 0;
+	private UnloggedMode unloggedMode;
 
     /**
      * Create an instance of stream.
@@ -103,8 +105,10 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
      * @param fileCollector     collects the dataEvent log files, creates indexes,
      */
     public PerThreadBinaryFileAggregatedLogger(
-            FileNameGenerator fileNameGenerator, IErrorLogger logger,
-            RawFileCollector fileCollector) {
+            FileNameGenerator fileNameGenerator,
+			IErrorLogger logger,
+            RawFileCollector fileCollector,
+			UnloggedMode unloggedMode) {
 //        this.sessionId = sessionId;
         this.hostname = NetworkClient.getHostname();
         this.errorLogger = logger;
@@ -113,6 +117,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
         this.fileCollector = fileCollector;
         this.fileList = fileCollector.getFileQueue();
+		this.unloggedMode = unloggedMode;
 
 //        System.out.printf("[unlogged] create aggregated logger -> %s\n", currentFileMap.get(-1));
 
@@ -276,7 +281,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
 
     public void writeEvent(int probeId, long valueId) {
         
-		if (this.threadDepth == 0) {
+		if ((this.unloggedMode == UnloggedMode.LogAnnotatedWithChildren) && (this.threadDepth == 0)) {
 			// early exit, do not print probed data now
 			return;
 		}
@@ -384,7 +389,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     @Override
     public void writeEvent(int probeId, long valueId, byte[] toByteArray) {
         
-		if (this.threadDepth == 0) {
+		if ((this.unloggedMode == UnloggedMode.LogAnnotatedWithChildren) && (this.threadDepth == 0)) {
 			// early exit, do not print probed data now
 			return;
 		}
@@ -422,7 +427,7 @@ public class PerThreadBinaryFileAggregatedLogger implements AggregatedFileLogger
     @Override
     public void writeEvent(int probeId, long valueId, ByteArrayOutputStream outputStream) {
 
-		if (this.threadDepth == 0) {
+		if ((this.unloggedMode == UnloggedMode.LogAnnotatedWithChildren) && (this.threadDepth == 0)) {
 			// early exit, do not print probed data now
 			return;
 		}

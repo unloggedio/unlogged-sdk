@@ -133,6 +133,7 @@ public class Runtime {
 
             firstLogLine.append(serverMetadata + "\n");
             errorLogger.log(firstLogLine.toString());
+			UnloggedMode unloggedMode = weaveParameters.getUnloggedMode();
 
             System.out.println("[unlogged]" + " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
@@ -155,7 +156,7 @@ public class Runtime {
 
                     FileNameGenerator fileNameGenerator = new FileNameGenerator(outputDir, "log-", ".selog");
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger
-                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger, fileCollector);
+                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger, fileCollector, unloggedMode);
 
                     logger = Logging.initialiseAggregatedLogger(perThreadBinaryFileAggregatedLogger, outputDir);
                     break;
@@ -178,7 +179,7 @@ public class Runtime {
 
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger1
                             = new PerThreadBinaryFileAggregatedLogger(logFileNameGenerator, errorLogger,
-                            fileCollector1);
+                            fileCollector1, unloggedMode);
 
                     logger = Logging.initialiseDetailedAggregatedLogger(perThreadBinaryFileAggregatedLogger1,
                             outputDir);
@@ -261,10 +262,12 @@ public class Runtime {
                                         includedPackageName.lastIndexOf("."));
                             }
                         }
+						Object unloggedMode = annotationData.unloggedMode();
                         args =
                                 "i=" + includedPackageName +
-                                        (annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
-                                        (",agentserverport=" + annotationData.port());
+								(annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
+								(",agentserverport=" + annotationData.port()) +
+								",unloggedMode=" + unloggedMode;
                     } else {
                         args = "format=discard";
                     }
