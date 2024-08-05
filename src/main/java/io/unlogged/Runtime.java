@@ -1,11 +1,29 @@
 package io.unlogged;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import com.insidious.common.weaver.ClassInfo;
+
 import fi.iki.elonen.NanoHTTPD;
 import io.unlogged.Runtime;
 import io.unlogged.command.AgentCommandServer;
 import io.unlogged.command.ServerMetadata;
-import io.unlogged.logging.*;
+import io.unlogged.logging.IErrorLogger;
+import io.unlogged.logging.IEventLogger;
+import io.unlogged.logging.Logging;
+import io.unlogged.logging.ObjectMapperFactory;
+import io.unlogged.logging.SimpleFileLogger;
 import io.unlogged.logging.impl.DetailedEventStreamAggregatedLogger;
 import io.unlogged.logging.perthread.PerThreadBinaryFileAggregatedLogger;
 import io.unlogged.logging.perthread.RawFileCollector;
@@ -15,13 +33,6 @@ import io.unlogged.util.ByteTools;
 import io.unlogged.util.StreamUtil;
 import io.unlogged.weaver.WeaveConfig;
 import io.unlogged.weaver.WeaveParameters;
-import java.io.*;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -122,6 +133,7 @@ public class Runtime {
 
             firstLogLine.append(serverMetadata + "\n");
             errorLogger.log(firstLogLine.toString());
+			UnloggedMode unloggedMode = weaveParameters.getUnloggedMode();
 
             System.out.println("[unlogged]" + " session Id: [" + config.getSessionId() + "] " + serverMetadata);
 
@@ -144,7 +156,7 @@ public class Runtime {
 
                     FileNameGenerator fileNameGenerator = new FileNameGenerator(outputDir, "log-", ".selog");
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger
-                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger, fileCollector);
+                            = new PerThreadBinaryFileAggregatedLogger(fileNameGenerator, errorLogger, fileCollector, unloggedMode);
 
                     logger = Logging.initialiseAggregatedLogger(perThreadBinaryFileAggregatedLogger, outputDir);
                     break;
@@ -167,7 +179,7 @@ public class Runtime {
 
                     PerThreadBinaryFileAggregatedLogger perThreadBinaryFileAggregatedLogger1
                             = new PerThreadBinaryFileAggregatedLogger(logFileNameGenerator, errorLogger,
-                            fileCollector1);
+                            fileCollector1, unloggedMode);
 
                     logger = Logging.initialiseDetailedAggregatedLogger(perThreadBinaryFileAggregatedLogger1,
                             outputDir);
@@ -250,10 +262,12 @@ public class Runtime {
                                         includedPackageName.lastIndexOf("."));
                             }
                         }
+						Object unloggedMode = annotationData.unloggedMode();
                         args =
                                 "i=" + includedPackageName +
-                                        (annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
-                                        (",agentserverport=" + annotationData.port());
+								(annotationData.serverEndpoint() == null ? "" : ",server=" + annotationData.serverEndpoint()) +
+								(",agentserverport=" + annotationData.port()) +
+								",unloggedMode=" + unloggedMode;
                     } else {
                         args = "format=discard";
                     }
@@ -358,6 +372,17 @@ public class Runtime {
 
         return frequencyLogging(methodCounter, divisor);
     }
+
+	/**
+	 * Thread Depth calculation method 
+	 */
+	public static void methodStart() {
+		instance.logger.modifyThreadDepth(1);
+	}
+
+	public static void methodEnd() {
+		instance.logger.modifyThreadDepth(-1);
+	}
 
     /**
      * Close data streams if necessary

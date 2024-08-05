@@ -5,6 +5,7 @@ import java.util.HashMap;
 import org.objectweb.asm.*;
 
 import io.unlogged.UnloggedLoggingLevel;
+import io.unlogged.UnloggedMode;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.util.ClassTypeUtil;
 import io.unlogged.util.DistinctClassLogNameMap;
@@ -21,6 +22,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 	private int access;
 	private UnloggedProcessorConfig unloggedProcessorConfig;
 	private Boolean isStatic;
+	private Boolean annotatedMethod;
 
 	public MethodVisitorWithoutProbe(int api, String methodName, String nameProbed, String fullClassName, int access, String desc, long classCounter, MethodVisitor mv, UnloggedProcessorConfig unloggedProcessorConfig) {
 		super(api, mv);
@@ -33,6 +35,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		this.unloggedProcessorConfig = unloggedProcessorConfig;
 		this.methodCompoundName = DistinctClassLogNameMap.getMethodCompoundName(fullClassName, methodName, desc);
 		this.isStatic = ((this.access & Opcodes.ACC_STATIC) != 0);
+		this.annotatedMethod = (classCounter!=0);
 	}
 
 	private void pushArgument(MethodVisitor mv, boolean boxing) {
@@ -99,7 +102,14 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
     }
 
 	private long getDivisor(){
-		long divisor = this.unloggedProcessorConfig.getDefaultCounter();
+		long divisor = 1;
+		if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAll) ||
+		 (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren)) {
+			divisor = this.unloggedProcessorConfig.getDefaultCounter();
+		}
+		else if (this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedOnly) {
+			divisor = -1;
+		}
 
 		// write classCounter if defined 
 		if (this.classCounter != (long)0) {
@@ -114,56 +124,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 		return divisor;
 	}
 
-	@Override
-	public void visitCode() {
-
-		// add the if condition
-		Label exitLabel = new Label();
-
-		// load methodName and divisor
-		mv.visitLdcInsn(this.methodCompoundName);
-		long divisor = getDivisor();
-		mv.visitLdcInsn(divisor);
-
-		String descParsedString = "";
-		if (this.unloggedProcessorConfig.getUnloggedLoggingLevel() == UnloggedLoggingLevel.ARGUMENT) {
-			// load arguments of method in stack and define the desc of calling method
-			pushArgument(mv, true);
-			int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
-			
-			for (int i=0;i<=descSize-2;i++) {
-				descParsedString = descParsedString + "Ljava/lang/Object;";
-			}
-		}
-
-		// call the probeCounter method
-		String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
-		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
-		
-		// add the exit jump
-		mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
-
-		// call the line for invoking the probed method
-		if (isStatic) {
-			pushArgument(mv, false);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
-		}
-		else{
-			visitVarInsn(Opcodes.ALOAD, 0);
-			pushArgument(mv, false);
-			mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
-		}
-		
-		// Return the result from the method
-		int returnOpcode = getReturnOpcode(this.desc);
-		mv.visitInsn(returnOpcode);
-
-		// Exit label
-		mv.visitLabel(exitLabel);
-		super.visitCode();
-	}
-
-	public static int getReturnOpcode(String descriptor) {
+	private static int getReturnOpcode(String descriptor) {
         Type returnType = Type.getReturnType(descriptor);
 
         if (returnType.getSort() == Type.VOID) {
@@ -188,9 +149,69 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
     }
 
 	@Override
+	public void visitCode() {
+		long divisor = getDivisor();
+		if (divisor != -1) {
+			// add the if condition
+			Label exitLabel = new Label();
+
+			// load methodName and divisor
+			mv.visitLdcInsn(this.methodCompoundName);
+			mv.visitLdcInsn(divisor);
+
+			String descParsedString = "";
+			if (this.unloggedProcessorConfig.getUnloggedLoggingLevel() == UnloggedLoggingLevel.ARGUMENT) {
+				// load arguments of method in stack and define the desc of calling method
+				pushArgument(mv, true);
+				int descSize = ClassTypeUtil.splitMethodDesc(this.desc).size();
+				
+				for (int i=0;i<=descSize-2;i++) {
+					descParsedString = descParsedString + "Ljava/lang/Object;";
+				}
+			}
+
+			// call the probeCounter method
+			String probeCounterDesc = "(Ljava/lang/String;J" + descParsedString + ")Z";
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "probeCounter", probeCounterDesc, false);
+
+			// add the exit jump
+			mv.visitJumpInsn(Opcodes.IFEQ, exitLabel);
+
+			if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren) && (this.annotatedMethod)) {
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "methodStart", "()V", false);			
+			}
+
+			// call the line for invoking the probed method
+			if (isStatic) {
+				pushArgument(mv, false);
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, this.fullClassName, this.nameProbed, this.desc, false);
+			}
+			else{
+				visitVarInsn(Opcodes.ALOAD, 0);
+				pushArgument(mv, false);
+				mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, this.fullClassName, this.nameProbed, this.desc, false);
+			}
+
+			if ((this.unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogAnnotatedWithChildren) && (this.annotatedMethod)) {
+				mv.visitMethodInsn(Opcodes.INVOKESTATIC, "io/unlogged/Runtime", "methodEnd", "()V", false);			
+			}
+
+			// Return the result from the method
+			int returnOpcode = getReturnOpcode(this.desc);
+			mv.visitInsn(returnOpcode);
+
+			// Exit label
+			mv.visitLabel(exitLabel);
+		}
+
+		super.visitCode();
+	}
+
+	@Override
 	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
 		// check for the annotation @UnloggedMethod
 		if ("Lio/unlogged/UnloggedMethod;".equals(descriptor)) {
+			this.annotatedMethod = true;
 			return new AnnotationVisitor(api, super.visitAnnotation(descriptor, visible)) {
 				@Override
 				public void visit(String key, Object value) {
@@ -203,6 +224,7 @@ class MethodVisitorWithoutProbe extends MethodVisitor {
 				}
 			};
 		}
+		
 		return super.visitAnnotation(descriptor, visible);
 	}
 }

@@ -11,6 +11,7 @@ import com.sun.tools.javac.util.Context;
 
 import io.unlogged.UnloggedLoggingLevel;
 import io.unlogged.Unlogged;
+import io.unlogged.UnloggedMode;
 import io.unlogged.core.CleanupRegistry;
 import io.unlogged.core.DiagnosticsReceiver;
 import io.unlogged.core.javac.Javac;
@@ -51,7 +52,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private Trees trees;
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
-	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(-1, UnloggedLoggingLevel.COUNTER);
+	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(1, UnloggedLoggingLevel.COUNTER, UnloggedMode.LogAll);
 
 
     public UnloggedProcessor() {
@@ -375,9 +376,9 @@ public class UnloggedProcessor extends AbstractProcessor {
 			
 			// setup unloggedProcessorConfig
 			long defaultCounter = Long.parseLong(unlogged.counter());
-			UnloggedLoggingLevel unloggedLoggingLevel = unlogged.unloggedLoggingLevel();
-			this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
-			this.unloggedProcessorConfig.setUnloggedLoggingLevel(unloggedLoggingLevel);
+            this.unloggedProcessorConfig.setDefaultCounter(defaultCounter);
+			this.unloggedProcessorConfig.setUnloggedLoggingLevel(unlogged.unloggedLoggingLevel());
+            this.unloggedProcessorConfig.setUnloggedMode(unlogged.unloggedMode());
 		}
 
         if (roundEnv.processingOver()) {

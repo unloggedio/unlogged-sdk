@@ -1,9 +1,9 @@
 package io.unlogged.logging;
 
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.insidious.common.weaver.ClassInfo;
-
-import java.util.List;
 
 public class DiscardEventLogger implements IEventLogger {
 
@@ -85,4 +85,9 @@ public class DiscardEventLogger implements IEventLogger {
     public ClassLoader getTargetClassLoader() {
         return this.getClass().getClassLoader();
     }
+
+	@Override
+	public void modifyThreadDepth(long delta) {
+		return;
+	}
 }
