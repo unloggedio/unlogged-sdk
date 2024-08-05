@@ -7,3 +7,7 @@ class TestResult(Enum):
 class buildSystem(Enum):
 	MAVEN = 1
 	GRADLE = 2
+
+class ReportType(Enum):
+	COMPILE = 1
+	REPLAY = 2
