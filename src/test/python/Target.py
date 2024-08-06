@@ -171,6 +171,7 @@ class Target:
 
 		replay_fail = []
 		test_case_results = []
+		total = len(expected_response_dict)
 		for local_test in expected_response_dict:
 			print("Test name = " + local_test)
 			print("	Expected value = " + expected_response_dict[local_test].name)
@@ -186,10 +187,13 @@ class Target:
 				case_result['result'] = TestResult.PASS
 			test_case_results.append(case_result)
 
+		print("total",total)
 		result_map = dict()
+		result_map['tot'] = str(total)
 		if (len(replay_fail) == 0):
 			print("All tests passed succesfully")
 			result_map['status'] = TestResult.PASS
+			result_map['passing'] = str(total)
 
 		else:
 			print("Replay tests have failed for " + self.test_repo_name + ". Fail count = " + str(len(replay_fail)))
@@ -197,5 +201,6 @@ class Target:
 				print("Test Case: " + local_test)
 				result_map['status'] = TestResult.FAIL
 
+			result_map['passing'] = str(total-len(replay_fail))
 			result_map['case_result'] = test_case_results
 			return result_map

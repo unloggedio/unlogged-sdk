@@ -37,9 +37,12 @@ class Report_Generator:
                 for summary in project_summary:
                     java_version = summary['java_version']
                     status = summary['status']
+                    total = summary['tot']
+                    passing_count = summary['passing']
                     case_results = summary['case_result']
 
-                    report_content += "*Java version* : "+java_version+"\n"
+                    report_content += "*Java version* : "+java_version+"\n\n"
+                    report_content += "*Passing Count* : "+passing_count+"/"+total+"\n\n"
                     report_content += "*Status* : "+self.get_status_string(status)+"\n\n"
 
                     report_content += "| Test ID | Status |\n"
@@ -72,6 +75,8 @@ class Report_Generator:
         new_entry = dict()
         new_entry['java_version'] = target.java_version
         new_entry['status'] = result_map['status']
+        new_entry['tot'] = result_map['tot']
+        new_entry['passing'] = result_map['passing']
         new_entry['case_result'] = result_map['case_result']
         self.result_map[target.test_repo_name].append(new_entry)
 
