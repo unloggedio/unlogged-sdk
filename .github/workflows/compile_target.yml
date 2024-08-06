@@ -56,3 +56,11 @@ jobs:
         run: |
           echo "${{ steps.compiletest.outputs.content }}" >> $GITHUB_STEP_SUMMARY
         if: always()
+
+      - name: Store reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: Replay Pipeline reports
+          path: |
+            **/compile-pipeline-result.md
