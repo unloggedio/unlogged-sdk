@@ -61,6 +61,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: Replay Pipeline reports
+          name: Compile Pipeline reports
           path: |
             **/compile-pipeline-result.md
