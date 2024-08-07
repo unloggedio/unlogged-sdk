@@ -1,11 +1,29 @@
 package io.unlogged.logging;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-//import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
@@ -13,20 +31,9 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 
 public class ObjectMapperFactory {
     private static final List<String> JACKSON_PROPERTY_NAMES_SET_FALSE = Arrays.asList(
@@ -245,6 +252,42 @@ public class ObjectMapperFactory {
                     }
                     return super.findPOJOBuilder(ac);
                 }
+
+				@SuppressWarnings("unchecked")
+				@Override
+				protected <A extends Annotation> A _findAnnotation(Annotated ann, Class<A> annoClass) {
+
+					A value = ann.getAnnotation(annoClass);
+					if (value == null && respectUserJacksonAnnotation(annoClass.getName())) {
+						try {
+							String mainAnnoClassName = annoClass.getName().substring("selogger.".length());
+							Class<A> mainAnnoClass = (Class<A>) Class.forName(mainAnnoClassName);
+							value = ann.getAnnotation(mainAnnoClass);
+						} catch (ClassNotFoundException e) {
+							e.printStackTrace();
+						}
+
+						if (value != null && Proxy.isProxyClass(value.getClass())) {
+							// create a new proxy instance and cast it to type A
+							// This will fix the class cast exception in upstream methods
+							ClassLoader classLoader = annoClass.getClassLoader();
+							Class<?>[] interfaces = { annoClass };
+							value = (A) Proxy.newProxyInstance(classLoader, interfaces, Proxy.getInvocationHandler(value));
+						}
+					}
+
+					return value;
+				}
+
+				private boolean respectUserJacksonAnnotation(String annotationName) {
+					if (annotationName.contains("JsonBackReference")) {
+						return true;
+					}
+					else if (annotationName.contains("JsonManagedReference")) {
+						return true;
+					}
+					return false;
+				}
             });
             DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
             jacksonBuilder.defaultDateFormat(df);
@@ -523,6 +566,42 @@ public class ObjectMapperFactory {
                     }
                     return super.findPOJOBuilder(ac);
                 }
+
+				@SuppressWarnings("unchecked")
+				@Override
+				protected <A extends Annotation> A _findAnnotation(Annotated ann, Class<A> annoClass) {
+
+					A value = ann.getAnnotation(annoClass);
+					if (value == null && respectUserJacksonAnnotation(annoClass.getName())) {
+						try {
+							String mainAnnoClassName = annoClass.getName().substring("selogger.".length());
+							Class<A> mainAnnoClass = (Class<A>) Class.forName(mainAnnoClassName);
+							value = ann.getAnnotation(mainAnnoClass);
+						} catch (ClassNotFoundException e) {
+							e.printStackTrace();
+						}
+
+						if (value != null && Proxy.isProxyClass(value.getClass())) {
+							// create a new proxy instance and cast it to type A
+							// This will fix the class cast exception in upstream methods
+							ClassLoader classLoader = annoClass.getClassLoader();
+							Class<?>[] interfaces = { annoClass };
+							value = (A) Proxy.newProxyInstance(classLoader, interfaces, Proxy.getInvocationHandler(value));
+						}
+					}
+
+					return value;
+				}
+
+				private boolean respectUserJacksonAnnotation(String annotationName) {
+					if (annotationName.contains("JsonBackReference")) {
+						return true;
+					}
+					else if (annotationName.contains("JsonManagedReference")) {
+						return true;
+					}
+					return false;
+				}
             });
             DateFormat df = new SimpleDateFormat("MMM d, yyyy HH:mm:ss aaa");
             jacksonBuilder.defaultDateFormat(df);
