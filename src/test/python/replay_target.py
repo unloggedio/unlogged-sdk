@@ -1,77 +1,86 @@
 import os
 import sys
 from Target import Target, ReplayTest
-from configEnum import buildSystem, TestResult
+from configEnum import buildSystem, TestResult, ReportType
+from markup_report_generator import Report_Generator
 import subprocess
 
-def replay_target (target):
-	
-	# clone repo
-	os.system("git clone " + target.test_repo_url)
-	
-	# modify build
-	if (target.buildSystem == buildSystem.MAVEN):
-		target.modify_pom(sdk_version)
-	elif (target.buildSystem == buildSystem.GRADLE):
-		target.modify_gradle(sdk_version)
-	
-	# server start
-	docker_up_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml up -d"
-	val_1 = os.system(docker_up_cmd)
+def replay_target(target):
+    # clone repo
+    os.system("git clone " + target.test_repo_url)
 
-	proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
-	(out_stream, err_stream) = proc.communicate()
-	docker_container_name = "target-repo"
+    # modify build
+    if (target.buildSystem == buildSystem.MAVEN):
+        target.modify_pom(sdk_version)
+    elif (target.buildSystem == buildSystem.GRADLE):
+        target.modify_gradle(sdk_version)
 
-	# target replay
-	if (target.buildSystem == buildSystem.MAVEN):
-		test_command = "docker exec " + docker_container_name + " ./mvnw clean install surefire:test --fail-never"
-	elif (target.buildSystem == buildSystem.GRADLE):
-		test_command = "docker exec " + docker_container_name + " ./gradlew test"
-	val_2 = os.system(test_command)
+    # server start
+    docker_up_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml up -d"
+    val_1 = os.system(docker_up_cmd)
 
-	response_code = val_1 or val_2
-	if (response_code == 0):
-		print ("Test for target executed successfully: " +  target.test_repo_name)
-	else:
-		raise Exception("Test for target failed execution: " + target.test_repo_name)
+    proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
+    (out_stream, err_stream) = proc.communicate()
+    docker_container_name = "target-repo"
 
-	# assert and clean repo
-	local_error_state = target.check_replay()
-	docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
-	os.system(docker_down_cmd)
-	os.system("rm -rf " + target.test_repo_name)
-	return local_error_state
+    # target replay
+    if (target.buildSystem == buildSystem.MAVEN):
+        test_command = "docker exec " + docker_container_name + " ./mvnw clean install surefire:test --fail-never"
+    elif (target.buildSystem == buildSystem.GRADLE):
+        test_command = "docker exec " + docker_container_name + " ./gradlew test"
+    val_2 = os.system(test_command)
 
-if __name__=="__main__":
+    response_code = val_1 or val_2
+    if (response_code == 0):
+        print("Test for target executed successfully: " + target.test_repo_name)
+    else:
+        raise Exception("Test for target failed execution: " + target.test_repo_name)
 
-	sdk_version = sys.argv[1]
-	target_list = [
-		#unlogged-spring-maven-demo
-		Target(
-			"https://github.com/unloggedio/unlogged-spring-maven-demo",
-			"unlogged-spring-maven-demo",
-			"/pom.xml",
-			"/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
-			buildSystem.MAVEN,
-			[
-                ReplayTest("org.unlogged.demo.controller.CustomerController.saveCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.CustomerController.removeCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.CustomerController.generateNeReferralCode - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.CustomerController.isCustomerEligibleForLoyaltyProgram - normal", TestResult.PASS),
+    # assert and clean repo
+    result_map = target.check_replay()
+    docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
+    os.system(docker_down_cmd)
+    os.system("rm -rf " + target.test_repo_name)
+    return result_map
+
+
+if __name__ == "__main__":
+    sdk_version = sys.argv[1]
+    target_list = [
+        # unlogged-spring-maven-demo
+        Target(
+            "https://github.com/unloggedio/unlogged-spring-maven-demo",
+            "unlogged-spring-maven-demo",
+            "/pom.xml",
+            "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+            buildSystem.MAVEN,
+            [
+                ReplayTest("org.unlogged.demo.controller.CustomerController.saveCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.CustomerController.removeCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.CustomerController.generateNeReferralCode - normal",
+                           TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.controller.CustomerController.isCustomerEligibleForLoyaltyProgram - normal",
+                    TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.CustomerController.getDummyProfile - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.CustomerController.getScoreMaps - normal", TestResult.PASS),
                 ReplayTest("FutureController.getFutureResult - normal", TestResult.PASS),
                 ReplayTest("FutureController.getFutureResultOptional - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.GreetingController.getGreeting - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.InternalClassController.getL1Object - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.InternalClassController.getMapValue - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.InternalClassController.getTimeObjects - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.InternalClassController.getL1Object - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.InternalClassController.getMapValue - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.InternalClassController.getTimeObjects - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.InternalClassController.returnChar - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.InternalClassController.cmm - normal", TestResult.PASS),
                 ReplayTest("ModelMapperOpsController.getDefaultModel - normal", TestResult.PASS),
                 ReplayTest("ModelMapperOpsController.getUserModelMiniDto - normal", TestResult.PASS),
-                ReplayTest("ModelMapperOpsController.getUserModelMiniDto - call from ModelMapper mocked", TestResult.PASS),
+                ReplayTest("ModelMapperOpsController.getUserModelMiniDto - call from ModelMapper mocked",
+                           TestResult.PASS),
                 ReplayTest("ModelMapperOpsController.getUserModelDto - normal", TestResult.PASS),
                 ReplayTest("ModelMapperOpsController.getUserModelDtoWithProvider - normal", TestResult.PASS),
                 ReplayTest("ModelMapperOpsController.getFromConverter - normal", TestResult.PASS),
@@ -95,8 +104,10 @@ if __name__=="__main__":
                 ReplayTest("OptionalOpsController.countNameLength - normal", TestResult.PASS),
                 ReplayTest("OptionalOpsController.flatMapUsage - normal", TestResult.PASS),
                 ReplayTest("OptionalOpsController.chain - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.RecursionController.getIsPalindrome - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.RecursionController.getFibonacciSeries - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.RecursionController.getIsPalindrome - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.RecursionController.getFibonacciSeries - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.RecursionController.isPalindrome - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.RecursionController.factorial - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.ResponseEntityOps.getOkString - normal", TestResult.PASS),
@@ -133,10 +144,13 @@ if __name__=="__main__":
                 ReplayTest("ThreadingOpsController.scheduledThread - normal", TestResult.PASS),
                 ReplayTest("ThreadingOpsController.scheduledThreadFixedRate - normal", TestResult.PASS),
                 ReplayTest("ThreadingOpsController.scheduledThreadFixedDelay - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.isDefaultUserVaild - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.isDefaultUserVaild - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.isUserValid - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.getValidUser - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.validateUserV2 - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.getValidUser - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.controller.ValidatorOpsController.validateUserV2 - normal",
+                           TestResult.PASS),
                 ReplayTest("VarOpsController.primitivesWrapped - normal", TestResult.PASS),
                 ReplayTest("VarOpsController.getAUser - normal", TestResult.PASS),
                 ReplayTest("VarOpsController.varListAndMap - normal", TestResult.PASS),
@@ -155,83 +169,150 @@ if __name__=="__main__":
                 ReplayTest("org.unlogged.demo.cron.ScheduledJobs.scheduleFixedDelayTask - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.cron.ScheduledJobs.cron1 - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.cron.ScheduledJobs.cron2Greet - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithMergedFilters - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectNotAllowed - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithRejectFilter - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectUndecided - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObject1 - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithAllowFilter - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectRejectUndecided - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.CustomObjectInputFilter.checkInput - normal",
+                           TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithMergedFilters - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectNotAllowed - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithRejectFilter - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectUndecided - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObject1 - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectWithAllowFilter - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.deserializationfilter.DeserializationController.deserializeObjectRejectUndecided - normal",
+                    TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.deserializationfilter.DeserializationController.serializeObject - normal",
+                           TestResult.PASS),
                 ReplayTest("GlobalFilter.getGlobalFilterAdditive - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.ApiHelper.WeatherApi.getWeatherinfo - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.ApiHelper.WeatherApi.getWeatherinfo - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.Alpha.getY - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.Beta.e - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.BigObjController.getListofBigPojos - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.BigObjController.getOrderedList - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.saveCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.getCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.removeCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.addNewContactNumber - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.generateNeReferralCode - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.isCustomerEligibleForLoyaltyProgram - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.GcdController.gcdOfTwoNumbers - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.BigObjController.getListofBigPojos - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.BigObjController.getOrderedList - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.saveCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.getCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.removeCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.addNewContactNumber - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.generateNeReferralCode - normal",
+                           TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.jspdemo.wfm.Controllers.CustomerRes.isCustomerEligibleForLoyaltyProgram - normal",
+                    TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.GcdController.gcdOfTwoNumbers - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.GcdController.getNull - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.ThirdPartyController.getResponse - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.ThirdPartyController.getWeatherForBangalore - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getBool - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.ThirdPartyController.getResponse - normal",
+                           TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.jspdemo.wfm.Controllers.ThirdPartyController.getWeatherForBangalore - normal",
+                    TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getBool - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.a - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getTestPojo - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.jodatest - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getInstant - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getDeepClass - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getTestText - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.saveUser - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.saveUser - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.testFetchUser - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getTestPojo - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.jodatest - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getInstant - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getDeepClass - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.getTestText - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.saveUser - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.saveUser - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Controllers.UserController.testFetchUser - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.save - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.save - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.save - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.save - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.fetchCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.removeCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.ReferralUtils.generateReferralCode - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.fetchCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Dao.CustomerProfileDao.removeCustomer - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.ReferralUtils.generateReferralCode - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.SerializationUtils.getObjectFor - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.SerializationUtils.getObjectFor - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.generateReferralCodes - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.saveNewCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.fetchCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.removeCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.addNewContact - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.generateReferralForCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.isCustomerEligibleForPremium - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.generateReferralCodes - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.saveNewCustomer - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.fetchCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.removeCustomer - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.CustomerService.addNewContact - normal",
+                           TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.jspdemo.wfm.Services.CustomerService.generateReferralForCustomer - normal",
+                    TestResult.PASS),
+                ReplayTest(
+                    "org.unlogged.demo.jspdemo.wfm.Services.CustomerService.isCustomerEligibleForPremium - normal",
+                    TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.UserService.many - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.UserService.getDeepClassList - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.UserService.getDeepClassList - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.Services.UserService.getUser - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyApiHelper.getWeatherinfo - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyApiHelper.getWeatherinfo - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyApiHelper.getWeatherinfo - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyApiHelper.getWeatherinfo - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyService.getWeatherFor - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.ThirdPartyService.getWeatherFor - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.UserInstanceDao.save - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.jspdemo.wfm.UserInstanceService.saveUser - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.repository.CustomerProfileRepository.save - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.repository.CustomerProfileRepository.removeCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.repository.CustomerProfileRepository.fetchCustomerProfile - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.resttemplate.PostController.getPostById - unexpected failure", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.resttemplate.PostsClient.findById - wrong assertions with extra char", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.repository.CustomerProfileRepository.removeCustomer - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.repository.CustomerProfileRepository.fetchCustomerProfile - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.resttemplate.PostController.getPostById - unexpected failure",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.resttemplate.PostsClient.findById - wrong assertions with extra char",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.CustomerService.generateReferralCodes - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.CustomerService.saveNewCustomer - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.CustomerService.removeCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.service.CustomerService.generateReferralForCustomer - normal", TestResult.PASS),
-                ReplayTest("org.unlogged.demo.service.CustomerService.isCustomerEligibleForPremium - normal", TestResult.PASS),
+                ReplayTest("org.unlogged.demo.service.CustomerService.generateReferralForCustomer - normal",
+                           TestResult.PASS),
+                ReplayTest("org.unlogged.demo.service.CustomerService.isCustomerEligibleForPremium - normal",
+                           TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.CustomerService.getBackProfile - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.CustomerService.getDummyScoreMaps - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.service.DeepService.getDeepReference - normal", TestResult.PASS),
@@ -247,31 +328,31 @@ if __name__=="__main__":
                 ReplayTest("PropertyServiceCEImpl.updateExisting - normal", TestResult.PASS),
                 ReplayTest("org.unlogged.demo.utils.ReferralUtils.generateReferralCode - normal", TestResult.PASS),
                 ReplayTest("ClassUserController.setAndGetUser - recursive setter bug freq logging", TestResult.PASS)
-			]
-		)
-		# Target(
-		# 	"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
-		# 	"unlogged-spring-webflux-maven-demo",
-		# 	"/pom.xml",
-		# 	"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
-		# 	buildSystem.MAVEN,
-		# 	[
-		# 		ReplayTest("VehicleComponent.getVehicles - normal", TestResult.PASS),
-		# 		ReplayTest("CronController.cronHello - normal mockMode", TestResult.PASS),
-		# 		ReplayTest("CronController.cronHello - normal integMode", TestResult.PASS),
-		# 		ReplayTest("EnrichmentController.enrichPersonsInParallel - normal", TestResult.PASS),
-		# 		ReplayTest("FluxOpsController.disposableExample - normal", TestResult.PASS),
-		# 		ReplayTest("FluxOpsController.parallelFluxExample - normal", TestResult.PASS),
-		# 		ReplayTest("FluxOpsController.tuple4Example - normal", TestResult.PASS),
-		# 		ReplayTest("PlayerController.createPlayer - normal mockMode", TestResult.PASS),
-		# 		ReplayTest("PlayerController.createPlayer - mock mismatch integrationMode", TestResult.PASS),
-		# 		ReplayTest("PlayerController.deletePlayerById - normal mockMode", TestResult.PASS),
-		# 		ReplayTest("PlayerController.deletePlayerById - normal integrationMode", TestResult.PASS),
-		# 		ReplayTest("ProductController.getAllProducts - no class def", TestResult.PASS),
-		# 		ReplayTest("ProductController.getProductById - no class def", TestResult.PASS),
-		# 		ReplayTest("ProductController.updateProduct - no class def", TestResult.PASS),
-		# 		ReplayTest("RecursiveController.nthFibonacci - normal", TestResult.PASS),
-		# 		ReplayTest("RecursiveController.factorial - normal", TestResult.PASS),
+            ]
+        )
+        # Target(
+        # 	"https://github.com/unloggedio/unlogged-spring-webflux-maven-demo",
+        # 	"unlogged-spring-webflux-maven-demo",
+        # 	"/pom.xml",
+        # 	"/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
+        # 	buildSystem.MAVEN,
+        # 	[
+        # 		ReplayTest("VehicleComponent.getVehicles - normal", TestResult.PASS),
+        # 		ReplayTest("CronController.cronHello - normal mockMode", TestResult.PASS),
+        # 		ReplayTest("CronController.cronHello - normal integMode", TestResult.PASS),
+        # 		ReplayTest("EnrichmentController.enrichPersonsInParallel - normal", TestResult.PASS),
+        # 		ReplayTest("FluxOpsController.disposableExample - normal", TestResult.PASS),
+        # 		ReplayTest("FluxOpsController.parallelFluxExample - normal", TestResult.PASS),
+        # 		ReplayTest("FluxOpsController.tuple4Example - normal", TestResult.PASS),
+        # 		ReplayTest("PlayerController.createPlayer - normal mockMode", TestResult.PASS),
+        # 		ReplayTest("PlayerController.createPlayer - mock mismatch integrationMode", TestResult.PASS),
+        # 		ReplayTest("PlayerController.deletePlayerById - normal mockMode", TestResult.PASS),
+        # 		ReplayTest("PlayerController.deletePlayerById - normal integrationMode", TestResult.PASS),
+        # 		ReplayTest("ProductController.getAllProducts - no class def", TestResult.PASS),
+        # 		ReplayTest("ProductController.getProductById - no class def", TestResult.PASS),
+        # 		ReplayTest("ProductController.updateProduct - no class def", TestResult.PASS),
+        # 		ReplayTest("RecursiveController.nthFibonacci - normal", TestResult.PASS),
+        # 		ReplayTest("RecursiveController.factorial - normal", TestResult.PASS),
         #         ReplayTest("RedisOpsController.setValue - return value null", TestResult.PASS),
         #         ReplayTest("RedisOpsController.getValue - logging.record event returns null", TestResult.PASS),
         #         ReplayTest("SealedClassController.getAllVehicles2 - normal", TestResult.PASS),
@@ -413,30 +494,38 @@ if __name__=="__main__":
         #         ReplayTest("VarKeywordController.getObjectVar - normal", TestResult.PASS),
         #         ReplayTest("ExternalProductController.getProduct - normal", TestResult.PASS),
         #         ReplayTest("Orchestrator.statusHandler - normal", TestResult.PASS)
-		# 	]
-		# ),
-		# Target(
-		# 	"https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
-		# 	"unlogged-spring-mvc-maven-demo",
-		# 	"/pom.xml",
-		# 	"/src/main/java/org/unlogged/mvc/demo/Application.java",
-		# 	buildSystem.MAVEN,
-		# 	[
-		# 		ReplayTest("loadAllBooks - normal", TestResult.PASS),
-		# 		ReplayTest("getBookById - normal", TestResult.PASS),
-		# 		ReplayTest("getAllBooks - normal", TestResult.PASS),
-		# 		ReplayTest("insertBook - normal", TestResult.PASS),
-		# 		ReplayTest("updateBook - normal", TestResult.PASS),
-		# 		ReplayTest("deleteBook - normal", TestResult.PASS)
-		# 	]
-		# )
-	]
-		
-	error_state = False
-	for local_target in target_list:
-		error_state = error_state | replay_target(local_target)
-	
-	if (error_state):
-		raise Exception("Test Failed")
-	else:
-		print ("Test Passed")
+        # 	]
+        # ),
+        # Target(
+        # 	"https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
+        # 	"unlogged-spring-mvc-maven-demo",
+        # 	"/pom.xml",
+        # 	"/src/main/java/org/unlogged/mvc/demo/Application.java",
+        # 	buildSystem.MAVEN,
+        # 	[
+        # 		ReplayTest("loadAllBooks - normal", TestResult.PASS),
+        # 		ReplayTest("getBookById - normal", TestResult.PASS),
+        # 		ReplayTest("getAllBooks - normal", TestResult.PASS),
+        # 		ReplayTest("insertBook - normal", TestResult.PASS),
+        # 		ReplayTest("updateBook - normal", TestResult.PASS),
+        # 		ReplayTest("deleteBook - normal", TestResult.PASS)
+        # 	]
+        # )
+    ]
+
+    passing = True
+    result_maps = []
+    report_generator = Report_Generator(ReportType.REPLAY)
+
+    for local_target in target_list:
+        result_map = replay_target(local_target)
+        report_generator.add_replay_result_status_entry(local_target,result_map)
+        result_maps.append(result_map)
+        if result_map['status'] == TestResult.FAIL:
+            passing = False
+
+    report_generator.generate_and_write_report()
+    if (passing):
+        print("Test Passed")
+    else:
+        raise Exception("Test Failed")

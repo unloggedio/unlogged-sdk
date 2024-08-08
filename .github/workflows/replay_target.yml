@@ -37,3 +37,31 @@ jobs:
       - name: Run testing script
         run: |
           python3 ./src/test/python/replay_target.py ${{ env.RELEASE_VERSION }}
+
+      # Summarize report
+      - name: Summarize Job summary - start
+        if: always()
+        run: |
+          echo "# Replay Pipeline results" >> $GITHUB_STEP_SUMMARY
+          echo "**SDK version** : ${{ env.RELEASE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Read Compile pipeline markup report
+        id: replaytest
+        uses: jaywcjlove/github-action-read-file@main
+        with:
+          localfile: replay-pipeline-result.md
+        if: always()
+
+      - name: Write report summary
+        run: |
+          echo "${{ steps.replaytest.outputs.content }}" >> $GITHUB_STEP_SUMMARY
+        if: always()
+
+      - name: Store reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: Replay Pipeline reports
+          path: |
+            **/replay-pipeline-result.md
+            **/replay_report.xml
