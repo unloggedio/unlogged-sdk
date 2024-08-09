@@ -53,8 +53,8 @@ public class MarkdownReportGenerator {
                 .append("<summary> Case ID : ").append(assertionDetails.getCaseId()).append("</summary>\n\n")
                 .append("| Operation Type | ").append(assertionDetails.getAssertionType()).append(" |\n")
                 .append("|----------------|------|\n")
-                .append("| Expected | ").append(assertionDetails.getExpected()).append("| \n")
-                .append("| Actual | ").append(assertionDetails.getActual()).append("| \n\n")
+                .append("| Expected | ").append(capSize(assertionDetails.getExpected())).append("| \n")
+                .append("| Actual | ").append(capSize(assertionDetails.getActual())).append("| \n\n")
                 .append("</details></li>\n\n").toString();
     }
 
@@ -90,5 +90,12 @@ public class MarkdownReportGenerator {
                         "```").append("\n")
                 .append("</details>").append("\n\n");
         return pieChartBuilder.toString();
+    }
+
+    private static String capSize(String payload) {
+        if (payload.length() > 10000) {
+            return "Too large to show here, please refer to Logs";
+        }
+        return payload;
     }
 }

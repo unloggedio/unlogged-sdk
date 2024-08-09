@@ -1,6 +1,7 @@
 package io.unlogged.autoexecutor.testutils.entity;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TestResultSummary {
     private int numberOfCases;
@@ -39,5 +40,9 @@ public class TestResultSummary {
 
     public List<AssertionDetails> getFailingCases() {
         return failingCases;
+    }
+
+    public List<Integer> getFailingCaseNumbers() {
+        return failingCases.stream().map(AssertionDetails::getCaseId).collect(Collectors.toList());
     }
 }

@@ -108,7 +108,7 @@ public class AutoExecutorCITest {
             logger.info("\n    " + resultSummary.getMode() + " Mode ->" + "\n"
                     + "    Total number of cases run : " + resultSummary.getNumberOfCases() + "\n"
                     + "    Number of Failing cases : " + resultSummary.getFailingCasesCount() + "\n"
-                    + "    Failing tests (Row numbers) : " + resultSummary.getFailingCases().toString());
+                    + "    Failing tests (Row numbers) : " + resultSummary.getFailingCaseNumbers().toString());
             if (resultSummary.getFailingCasesCount() > 0) {
                 overallStatus = false;
             }
