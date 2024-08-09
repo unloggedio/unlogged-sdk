@@ -22,5 +22,11 @@
 - Changed the data type of method call state in Runtime class from int to long, ensuring correct state management for higher number of method calls.
 
 ## SDK v0.7.1
+- Minor fixes to the SDK.
+
+## SDK v0.7.2
 - Fixed issues with circular POJO parsing. Users previously had to import packages from SDK's shaded JAR for mocks to work with Direct Invoke. 
 - Now, users can import Jackson's package for parsing POJOs.
+
+## SDK v0.7.3
+- Fixed an issue where some methods when invoked were creating two test candidates. This was happening for methods where a synthetic method was emitted by the Java compiler.
