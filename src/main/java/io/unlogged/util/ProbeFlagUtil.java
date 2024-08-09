@@ -43,7 +43,8 @@ public class ProbeFlagUtil {
 		}
 		else if (((access & Opcodes.ACC_INTERFACE) != 0)
 				|| ((access & Opcodes.ACC_ENUM) != 0)
-				|| ((access & Opcodes.ACC_ABSTRACT) != 0)) {
+				|| ((access & Opcodes.ACC_ABSTRACT) != 0)
+				|| ((access & Opcodes.ACC_SYNTHETIC) != 0)) {
 			return true;
 		}
 

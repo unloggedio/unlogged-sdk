@@ -248,7 +248,7 @@ public class ClassTransformer extends ClassVisitor {
 			return methodVisitorProbed;
 		}
 		else if (neverProbeMethodFlag) {
-			// early exit got method that are never probed
+			// early exit for method that are never probed
 			MethodVisitor methodVisitorUnModified = cv.visitMethod(access, name, desc, signature, exceptions);
             return methodVisitorUnModified;
         }
