@@ -40,7 +40,8 @@ public class MarkdownReportGenerator {
                 });
             }
             stringBuilder.append("\n\n").append("</ul></details>").append("\n")
-                    .append(generatePieChart(testResultSummary));
+                    .append(generatePieChart(testResultSummary))
+                    .append("\n\n");
 
         });
         writeFile(project + "-summary", stringBuilder.toString(), path);
@@ -52,8 +53,8 @@ public class MarkdownReportGenerator {
                 .append("<summary> Case ID : ").append(assertionDetails.getCaseId()).append("</summary>\n\n")
                 .append("| Operation Type | ").append(assertionDetails.getAssertionType()).append(" |\n")
                 .append("|----------------|------|\n")
-                .append("| Expected | ").append(assertionDetails.getExpected()).append("|\n")
-                .append("| Actual | ").append(assertionDetails.getActual()).append("\n\n")
+                .append("| Expected | ").append(assertionDetails.getExpected()).append("| \n")
+                .append("| Actual | ").append(assertionDetails.getActual()).append("| \n\n")
                 .append("</details></li>\n\n").toString();
     }
 
@@ -82,7 +83,7 @@ public class MarkdownReportGenerator {
         pieChartBuilder.append("<details>").append("\n")
                 .append("<summary>Status Chart</summary>").append("\n\n")
                 .append("```mermaid\n" +
-                        "%%{init: {'theme': 'default', 'themeVariables': {'pie1': '#238636', 'pie2': '#da3633'}}}%%\n" +
+                        "%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#238636', 'pie2': '#da3633','primaryTextColor': '#fff', 'primaryBorderColor': '#7C0000'}}}%%\n" +
                         "pie title Status Chart\n" +
                         "    \"Passing\" : " + testResultSummary.getPassingCasesCount() + "\n" +
                         "    \"Failing\" : " + testResultSummary.getFailingCasesCount() + "\n" +

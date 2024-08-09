@@ -538,12 +538,14 @@ if __name__ == "__main__":
     report_generator = Report_Generator(ReportType.REPLAY)
     for local_target in target_list:
         result_map = replay_target(local_target)
+        report_generator.reset_map()
         report_generator.add_replay_result_status_entry(local_target, result_map)
         result_maps.append(result_map)
+        report_generator.generate_and_write_report()
+
         if result_map['status'] == TestResult.FAIL:
             passing = False
 
-    report_generator.generate_and_write_report()
     if (passing):
         print("Test Passed")
     else:

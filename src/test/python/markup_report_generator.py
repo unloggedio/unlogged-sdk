@@ -7,10 +7,12 @@ class Report_Generator:
     table_format = True
     def __init__(self, mode):
         self.mode = mode
+        self.reset_map()
+
+    def reset_map(self):
         self.result_map = dict()
 
     def generate_and_write_report(self):
-        repoting_content = ""
         filename = ''
         if self.mode == ReportType.COMPILE:
             report_content = "## Compile Pipeline Results\n"
@@ -54,7 +56,7 @@ class Report_Generator:
                         report_content += "| "+test_name+" | "+self.get_status_string(status,True)+" |\n"
                     report_content += "\n\n"
 
-        report_file = open(filename, 'w')
+        report_file = open(filename, 'a')
         report_file.write(report_content)
         report_file.close()
 
