@@ -5,10 +5,7 @@ import io.unlogged.autoexecutor.testutils.autoCIUtils.AgentClientLite;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.AssertionUtils;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.ParseUtils;
 import io.unlogged.autoexecutor.testutils.autoCIUtils.XlsxUtils;
-import io.unlogged.autoexecutor.testutils.entity.AutoAssertionResult;
-import io.unlogged.autoexecutor.testutils.entity.TestConfig;
-import io.unlogged.autoexecutor.testutils.entity.TestResultSummary;
-import io.unlogged.autoexecutor.testutils.entity.TestUnit;
+import io.unlogged.autoexecutor.testutils.entity.*;
 import io.unlogged.command.AgentCommand;
 import io.unlogged.command.AgentCommandRequest;
 import io.unlogged.command.AgentCommandRequestType;
@@ -129,7 +126,7 @@ public class AutoExecutorCITest {
         int count = 0;
         int passing = 0;
         int failing = 0;
-        List<Integer> failingCaseIds = new ArrayList<>();
+        List<AssertionDetails> failingAssertionDetails = new ArrayList<>();
 
         while (rowIterator.hasNext()) {
             if (count == 0) {
@@ -207,7 +204,9 @@ public class AutoExecutorCITest {
                     AutoAssertionResult result = AssertionUtils.assertCase(testUnit);
                     if (!result.isPassing()) {
                         failing++;
-                        failingCaseIds.add(count);
+                        failingAssertionDetails.add(new AssertionDetails(
+                                count, result.getExpected(),
+                                result.getActual(), result.getAssertionType()));
                     } else {
                         passing++;
                     }
@@ -229,7 +228,7 @@ public class AutoExecutorCITest {
                 }
             }
         }
-        return new TestResultSummary(count - 2, passing, failing, failingCaseIds);
+        return new TestResultSummary(count - 2, passing, failing, failingAssertionDetails);
     }
 
     private String limitResponseSize(String input) {

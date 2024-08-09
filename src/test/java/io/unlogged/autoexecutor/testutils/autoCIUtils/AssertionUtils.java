@@ -26,6 +26,9 @@ public class AssertionUtils {
             actualResponse = "null - from agent";
         }
 
+        assertionResult.setExpected(refOut);
+        assertionResult.setActual(actualResponse);
+
         boolean result = false;
         assertionResult.setAssertionType(assertionType);
         String message = "";
@@ -67,6 +70,8 @@ public class AssertionUtils {
                 } else {
                     message = "Received Exception when it was not expected";
                 }
+                assertionResult.setExpected("NO EXCEPTION");
+                assertionResult.setActual(actualResponse);
                 break;
             case "EQUAL EXCEPTION":
                 //should be an equal exception
@@ -86,6 +91,8 @@ public class AssertionUtils {
                 } else {
                     message = "Received a null response";
                 }
+                assertionResult.setExpected("NOT NULL");
+                assertionResult.setActual(actualResponse);
                 break;
             case "NOT EQUAL":
                 //the response shouldn't be equal to reference output
@@ -98,6 +105,7 @@ public class AssertionUtils {
         }
         assertionResult.setPassing(result);
         assertionResult.setMessage(message);
+
         return assertionResult;
     }
 

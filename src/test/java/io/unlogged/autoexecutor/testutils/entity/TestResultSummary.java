@@ -7,10 +7,10 @@ public class TestResultSummary {
     private int passingCasesCount;
     private int failingCasesCount;
     private String mode;
-    private List<Integer> failingCases;
+    private List<AssertionDetails> failingCases;
 
     public TestResultSummary(int numberOfCases, int passingCasesCount, int failingCasesCount,
-                             List<Integer> failingCaseIds) {
+                             List<AssertionDetails> failingCaseIds) {
         this.numberOfCases = numberOfCases;
         this.passingCasesCount = passingCasesCount;
         this.failingCasesCount = failingCasesCount;
@@ -37,7 +37,7 @@ public class TestResultSummary {
         this.mode = mode;
     }
 
-    public List<Integer> getFailingCases() {
+    public List<AssertionDetails> getFailingCases() {
         return failingCases;
     }
 }

@@ -63,7 +63,7 @@ class Report_Generator:
             self.result_map[target.test_repo_name] = []
 
         new_entry = dict()
-        new_entry['java_version'] = target.java_version
+        new_entry['java_version'] = target.target_run_properties.java_version
         new_entry['status'] = test_result
         new_entry['information'] = info
         self.result_map[target.test_repo_name].append(new_entry)
@@ -73,7 +73,7 @@ class Report_Generator:
             self.result_map[target.test_repo_name] = []
 
         new_entry = dict()
-        new_entry['java_version'] = target.java_version
+        new_entry['java_version'] = target.target_run_properties.java_version
         new_entry['status'] = result_map['status']
         new_entry['tot'] = result_map['tot']
         new_entry['passing'] = result_map['passing']
@@ -92,7 +92,3 @@ class Report_Generator:
                 return ":red_circle: Failing"
             else:
                 return "Failing"
-
-
-
-

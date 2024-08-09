@@ -64,4 +64,4 @@ jobs:
           name: Replay Pipeline reports
           path: |
             **/replay-pipeline-result.md
-            **/replay_report.xml
+            **/replayReports/

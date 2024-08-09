@@ -11,3 +11,11 @@ class buildSystem(Enum):
 class ReportType(Enum):
 	COMPILE = 1
 	REPLAY = 2
+
+class StartMode(Enum):
+	DOCKER = 1
+	CMD = 2
+
+class ProjectType(Enum):
+	NORMAL = 1
+	REACTIVE = 2

@@ -1,13 +1,13 @@
 import os
 import sys
 import time
-from Target import Target
-from configEnum import buildSystem
+from Target import Target, TargetRunProperties, AutoExecutorProperties
+from configEnum import buildSystem, StartMode
 import subprocess
 
 def autoexecute_target(target):
 
-    os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
+    os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
 
     if (target.buildSystem == buildSystem.MAVEN):
         target.modify_pom(sdk_version)
@@ -23,7 +23,7 @@ def autoexecute_target(target):
     # wait till project has started
     time.sleep(140)
 
-    test_command = "mvn test -Dtest=AutoExecutorCITest#"+target.autoexecutor_test_method
+    test_command = "mvn test -Dtest=AutoExecutorCITest#"+target.autoexecutor_properties.test_method
     status = os.system(test_command)
 
     docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
@@ -50,8 +50,8 @@ if __name__=="__main__":
             "/pom.xml",
             "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
             buildSystem.MAVEN,
-            branch_name="main",
-            autoexecutor_test_method="startUnloggedMavenDemoTest"
+            target_run_properties = TargetRunProperties("main","17",StartMode.DOCKER),
+            autoexecutor_properties = AutoExecutorProperties("startUnloggedMavenDemoTest")
         )
     )
     target_list.append(
@@ -61,8 +61,8 @@ if __name__=="__main__":
             "/pom.xml",
             "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
             buildSystem.MAVEN,
-            branch_name="dockerization",
-            autoexecutor_test_method="startWebfluxDemoTest"
+            target_run_properties = TargetRunProperties("dockerization","17",StartMode.DOCKER),
+            autoexecutor_properties = AutoExecutorProperties("startWebfluxDemoTest")
         )
     )
 
