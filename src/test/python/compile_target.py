@@ -44,7 +44,7 @@ def compile_target (target):
 
     dependencies = subprocess.run([program, arg], cwd = os_cwd + "/" + target.test_repo_name,capture_output=True, text=True).stdout
 
-    if target.compile_test_options.projectType == ProjectType.NORMAL:
+    if target.compile_test_options.project_type == ProjectType.NORMAL:
         #Ensure reactive frameworks are not used on Non-Reactive repos
         if "io.projectreactor" in dependencies:
             information = "Reactor core found in non reactive project, not expected"
