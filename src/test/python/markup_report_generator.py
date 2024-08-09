@@ -42,10 +42,15 @@ class Report_Generator:
                     total = summary['tot']
                     passing_count = summary['passing']
                     case_results = summary['case_result']
+                    run_state = summary['run_state']
 
                     report_content += "*Java version* : "+java_version+"\n\n"
                     report_content += "*Passing Count* : "+passing_count+"/"+total+"\n\n"
                     report_content += "*Status* : "+self.get_status_string(status)+"\n\n"
+
+                    if run_state == False:
+                        report_content += "*Test Execution Failed : No tests were run for this project*\n\n"
+                        continue
 
                     report_content += "| Test ID | Status |\n"
                     report_content += "|---------|--------|\n"
@@ -76,6 +81,7 @@ class Report_Generator:
 
         new_entry = dict()
         new_entry['java_version'] = target.target_run_properties.java_version
+        new_entry['run_state'] = result_map['run_state']
         new_entry['status'] = result_map['status']
         new_entry['tot'] = result_map['tot']
         new_entry['passing'] = result_map['passing']

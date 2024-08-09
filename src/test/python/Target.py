@@ -255,6 +255,7 @@ class Target:
 			result_map['passing'] = str(total-len(replay_fail))
 			result_map['case_result'] = test_case_results
 
+		result_map['run_state'] = True
 		return result_map
 
 	def format_report_name(self,repo_name):

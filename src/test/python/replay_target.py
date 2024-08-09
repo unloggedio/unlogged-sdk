@@ -48,7 +48,15 @@ def replay_target(target):
     if (response_code == 0):
         print("Test for target executed successfully: " + target.test_repo_name)
     else:
-        raise Exception("Test for target failed execution: " + target.test_repo_name)
+        print("Test for target failed execution: " + target.test_repo_name)
+        result_map = dict()
+        result_map['java_version'] = target.target_run_properties.java_version
+        result_map['status'] = TestResult.FAIL
+        result_map['tot'] = "0"
+        result_map['passing'] = "0"
+        result_map['case_result'] = []
+        result_map['run_state'] = False
+        return result_map
 
     # assert and clean repo
     result_map = target.check_replay()
