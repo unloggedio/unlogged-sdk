@@ -5,9 +5,10 @@ class ReplayTestSuite:
     def __init__(self):
         pass
 
+    # Note : Run non docker tests first
     def get_suite(self):
         target_list = [
-        # unlogged-spring-mvc-maven-demo
+        # unlogged-spring-mvc-maven-demo - main (java 17)
         Target(
             "https://github.com/unloggedio/unlogged-spring-mvc-maven-demo",
             "unlogged-spring-mvc-maven-demo",
@@ -25,7 +26,51 @@ class ReplayTestSuite:
                     ReplayTest("deleteBook - normal", TestResult.PASS)
                 ])
         ),
-        # unlogged-spring-maven-demo
+        # unlogged-spring-maven-demo - java 8
+        Target(
+            "https://github.com/unloggedio/unlogged-spring-maven-demo",
+            "unlogged-spring-maven-demo",
+            "/pom.xml",
+            "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
+            buildSystem.MAVEN,
+            target_run_properties = TargetRunProperties("java8","8", StartMode.CMD),
+            replay_test_options= ReplayTestOptions(
+                [
+                    ReplayTest("count_prime_calc saved on 2024-06-03 12:46", TestResult.PASS),
+                    ReplayTest("filterList saved on 2024-06-03 12:44", TestResult.PASS),
+                    ReplayTest("getLocationFromAddress saved on 2024-06-03 12:47", TestResult.PASS),
+                    ReplayTest("fetchCustomerProfile saved on 2024-06-03 12:40", TestResult.PASS),
+                    ReplayTest("CalculateScoreForCenosCustomer saved on 2024-06-03 12:47", TestResult.PASS),
+                    ReplayTest("isCustomerEligibleForLoyaltyProgram saved on 2024-06-03 12:40", TestResult.PASS),
+                    ReplayTest("generateReferralCode saved on 2024-06-03 12:47", TestResult.PASS),
+                    ReplayTest("getDummyProfile saved on 2024-06-03 12:41", TestResult.PASS),
+                    ReplayTest("getAbsoluteUrl saved on 2024-06-03 12:46", TestResult.PASS),
+                    ReplayTest("getValue saved on 2024-06-03 12:49", TestResult.PASS),
+                    ReplayTest("getFutureResultOptional saved on 2024-06-03 12:42", TestResult.PASS),
+                    ReplayTest("fetchCustomerProfile saved on 2024-06-03 12:40", TestResult.PASS),
+                    ReplayTest("saveCustomerProfile saved on 2024-06-03 12:39", TestResult.PASS),
+                    ReplayTest("getUrl saved on 2024-06-03 12:46", TestResult.PASS),
+                    ReplayTest("getSomeInt saved on 2024-06-03 12:44", TestResult.PASS),
+                    ReplayTest("getScoreMaps saved on 2024-06-03 12:41", TestResult.PASS),
+                    ReplayTest("getAddressbook saved on 2024-06-03 12:46", TestResult.PASS),
+                    ReplayTest("save saved on 2024-06-03 12:39", TestResult.PASS),
+                    ReplayTest("saveNewCustomer saved on 2024-06-03 12:39", TestResult.PASS),
+                    ReplayTest("getLocationFromAddress saved on 2024-06-03 12:47", TestResult.PASS),
+                    ReplayTest("getValue saved on 2024-06-03 12:50", TestResult.PASS),
+                    ReplayTest("doSomething saved on 2024-06-03 12:42", TestResult.PASS),
+                    ReplayTest("getBackProfile saved on 2024-06-03 12:41", TestResult.PASS),
+                    ReplayTest("getFutureResult saved on 2024-06-03 12:42", TestResult.PASS),
+                    ReplayTest("doSomething saved on 2024-06-03 12:49", TestResult.PASS),
+                    ReplayTest("getTimeObjects saved on 2024-06-03 12:43", TestResult.PASS),
+                    ReplayTest("getDummyScoreMaps saved on 2024-06-03 12:41", TestResult.PASS),
+                    ReplayTest("calculateDiscount saved on 2024-06-03 12:48", TestResult.PASS),
+                    ReplayTest("doSomethingOptional saved on 2024-06-03 12:42", TestResult.PASS),
+                    ReplayTest("isCustomerEligibleForPremium saved on 2024-06-03 12:40", TestResult.PASS),
+                    ReplayTest("getCustomerProfile saved on 2024-06-03 12:40", TestResult.PASS),
+                    ReplayTest("getMapValue saved on 2024-06-03 12:43", TestResult.PASS)
+                ])
+        ),
+        # unlogged-spring-maven-demo - main (java 17)
         Target(
             "https://github.com/unloggedio/unlogged-spring-maven-demo",
             "unlogged-spring-maven-demo",
