@@ -184,7 +184,7 @@ class Target:
 		# Create path if it doesn't exist
 		Path("replayReports/").mkdir(parents=True, exist_ok=True)
 		# parse report
-		report_name="replay_report_"+self.format_report_name(self.test_repo_name)+".xml"
+		report_name="replay_report_"+self.format_report_name(self.test_repo_name)+"_"+self.target_run_properties.java_version+".xml"
 		report_path = "replayReports/"+report_name
 
 		if self.target_run_properties.start_mode == StartMode.DOCKER:
@@ -205,6 +205,19 @@ class Target:
 							  'https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd')
 
 		print("Report Path : ",report_path)
+		report_file = Path(report_path)
+		if not report_file.is_file():
+			print("Exception : Report file not found")
+			result_map = dict()
+			result_map['java_version'] = self.target_run_properties.java_version
+			result_map['status'] = TestResult.FAIL
+			result_map['tot'] = "0"
+			result_map['passing'] = "0"
+			result_map['case_result'] = []
+			result_map['run_state'] = False
+			result_map['message'] = "Report file not found"
+			return result_map
+
 		tree_report = ET.parse(report_path)
 		tree_root = tree_report.getroot()
 
@@ -256,6 +269,7 @@ class Target:
 			result_map['case_result'] = test_case_results
 
 		result_map['run_state'] = True
+		result_map['message'] = "Tests ran"
 		return result_map
 
 	def format_report_name(self,repo_name):

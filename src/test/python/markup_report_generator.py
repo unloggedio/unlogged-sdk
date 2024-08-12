@@ -43,13 +43,14 @@ class Report_Generator:
                     passing_count = summary['passing']
                     case_results = summary['case_result']
                     run_state = summary['run_state']
+                    message = summary['message']
 
                     report_content += "*Java version* : "+java_version+"\n\n"
                     report_content += "*Passing Count* : "+passing_count+"/"+total+"\n\n"
                     report_content += "*Status* : "+self.get_status_string(status)+"\n\n"
 
                     if run_state == False:
-                        report_content += "*Test Execution Failed : No tests were run for this project*\n\n"
+                        report_content += "*Failure message : "+message+"*\n\n"
                         continue
 
                     report_content += "| Test ID | Status |\n"
@@ -85,6 +86,7 @@ class Report_Generator:
         new_entry['status'] = result_map['status']
         new_entry['tot'] = result_map['tot']
         new_entry['passing'] = result_map['passing']
+        new_entry['message'] = result_map['message']
         new_entry['case_result'] = result_map['case_result']
         self.result_map[target.test_repo_name].append(new_entry)
 

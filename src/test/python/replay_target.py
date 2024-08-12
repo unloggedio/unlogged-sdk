@@ -9,7 +9,11 @@ import subprocess
 def replay_target(target):
     # clone repo
     print(f"Starting replay test run for {target.test_repo_name} -> branch {target.target_run_properties.branch_name}")
-    os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
+    clone_status = os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
+
+    print(clone_status)
+    if clone_status == 32768:
+        os.system(f"cd {target.test_repo_name} && git checkout . && git checkout {target.target_run_properties.branch_name}")
 
     # set java version
     expected_java_version = target.target_run_properties.java_version
@@ -25,7 +29,7 @@ def replay_target(target):
     # server start
     if target.target_run_properties.start_mode == StartMode.DOCKER:
         docker_up_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml up -d"
-        val_1 = os.system(docker_up_cmd)
+        os.system(docker_up_cmd)
 
         proc = subprocess.Popen(["docker ps -a"], stdout=subprocess.PIPE, shell=True)
         (out_stream, err_stream) = proc.communicate()
@@ -35,29 +39,15 @@ def replay_target(target):
         if (target.buildSystem == buildSystem.MAVEN):
             test_command = "docker exec " + docker_container_name + " ./mvnw clean install surefire:test --fail-never"
         elif (target.buildSystem == buildSystem.GRADLE):
-            test_command = "docker exec " + docker_container_name + " ./gradlew test"
-        val_2 = os.system(test_command)
+            test_command = "docker exec " + docker_container_name + " ./gradlew clean test"
+        os.system(test_command)
     else:
         if (target.buildSystem == buildSystem.MAVEN):
-            test_command = "cd "+target.test_repo_name+" && ./mvnw test"
+            test_command = "cd "+target.test_repo_name+" && ./mvnw clean test"
         elif (target.buildSystem == buildSystem.GRADLE):
-            test_command = "cd "+target.test_repo_name+" && ./gradlew test"
-        val_1 = 0
-        val_2 = os.system(test_command)
+            test_command = "cd "+target.test_repo_name+" && ./gradlew clean test"
+        os.system(test_command)
 
-    response_code = val_1 or val_2
-    if (response_code == 0):
-        print("Test for target executed successfully: " + target.test_repo_name)
-    else:
-        print("Test for target failed execution: " + target.test_repo_name)
-        result_map = dict()
-        result_map['java_version'] = target.target_run_properties.java_version
-        result_map['status'] = TestResult.FAIL
-        result_map['tot'] = "0"
-        result_map['passing'] = "0"
-        result_map['case_result'] = []
-        result_map['run_state'] = False
-        return result_map
 
     # assert and clean repo
     result_map = target.check_replay()
