@@ -38,7 +38,7 @@ def replay_target(target):
         val_2 = os.system(test_command)
     else:
         if (target.buildSystem == buildSystem.MAVEN):
-            test_command = "cd "+target.test_repo_name+" && ./mvnw clean install surefire:test --fail-never"
+            test_command = "cd "+target.test_repo_name+" && mvn clean compile test --fail-never"
         elif (target.buildSystem == buildSystem.GRADLE):
             test_command = "cd "+target.test_repo_name+" && ./gradlew test"
         val_1 = 0
