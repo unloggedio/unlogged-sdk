@@ -1,7 +1,8 @@
 import os
 import xml.etree.ElementTree as ET
-from configEnum import TestResult
+from configEnum import TestResult, StartMode
 import subprocess
+from pathlib import Path
 
 # define constants
 main_method_identifier = "public static void main"
@@ -15,20 +16,59 @@ class ReplayTest:
 		self.test_name = test_name
 		self.result_ideal = result_ideal
 
+class ReplayTestOptions:
+	def __init__(self,test_response):
+		self.test_response=test_response
+
+class CompileTestOptions:
+	def __init__(self, project_type):
+		self.project_type = project_type
+
+class TargetRunProperties:
+	def __init__(self, branch_name="main", java_version="17", start_mode=StartMode.DOCKER):
+		self.branch_name = branch_name
+		self.java_version=java_version
+		self.start_mode=start_mode
+
+class AutoExecutorProperties:
+	def __init__(self, test_method=""):
+		self.test_method=test_method
+
 
 class Target:
-	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem, test_response=[],
-				 projectType="Normal", branch_name="main", java_version="17", autoexecutor_test_method=""):
+	def __init__(self, test_repo_url, test_repo_name, rel_dependency_path, rel_main_path, buildSystem,
+				 target_run_properties, compile_test_options = None, replay_test_options = None, autoexecutor_properties = None):
 		self.test_repo_url = test_repo_url
 		self.test_repo_name = test_repo_name
 		self.rel_dependency_path = rel_dependency_path
 		self.rel_main_path = rel_main_path
 		self.buildSystem = buildSystem
-		self.test_response = test_response
-		self.projectType = projectType
-		self.branch_name = branch_name
-		self.java_version = java_version
-		self.autoexecutor_test_method = autoexecutor_test_method
+		self.target_run_properties = target_run_properties
+		self.compile_test_options = compile_test_options
+		self.replay_test_options = replay_test_options
+		self.autoexecutor_properties = autoexecutor_properties
+
+	def set_java_home(self,java_home):
+		os.environ["JAVA_HOME"] = java_home
+		os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
+
+	def check_java_version(self,expected_version):
+		result = subprocess.run(["java", "-version"], capture_output=True, text=True)
+		if result.returncode != 0:
+			raise Exception(f"Failed to check Java version: {result.stderr}")
+
+		version_output = result.stderr.split('\n')[0]
+		version = version_output.split('"')[1]
+
+		if version.startswith("1.8"):
+			version = "8"
+		else:
+			version = version.split('.')[0]
+
+		if not version == expected_version:
+			raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
+		print(f"Java version {version} matches expected version {expected_version} - Passing")
+
 
 	def modify_pom(self, sdk_version):
 
@@ -138,14 +178,24 @@ class Target:
 
 		# create dictionary from configuration
 		expected_response_dict = {}
-		for local_test in self.test_response:
+		for local_test in self.replay_test_options.test_response:
 			expected_response_dict[local_test.test_name] = local_test.result_ideal
 
+		# Create path if it doesn't exist
+		Path("replayReports/").mkdir(parents=True, exist_ok=True)
 		# parse report
-		report_path = "replay_report.xml"
-		docker_container_name = "target-repo"
+		report_name="replay_report_"+self.format_report_name(self.test_repo_name)+"_"+self.target_run_properties.java_version+".xml"
+		report_path = "replayReports/"+report_name
 
-		copy_cmd = "docker cp " + docker_container_name + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
+		if self.target_run_properties.start_mode == StartMode.DOCKER:
+			# Default docker maven filepath
+			docker_container_name = "target-repo"
+			copy_cmd = "docker cp " + docker_container_name + ":/target/surefire-reports/TEST-UnloggedRunnerTest.xml " + report_path
+		else :
+			# Default local maven filepath
+			local_report_path = self.test_repo_name+"/target/surefire-reports/TEST-UnloggedTests.xml"
+			copy_cmd = "cp "+local_report_path+" "+report_path
+
 		print("copy_cmd = " + copy_cmd)
 		copy_cmd = subprocess.Popen([copy_cmd], stdout=subprocess.PIPE, shell=True)
 		(copy_cmd_std, copy_cmd_err) = copy_cmd.communicate()
@@ -153,6 +203,20 @@ class Target:
 		ET.register_namespace('xsi', 'http://www.w3.org/2001/XMLSchema-instance')
 		ET.register_namespace('noNamespaceSchemaLocation',
 							  'https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd')
+
+		print("Report Path : ",report_path)
+		report_file = Path(report_path)
+		if not report_file.is_file():
+			print("Exception : Report file not found")
+			result_map = dict()
+			result_map['java_version'] = self.target_run_properties.java_version
+			result_map['status'] = TestResult.FAIL
+			result_map['tot'] = "0"
+			result_map['passing'] = "0"
+			result_map['case_result'] = []
+			result_map['run_state'] = False
+			result_map['message'] = "Report file not found"
+			return result_map
 
 		tree_report = ET.parse(report_path)
 		tree_root = tree_report.getroot()
@@ -187,13 +251,13 @@ class Target:
 				case_result['result'] = TestResult.PASS
 			test_case_results.append(case_result)
 
-		print("total",total)
 		result_map = dict()
 		result_map['tot'] = str(total)
 		if (len(replay_fail) == 0):
 			print("All tests passed succesfully")
 			result_map['status'] = TestResult.PASS
 			result_map['passing'] = str(total)
+			result_map['case_result'] = test_case_results
 
 		else:
 			print("Replay tests have failed for " + self.test_repo_name + ". Fail count = " + str(len(replay_fail)))
@@ -203,4 +267,10 @@ class Target:
 
 			result_map['passing'] = str(total-len(replay_fail))
 			result_map['case_result'] = test_case_results
-			return result_map
+
+		result_map['run_state'] = True
+		result_map['message'] = "Tests ran"
+		return result_map
+
+	def format_report_name(self,repo_name):
+		return repo_name.replace("-","_")

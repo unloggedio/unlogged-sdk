@@ -1,16 +1,17 @@
 package io.unlogged.autoexecutor.testutils.entity;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TestResultSummary {
     private int numberOfCases;
     private int passingCasesCount;
     private int failingCasesCount;
     private String mode;
-    private List<Integer> failingCases;
+    private List<AssertionDetails> failingCases;
 
     public TestResultSummary(int numberOfCases, int passingCasesCount, int failingCasesCount,
-                             List<Integer> failingCaseIds) {
+                             List<AssertionDetails> failingCaseIds) {
         this.numberOfCases = numberOfCases;
         this.passingCasesCount = passingCasesCount;
         this.failingCasesCount = failingCasesCount;
@@ -37,7 +38,11 @@ public class TestResultSummary {
         this.mode = mode;
     }
 
-    public List<Integer> getFailingCases() {
+    public List<AssertionDetails> getFailingCases() {
         return failingCases;
+    }
+
+    public List<Integer> getFailingCaseNumbers() {
+        return failingCases.stream().map(AssertionDetails::getCaseId).collect(Collectors.toList());
     }
 }

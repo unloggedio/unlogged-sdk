@@ -1,38 +1,18 @@
 import os
 import sys
-from Target import Target
-from configEnum import buildSystem, ReportType, TestResult
+from Target import Target, TargetRunProperties, CompileTestOptions
+from configEnum import buildSystem, ReportType, TestResult, StartMode, ProjectType
 from markup_report_generator import Report_Generator
 import subprocess
 
-def set_java_home(java_home):
-    os.environ["JAVA_HOME"] = java_home
-    os.environ["PATH"] = os.path.join(java_home, "bin") + ":" + os.environ["PATH"]
-
-def check_java_version(expected_version):
-    result = subprocess.run(["java", "-version"], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise Exception(f"Failed to check Java version: {result.stderr}")
-
-    version_output = result.stderr.split('\n')[0]
-    version = version_output.split('"')[1]
-
-    if version.startswith("1.8"):
-        version = "8"
-    else:
-        version = version.split('.')[0]
-
-    if not version == expected_version:
-        raise Exception(f"Java version {version} does not match expected version {expected_version} - Failing")
-    print(f"Java version {version} matches expected version {expected_version} - Passing")
-
 def compile_target (target):
 
+    print(f"Starting compile test run for {target.test_repo_name} -> branch {target.target_run_properties.branch_name}")
     # clone target
-    os.system(f"git clone -b {target.branch_name} {target.test_repo_url}")
-    expected_java_version = target.java_version
-    set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
-    check_java_version(expected_java_version)
+    os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
+    expected_java_version = target.target_run_properties.java_version
+    target.set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
+    target.check_java_version(expected_java_version)
 
     # modify build system file
     target.modify_main()
@@ -64,8 +44,8 @@ def compile_target (target):
 
     dependencies = subprocess.run([program, arg], cwd = os_cwd + "/" + target.test_repo_name,capture_output=True, text=True).stdout
 
-    if target.projectType == "Normal":
-        #Ensure reactive frameworks are not used on Non reactive repos
+    if target.compile_test_options.project_type == ProjectType.NORMAL:
+        #Ensure reactive frameworks are not used on Non-Reactive repos
         if "io.projectreactor" in dependencies:
             information = "Reactor core found in non reactive project, not expected"
             print("Found reactor core in a Non reactive project " + target.test_repo_name + " - Failing")
@@ -108,9 +88,8 @@ if __name__=="__main__":
                 "/pom.xml",
                 "/src/main/java/org/unlogged/demo/UnloggedDemoApplication.java",
                 buildSystem.MAVEN,
-                projectType="Normal",
-                branch_name=branch_name,
-                java_version=branch_java_version_map[branch_name]
+                target_run_properties=TargetRunProperties(branch_name,branch_java_version_map[branch_name], StartMode.CMD),
+                compile_test_options=CompileTestOptions(ProjectType.NORMAL)
             )
         )
         target_list.append(
@@ -120,9 +99,8 @@ if __name__=="__main__":
                 "/pom.xml",
                 "/src/main/java/org/unlogged/springwebfluxdemo/SpringWebfluxDemoApplication.java",
                 buildSystem.MAVEN,
-                projectType="Reactive",
-                branch_name=branch_name,
-                java_version=branch_java_version_map[branch_name]
+                target_run_properties=TargetRunProperties(branch_name,branch_java_version_map[branch_name], StartMode.CMD),
+                compile_test_options=CompileTestOptions(ProjectType.REACTIVE)
             )
         )
     target_list.append(
@@ -132,9 +110,8 @@ if __name__=="__main__":
             "/pom.xml",
             "/src/main/java/org/unlogged/mvc/demo/Application.java",
             buildSystem.MAVEN,
-            projectType="Normal",
-            branch_name="main",
-            java_version="17"
+            target_run_properties=TargetRunProperties("main","17", StartMode.CMD),
+            compile_test_options=CompileTestOptions(ProjectType.NORMAL)
         )
     )
 

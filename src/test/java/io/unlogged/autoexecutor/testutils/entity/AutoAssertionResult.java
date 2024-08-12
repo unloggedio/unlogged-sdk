@@ -4,6 +4,8 @@ public class AutoAssertionResult {
     private boolean passing;
     private String message;
     private String assertionType;
+    private String expected;
+    private String actual;
 
     public boolean isPassing() {
         return passing;
@@ -27,5 +29,21 @@ public class AutoAssertionResult {
 
     public void setAssertionType(String assertionType) {
         this.assertionType = assertionType;
+    }
+
+    public String getExpected() {
+        return expected;
+    }
+
+    public void setExpected(String expected) {
+        this.expected = expected;
+    }
+
+    public String getActual() {
+        return actual;
+    }
+
+    public void setActual(String actual) {
+        this.actual = actual;
     }
 }
