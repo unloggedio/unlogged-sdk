@@ -54,7 +54,7 @@ jobs:
 
       - name: Write report summary
         run: |
-          echo "# Replay Pipeline Report" >> $GITHUB_STEP_SUMMARY
+          echo "# Compile Pipeline Report" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.compiletest.outputs.content }}" >> $GITHUB_STEP_SUMMARY
         if: always()
 
