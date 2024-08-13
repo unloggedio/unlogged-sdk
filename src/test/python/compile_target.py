@@ -117,12 +117,21 @@ if __name__=="__main__":
 
     report_generator = ReportGenerator(ReportType.COMPILE)
     passing = True
+    results = dict()
     for local_target in target_list:
         result = compile_target(local_target)
-        report_generator.write_compile_report(local_target, result['status'], result['information'])
+        if local_target not in results:
+            results[local_target.test_repo_name] = []
+
+        entry = dict()
+        entry['target'] = local_target
+        entry['status'] = result['status']
+        entry['information'] = result['information']
+
+        results[local_target.test_repo_name].append(entry)
         if result['status'] == TestResult.FAIL:
             passing = False
 
-    report_generator.generate_and_write_report()
+    report_generator.write_compile_report(results)
     if passing == False:
         raise Exception("Compile Pipeline has failing cases")

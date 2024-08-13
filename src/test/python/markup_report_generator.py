@@ -12,18 +12,25 @@ class ReportGenerator:
         report_file.write(contents)
         report_file.close()
 
-    def write_compile_report(self, target, test_result, information):
-        java_version = target.target_run_properties.java_version
-        status = test_result
-        project_name = target.test_repo_name
-
+    def write_compile_report(self, results):
         filename = "compile-pipeline-result.md"
         report_content = ""
-        report_content += "### Project : "+project_name+"\n\n"
-        report_content += "| Java Version | Status  | Information |\n"
-        report_content += "|--------------|---------|-------------|\n"
-        report_content += "| "+java_version+"|"+self.get_status_string(status,True)+"|"+information+"|\n"
-        report_content += "\n\n"
+
+        for project in results:
+            result_summaries = results[project]
+            report_content += "### Project : "+project_name+"\n\n"
+            for summary in result_summaries:
+                target = summary['target']
+                java_version = target.target_run_properties.java_version
+                status = summary['status']
+                information = summary['information']
+                project_name = target.test_repo_name
+
+                report_content += "| Java Version | Status  | Information |\n"
+                report_content += "|--------------|---------|-------------|\n"
+                report_content += "| "+java_version+"|"+self.get_status_string(status,True)+"|"+information+"|\n"
+                report_content += "\n\n"
+
         self.write_to_file(report_content,filename)
 
     def write_replay_report(self, target, result_map):
