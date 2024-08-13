@@ -120,7 +120,7 @@ if __name__=="__main__":
     results = dict()
     for local_target in target_list:
         result = compile_target(local_target)
-        if local_target not in results:
+        if local_target.test_repo_name not in results:
             results[local_target.test_repo_name] = []
 
         entry = dict()

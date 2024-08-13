@@ -20,17 +20,16 @@ class ReportGenerator:
             result_summaries = results[project]
             project_name = project
             report_content += "### Project : "+project_name+"\n\n"
+            report_content += "| Java Version | Status  | Information |\n"
+            report_content += "|--------------|---------|-------------|\n"
             for summary in result_summaries:
                 target = summary['target']
                 java_version = target.target_run_properties.java_version
                 status = summary['status']
                 information = summary['information']
-                
-                report_content += "| Java Version | Status  | Information |\n"
-                report_content += "|--------------|---------|-------------|\n"
-                report_content += "| "+java_version+"|"+self.get_status_string(status,True)+"|"+information+"|\n"
-                report_content += "\n\n"
 
+                report_content += "| "+java_version+"|"+self.get_status_string(status,True)+"|"+information+"|\n"
+            report_content += "\n\n"
         self.write_to_file(report_content,filename)
 
     def write_replay_report(self, target, result_map):
