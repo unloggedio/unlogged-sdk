@@ -66,10 +66,10 @@ if __name__=="__main__":
         )
     )
 
-    result_stats = []
+    failing_suite_count = 0
     for target in target_list:
-        result_stats.append(autoexecute_target(target))
+        if not autoexecute_target(target):
+            failing_suite_count+=1
 
-    failing_suite_count = result_stats.count(False)
     if failing_suite_count > 0:
         raise Exception(f"There are {failing_suite_count} failing test suites in AutoExecutor CI Pipeline")

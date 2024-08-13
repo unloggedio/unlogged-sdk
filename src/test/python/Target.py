@@ -92,7 +92,6 @@ class Target:
 			os.system(
 				"mvn versions:use-latest-versions -DallowSnapshots=true -Dincludes=video.bug:unlogged-sdk -f " + pom_path)
 
-
 		else:
 			# add dependency
 			dependency = ET.Element("dependency")
@@ -204,7 +203,6 @@ class Target:
 		ET.register_namespace('noNamespaceSchemaLocation',
 							  'https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd')
 
-		print("Report Path : ",report_path)
 		report_file = Path(report_path)
 		if not report_file.is_file():
 			print("Exception : Report file not found")

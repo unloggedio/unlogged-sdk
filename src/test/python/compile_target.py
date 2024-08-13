@@ -2,7 +2,7 @@ import os
 import sys
 from Target import Target, TargetRunProperties, CompileTestOptions
 from configEnum import buildSystem, ReportType, TestResult, StartMode, ProjectType
-from markup_report_generator import Report_Generator
+from markup_report_generator import ReportGenerator
 import subprocess
 
 def compile_target (target):
@@ -115,14 +115,14 @@ if __name__=="__main__":
         )
     )
 
-    report_generator = Report_Generator(ReportType.COMPILE)
-    results = []
+    report_generator = ReportGenerator(ReportType.COMPILE)
+    passing = True
     for local_target in target_list:
         result = compile_target(local_target)
-        results.append(result)
-        report_generator.add_compile_result_status_entry(local_target, result['status'], result['information'])
+        report_generator.write_compile_report(local_target, result['status'], result['information'])
+        if result['status'] == TestResult.FAIL:
+            passing = False
 
     report_generator.generate_and_write_report()
-    for summary in results:
-        if summary['status'] == False:
-            raise Exception("Compile Pipeline has failing cases")
+    if passing == False:
+        raise Exception("Compile Pipeline has failing cases")
