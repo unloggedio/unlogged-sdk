@@ -7,7 +7,6 @@ from pathlib import Path
 import subprocess
 
 def replay_target(target):
-
     print(f"Starting replay test run for {target.test_repo_name} -> branch {target.target_run_properties.branch_name}")
     target_repo_folder = Path(target.test_repo_name)
     if not target_repo_folder.is_dir() :
@@ -50,11 +49,11 @@ def replay_target(target):
     os.system(test_command)
 
     result_map = target.check_replay()
-
     # clean repo
     if target.target_run_properties.start_mode == StartMode.DOCKER:
         docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
-        # os.system(docker_down_cmd)
+        os.system(docker_down_cmd)
+
 
     os.system("rm -rf " + target.test_repo_name)
     return result_map

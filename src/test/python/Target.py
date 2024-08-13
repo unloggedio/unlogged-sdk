@@ -203,6 +203,7 @@ class Target:
 		ET.register_namespace('noNamespaceSchemaLocation',
 							  'https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd')
 
+
 		report_file = Path(report_path)
 		if not report_file.is_file():
 			print("Exception : Report file not found")
