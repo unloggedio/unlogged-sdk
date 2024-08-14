@@ -1,30 +1,36 @@
 import os
 import sys
-from Target import Target, ReplayTest, TargetRunProperties, ReplayTestOptions
 from configEnum import buildSystem, TestResult, ReportType, StartMode
-from markup_report_generator import Report_Generator
+from markup_report_generator import ReportGenerator
 from test_suite import ReplayTestSuite
+from pathlib import Path
 import subprocess
 
 def replay_target(target):
-    # clone repo
     print(f"Starting replay test run for {target.test_repo_name} -> branch {target.target_run_properties.branch_name}")
-    clone_status = os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
-
-    print(clone_status)
-    if clone_status == 32768:
-        os.system(f"cd {target.test_repo_name} && git checkout . && git checkout {target.target_run_properties.branch_name}")
+    target_repo_folder = Path(target.test_repo_name)
+    if not target_repo_folder.is_dir() :
+        # Clone if the folder doesn't exist
+        print(f"Cloning repo : {target.test_repo_name} -> branch : {target.target_run_properties.branch_name}")
+        os.system(f"git clone -b {target.target_run_properties.branch_name} {target.test_repo_url}")
+    else :
+        # switch branch if folder exists
+        print(f"Switching repo branch to {target.target_run_properties.branch_name}")
+        os.system(f"cd {target.test_repo_name} && git restore . && git switch {target.target_run_properties.branch_name}")
 
     # set java version
     expected_java_version = target.target_run_properties.java_version
     target.set_java_home(f"/usr/lib/jvm/temurin-{expected_java_version}-jdk-amd64")
     target.check_java_version(expected_java_version)
 
+    base_test_command = ""
     # modify build
     if (target.buildSystem == buildSystem.MAVEN):
         target.modify_pom(sdk_version)
+        base_test_command = "./mvnw clean test"
     elif (target.buildSystem == buildSystem.GRADLE):
         target.modify_gradle(sdk_version)
+        base_test_command = "./gradlew clean test"
 
     # server start
     if target.target_run_properties.start_mode == StartMode.DOCKER:
@@ -36,24 +42,18 @@ def replay_target(target):
         docker_container_name = "target-repo"
 
         # target replay
-        if (target.buildSystem == buildSystem.MAVEN):
-            test_command = "docker exec " + docker_container_name + " ./mvnw clean install surefire:test --fail-never"
-        elif (target.buildSystem == buildSystem.GRADLE):
-            test_command = "docker exec " + docker_container_name + " ./gradlew clean test"
-        os.system(test_command)
+        test_command = "docker exec " + docker_container_name + " "+base_test_command
     else:
-        if (target.buildSystem == buildSystem.MAVEN):
-            test_command = "cd "+target.test_repo_name+" && ./mvnw clean test"
-        elif (target.buildSystem == buildSystem.GRADLE):
-            test_command = "cd "+target.test_repo_name+" && ./gradlew clean test"
-        os.system(test_command)
+        test_command = "cd "+target.test_repo_name+" && "+base_test_command
 
+    os.system(test_command)
 
-    # assert and clean repo
     result_map = target.check_replay()
+    # clean repo
     if target.target_run_properties.start_mode == StartMode.DOCKER:
         docker_down_cmd = "cd " + target.test_repo_name + " && docker compose -f conf/docker-compose.yml down"
         os.system(docker_down_cmd)
+
 
     os.system("rm -rf " + target.test_repo_name)
     return result_map
@@ -62,14 +62,10 @@ if __name__ == "__main__":
     sdk_version = sys.argv[1]
 
     passing = True
-    result_maps = []
-    report_generator = Report_Generator(ReportType.REPLAY)
-    for local_target in ReplayTestSuite().get_suite():
+    report_generator = ReportGenerator(ReportType.REPLAY)
+    for local_target in ReplayTestSuite().get_replay_test_suite():
         result_map = replay_target(local_target)
-        report_generator.reset_map()
-        report_generator.add_replay_result_status_entry(local_target, result_map)
-        result_maps.append(result_map)
-        report_generator.generate_and_write_report()
+        report_generator.write_replay_report(local_target, result_map)
 
         if result_map['status'] == TestResult.FAIL:
             passing = False
