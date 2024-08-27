@@ -30,3 +30,7 @@
 
 ## SDK v0.7.3
 - Fixed an issue where some methods when invoked were creating two test candidates. This was happening for methods where a synthetic method was emitted by the Java compiler.
+
+## SDK v0.7.4
+- The SDK now comes with LogNothing mode. The SDK in this mode logs nothing, but direct invoke still works.
+- There are now better defualt modes for SDK. When annotation is not set then it runs in LogNothing mode. When annotation is set but mode is not defined then it runs in LogAll mode.
