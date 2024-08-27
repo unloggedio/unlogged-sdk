@@ -53,6 +53,7 @@ public class UnloggedProcessor extends AbstractProcessor {
     private JavacTransformer transformer;
     private JavacFiler javacFiler;
 	private UnloggedProcessorConfig unloggedProcessorConfig = new UnloggedProcessorConfig(1, UnloggedLoggingLevel.COUNTER, UnloggedMode.LogAll);
+	private boolean parsed = false;
 
 
     public UnloggedProcessor() {
@@ -371,7 +372,9 @@ public class UnloggedProcessor extends AbstractProcessor {
         if (System.getProperty("unlogged.disable", null) != null) return false;
 
 
-		for (Element element : roundEnv.getElementsAnnotatedWith(Unlogged.class)) {
+		Set<? extends Element> annotatedClasses = roundEnv.getElementsAnnotatedWith(Unlogged.class);
+		for (Element element : annotatedClasses) {
+			this.parsed = true;
 			Unlogged unlogged = element.getAnnotation(Unlogged.class);
 			
 			// setup unloggedProcessorConfig
@@ -386,8 +389,13 @@ public class UnloggedProcessor extends AbstractProcessor {
             return false;
         }
 
-        Set<? extends Element> annotatedClasses = roundEnv.getElementsAnnotatedWith(Unlogged.class);
-        if (annotatedClasses.size() > 1) {
+		if (annotatedClasses.isEmpty() && !this.parsed) {
+			// no class is annotated with Unlogged
+			// set log mode as LogNothing
+			this.parsed = true;
+			this.unloggedProcessorConfig.setUnloggedMode(UnloggedMode.LogNothing);
+		}
+		else if (annotatedClasses.size() > 1) {
             throw new RuntimeException("More than 1 class annotated with @Unlogged annotation. Only the entry point " +
                     "method should be annotated with @Unlogged annotation: [" +
                     annotatedClasses.stream()

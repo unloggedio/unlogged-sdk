@@ -21,20 +21,23 @@
  */
 package io.unlogged.core;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.unlogged.UnloggedMode;
 import io.unlogged.core.bytecode.ProbeInstrumenter;
 import io.unlogged.core.javac.HandlerLibrary;
 import io.unlogged.core.processor.UnloggedProcessorConfig;
 import io.unlogged.weaver.DataInfoProvider;
 
-import java.io.*;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 public final class PostCompiler {
     private static List<PostCompilerTransformation> transformations;
-
-    ;
 
     private PostCompiler() {/* prevent instantiation*/}
 
@@ -43,8 +46,14 @@ public final class PostCompiler {
 			DiagnosticsReceiver diagnostics,
             OutputStream classWeaveOutputStream,
 			DataInfoProvider dataInfoProvider,
-			UnloggedProcessorConfig unloggedProcessorConfig) {
-        if (System.getProperty("unlogged.disablePostCompiler", null) != null) return original;
+			UnloggedProcessorConfig unloggedProcessorConfig) 
+		{
+
+
+        if (System.getProperty("unlogged.disablePostCompiler", null) != null) {
+			return original;
+		}
+
         init(diagnostics, unloggedProcessorConfig);
         byte[] previous = original;
         for (PostCompilerTransformation transformation : transformations) {
