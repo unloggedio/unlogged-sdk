@@ -53,10 +53,6 @@ public final class PostCompiler {
         if (System.getProperty("unlogged.disablePostCompiler", null) != null) {
 			return original;
 		}
-		else if (unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogNothing) {
-			return original;
-		}
-
 
         init(diagnostics, unloggedProcessorConfig);
         byte[] previous = original;
