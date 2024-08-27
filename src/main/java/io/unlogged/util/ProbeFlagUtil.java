@@ -2,18 +2,25 @@ package io.unlogged.util;
 
 import org.objectweb.asm.Opcodes;
 
+import io.unlogged.UnloggedMode;
+import io.unlogged.core.processor.UnloggedProcessorConfig;
+
 public class ProbeFlagUtil {
 
-	public static boolean getAddHashMap(int access) {
+	public static boolean getAddHashMap(UnloggedProcessorConfig unloggedProcessorConfig, int access) {
 		// TODO: remove this filter
 		// decide if a Hashmap is to be added in static call of the class
 		// always probe a default method in interface, because we cannot add a hashmap to the interface
 
-		if (((access & Opcodes.ACC_INTERFACE) != 0)
+		if (unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogNothing) {
+			return false;
+		}
+		else if (((access & Opcodes.ACC_INTERFACE) != 0)
 			|| ((access & Opcodes.ACC_ENUM) != 0)){
 			// do not add a hash map
 			return false;
 		}
+
 		return true;
 	}
 
@@ -30,9 +37,12 @@ public class ProbeFlagUtil {
 		return false;
 	}
 
-	public static Boolean getNeverProbeMethodFlag (String methodName, int access) {
+	public static Boolean getNeverProbeMethodFlag (UnloggedProcessorConfig unloggedProcessorConfig, String methodName, int access) {
 
-		if (methodName.equals("equals")
+		if (unloggedProcessorConfig.getUnloggedMode() == UnloggedMode.LogNothing) {
+			return true;
+		}
+		else if (methodName.equals("equals")
 			|| methodName.equals("hashCode")
 			|| methodName.equals("onNext")
 			|| methodName.equals("onSubscribe")

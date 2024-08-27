@@ -191,7 +191,7 @@ public class ClassTransformer extends ClassVisitor {
             className = name.substring(index + 1);
         }
 
-		this.addHashMap = ProbeFlagUtil.getAddHashMap(access);
+		this.addHashMap = ProbeFlagUtil.getAddHashMap(this.unloggedProcessorConfig, access);
         super.visit(version, access, name, signature, superName, interfaces);
     }
 
@@ -233,7 +233,7 @@ public class ClassTransformer extends ClassVisitor {
 		
 		// calculate probe flag at method level
 		Boolean alwaysProbeMethodFlag = !this.addHashMap || ProbeFlagUtil.getAlwaysProbeMethodFlag(name, access, desc);
-		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(name, access);
+		Boolean neverProbeMethodFlag = ProbeFlagUtil.getNeverProbeMethodFlag(this.unloggedProcessorConfig, name, access);
 
 		if (name.equals("<clinit>")) {
 			// early exit for clinit. It is already defined in class with initial method
