@@ -577,8 +577,8 @@ public class ObjectMapperFactory {
 							String mainAnnoClassName = annoClass.getName().substring("selogger.".length());
 							Class<A> mainAnnoClass = (Class<A>) Class.forName(mainAnnoClassName);
 							value = ann.getAnnotation(mainAnnoClass);
-						} catch (ClassNotFoundException e) {
-							e.printStackTrace();
+						} catch (ClassNotFoundException ignored) {
+                            // nothing to do if that class was not found
 						}
 
 						if (value != null && Proxy.isProxyClass(value.getClass())) {
